@@ -5,6 +5,18 @@ import pydeck as pdk
 # 1. Sayfa Ayarları
 st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
+# --- 🛠️ YENİ: GİZLİ CSS KODU (MENÜLERİ SİLER) ---
+# Bu kısım sağ üstteki hamburger menüyü ve alttaki "Made with Streamlit" yazısını yok eder.
+gizle_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """
+st.markdown(gizle_style, unsafe_allow_html=True)
+# ------------------------------------------------
+
 # 2. Logo ve Başlık
 col1, col2 = st.columns([1, 5])
 with col1:
@@ -18,9 +30,9 @@ with col2:
 st.markdown("---")
 
 # --------------------------------------------------------
-# 3. VERİ BAĞLANTISI (DÜZELTİLMİŞ LİNK YAPISI 🔗)
-
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?output=csv" 
+# 3. VERİ BAĞLANTISI
+# LİNKİNİ AŞAĞIYA YAPIŞTIRMAYI UNUTMA!
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
 try:
     df = pd.read_csv(sheet_url)
@@ -33,7 +45,7 @@ try:
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
 
-    # Koordinat Düzeltici (90'dan büyükse böl)
+    # Koordinat Düzeltici
     def fix_coordinate(val, limit):
         if pd.isna(val): return val
         while abs(val) > limit: 
@@ -85,7 +97,6 @@ with tab1:
             pickable=True,
         )
 
-        # Harita Merkezi
         view_state = pdk.ViewState(
             latitude=df['lat'].mean(), 
             longitude=df['lon'].mean(), 
@@ -114,11 +125,9 @@ with tab2:
     else:
         df_liste = df.copy()
 
-    # 🛠️ GÜNCELLENEN KISIM BURASI 🛠️
-    # Eski hatalı link yerine standart Google Maps linki koyduk.
-    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}", axis=1)
+    # Link Yapısı
+    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"http://googleusercontent.com/maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
     
-    # Tablo Gösterimi
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
         column_config={
