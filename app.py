@@ -3,19 +3,15 @@ import pandas as pd
 import pydeck as pdk
 
 # 1. Sayfa Ayarları
-st.set_page_config(page_title="Medibulut Saha", page_icon="🦷", layout="wide")
+st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
-# --- 🛠️ GÜÇLENDİRİLMİŞ TEMİZLİK KODU (CSS) ---
-# Hem üst menüyü, hem alt yazıyı, hem de haritanın sağ altındaki butonları gizler.
+# --- 🛠️ GİZLİ CSS KODU (MENÜ VE FULLSCREEN GİZLEME) ---
 gizle_style = """
     <style>
     /* Üst menü ve alt bilgiyi gizle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* Haritanın altındaki 'DeckGL' veya 'Mapbox' logolarını küçült/gizle */
-    .deckgl-overlay { mix-blend-mode: multiply; }
     
     /* Sağ alttaki tam ekran butonunu (fullscreen) gizle */
     button[title="View Fullscreen"] {
@@ -143,5 +139,18 @@ with tab2:
     # Link Yapısı
     df_liste['Navigasyon'] = df_liste.apply(lambda x: f"http://googleusercontent.com/maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
     
+    
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
+        column_config={
+            "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+            "Durum": st.column_config.TextColumn("Statü"),
+            "Ziyaret Notu": st.column_config.TextColumn("Saha Notları"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+
+if st.button('🔄 Verileri Güncelle'):
+    st.cache_data.clear()
+    st.rerun()
