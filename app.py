@@ -18,7 +18,7 @@ with col2:
 st.markdown("---")
 
 # --------------------------------------------------------
-# 3. VERİ BAĞLANTISI (PREMIUM AYARLAR 🚀)
+# 3. VERİ BAĞLANTISI 
 # LÜTFEN KENDİ LİNKİNİ AŞAĞIYA YAPIŞTIR:
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
@@ -29,17 +29,17 @@ try:
     # Boşluk temizliği
     df.columns = df.columns.str.strip()
     
-    # Hata kontrolü
-    if 'Durum' not in df.columns:
-        st.error("🚨 HATA: Excel'de 'Durum' sütunu bulunamadı!")
-        st.stop()
+    # Sayısal veri garantisi (Harita bozulmasın diye)
+    df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
+    df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
+    df = df.dropna(subset=['lat', 'lon']) # Konumu olmayanları haritadan çıkar
 
-    # --- RENK AYARLAMASI (Gidilen: Yeşil, Gidilmeyen: Kırmızı) ---
+    # --- RENK AYARLAMASI ---
     def get_color(durum):
         if durum == 'Gidildi':
-            return [0, 255, 0, 200] # Yeşil (RGB)
+            return [0, 255, 0, 200] # Yeşil
         else:
-            return [255, 0, 0, 200] # Kırmızı (RGB)
+            return [255, 0, 0, 200] # Kırmızı
             
     df['color'] = df['Durum'].apply(get_color)
         
@@ -65,67 +65,67 @@ col2.metric("Ziyaret Edilen", gidilen_sayisi, "Başarılı")
 col3.metric("Kalan", len(df) - gidilen_sayisi, "Hedef", delta_color="inverse")
 
 # 6. Harita ve Liste
-tab1, tab2 = st.tabs(["🛰️ Uydu Haritası", "📋 Detaylı Liste & Rota"])
+tab1, tab2 = st.tabs(["🛰️ Uydu Haritası", "📋 Liste & Rota"])
 
 with tab1:
-    # --- UYDU HARİTASI AYARLARI ---
     try:
-        # Haritanın başlangıç noktası (Otomatik ortalar)
-        ilk_bakis = pdk.ViewState(
-            latitude=df_filtreli['lat'].mean(),
-            longitude=df_filtreli['lon'].mean(),
-            zoom=13,
-            pitch=50, # 3D Görünüm açısı
+        # --- ÜCRETSİZ UYDU KATMANI (ESRI) ---
+        # Mapbox yerine bunu kullanıyoruz, şifre istemez!
+        uydu_katmani = pdk.Layer(
+            "TileLayer",
+            data=None,
+            get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         )
 
-        # Noktalar (Layer)
-        layer = pdk.Layer(
+        # Noktalar Katmanı
+        nokta_katmani = pdk.Layer(
             "ScatterplotLayer",
             data=df_filtreli,
             get_position='[lon, lat]',
             get_color='color',
-            get_radius=100,  # Nokta büyüklüğü
-            pickable=True,   # Tıklanabilir olsun
+            get_radius=150,  
+            pickable=True,
         )
 
-        # Haritayı Çiz
+        # Harita Görünümü
+        ilk_bakis = pdk.ViewState(
+            latitude=df_filtreli['lat'].mean(),
+            longitude=df_filtreli['lon'].mean(),
+            zoom=13,
+            pitch=0,
+        )
+
         st.pydeck_chart(pdk.Deck(
-            map_style='mapbox://styles/mapbox/satellite-streets-v11', # UYDU MODU
+            map_style=None, # Mapbox stilini kapattık
             initial_view_state=ilk_bakis,
-            layers=[layer],
+            layers=[uydu_katmani, nokta_katmani], # Önce uyduyu, üstüne noktaları koyduk
             tooltip={"text": "{Klinik Adı}\n{Durum}"}
         ))
         
-        st.info("💡 İPUCU: Kırmızı noktalar gidilecek yerler, Yeşiller tamamlananlar.")
+        st.info("💡 Kırmızı: Gidilecek | Yeşil: Tamamlanan")
 
     except Exception as e:
-        st.error(f"Harita hatası: {e}. 'lat' ve 'lon' sütunlarını kontrol et.")
+        st.error(f"Harita hatası: {e}")
 
 with tab2:
-    # --- NAVİGASYON LİNKLERİ ---
-    st.write("📍 **Navigasyon için 'Rota Oluştur' butonuna tıkla:**")
-    
+    st.write("📍 **Rota oluşturmak için linke tıkla:**")
     df_liste = df_filtreli.copy()
     
-    # Google Maps Yol Tarifi Linki Oluşturma
-    # Bu linke tıklayınca telefondaki haritalar açılır ve rotayı çizer.
+    # Navigasyon Linki
     df_liste['Navigasyon'] = df_liste.apply(
         lambda row: f"https://www.google.com/maps/dir/?api=1&destination={row['lat']},{row['lon']}", axis=1
     )
 
-    # Tabloyu Göster
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Durum', 'Navigasyon']],
         column_config={
             "Navigasyon": st.column_config.LinkColumn(
-                "Yol Tarifi", 
-                display_text="📍 Rota Oluştur" # Link yerine bu yazı görünecek
+                "Yol Tarifi", display_text="📍 Rota Çiz"
             )
         },
         use_container_width=True
     )
 
-# 7. Yenileme
 if st.button('🔄 Verileri Güncelle'):
     st.cache_data.clear()
     st.rerun()
