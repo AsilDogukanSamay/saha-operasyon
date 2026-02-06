@@ -3,15 +3,30 @@ import pandas as pd
 import pydeck as pdk
 
 # 1. Sayfa Ayarları
-st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
+st.set_page_config(page_title="Medibulut Saha", page_icon="🦷", layout="wide")
 
-# --- 🛠️ YENİ: GİZLİ CSS KODU (MENÜLERİ SİLER) ---
-# Bu kısım sağ üstteki hamburger menüyü ve alttaki "Made with Streamlit" yazısını yok eder.
+# --- 🛠️ GÜÇLENDİRİLMİŞ TEMİZLİK KODU (CSS) ---
+# Hem üst menüyü, hem alt yazıyı, hem de haritanın sağ altındaki butonları gizler.
 gizle_style = """
     <style>
+    /* Üst menü ve alt bilgiyi gizle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* Haritanın altındaki 'DeckGL' veya 'Mapbox' logolarını küçült/gizle */
+    .deckgl-overlay { mix-blend-mode: multiply; }
+    
+    /* Sağ alttaki tam ekran butonunu (fullscreen) gizle */
+    button[title="View Fullscreen"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Harita kapsayıcısının kenarlarını temizle */
+    .stDeckGlJsonChart {
+        box-shadow: none !important;
+    }
     </style>
     """
 st.markdown(gizle_style, unsafe_allow_html=True)
@@ -31,7 +46,7 @@ st.markdown("---")
 
 # --------------------------------------------------------
 # 3. VERİ BAĞLANTISI
-# LİNKİNİ AŞAĞIYA YAPIŞTIRMAYI UNUTMA!
+
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
 try:
@@ -130,15 +145,3 @@ with tab2:
     
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
-        column_config={
-            "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
-            "Durum": st.column_config.TextColumn("Statü"),
-            "Ziyaret Notu": st.column_config.TextColumn("Saha Notları"),
-        },
-        use_container_width=True,
-        hide_index=True
-    )
-
-if st.button('🔄 Verileri Güncelle'):
-    st.cache_data.clear()
-    st.rerun()
