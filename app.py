@@ -5,23 +5,27 @@ import pydeck as pdk
 # 1. Sayfa Ayarları
 st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
-# --- 🛠️ GİZLİ CSS KODU (MENÜ VE FULLSCREEN GİZLEME) ---
+
 gizle_style = """
     <style>
-    /* Üst menü ve alt bilgiyi gizle */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    /* Sağ alttaki tam ekran butonunu (fullscreen) gizle */
-    button[title="View Fullscreen"] {
-        display: none !important;
-        visibility: hidden !important;
+    /* 1. 'Built with Streamlit' yazısını ve alt bilgiyi YOK ET */
+    footer {
+        visibility: hidden;
+        height: 0px;
     }
     
-    /* Harita kapsayıcısının kenarlarını temizle */
-    .stDeckGlJsonChart {
-        box-shadow: none !important;
+    /* 2. Sağ üstteki 3 noktalı menüyü ve renkli şeridi GİZLE */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* 3. Sağ alttaki 'Fullscreen' butonunu tamamen SİL */
+    button[title="View Fullscreen"] {
+        display: none !important;
+    }
+    
+    /* 4. Harita üzerindeki butonları ve gereksiz öğeleri temizle */
+    .stDeckGlJsonChart button {
+        display: none !important;
     }
     </style>
     """
@@ -34,7 +38,7 @@ with col1:
     try:
         st.image("logo.png", width=100)
     except:
-        st.write("🦷")
+        st.write("📍")
 with col2:
     st.title("Medibulut Saha Operasyon - CRM Paneli")
 
@@ -43,7 +47,7 @@ st.markdown("---")
 # --------------------------------------------------------
 # 3. VERİ BAĞLANTISI
 
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csvhttps://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
 try:
     df = pd.read_csv(sheet_url)
@@ -138,7 +142,6 @@ with tab2:
 
     # Link Yapısı
     df_liste['Navigasyon'] = df_liste.apply(lambda x: f"http://googleusercontent.com/maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
-    
     
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
