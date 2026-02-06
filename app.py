@@ -3,7 +3,7 @@ import pandas as pd
 import pydeck as pdk
 
 # 1. Sayfa Ayarları
-st.set_page_config(page_title="Medibulut Saha", page_icon="🦷", layout="wide")
+st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
 # 2. Logo ve Başlık
 col1, col2 = st.columns([1, 5])
@@ -18,22 +18,22 @@ with col2:
 st.markdown("---")
 
 # --------------------------------------------------------
-# 3. VERİ BAĞLANTISI (AKILLI KOORDİNAT DÜZELTİCİ 🧠)
-# LİNKİNİ AŞAĞIYA YAPIŞTIRMAYI UNUTMA!
+# 3. VERİ BAĞLANTISI (DÜZELTİLMİŞ LİNK YAPISI 🔗)
+
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?output=csv" 
 
 try:
     df = pd.read_csv(sheet_url)
     df.columns = df.columns.str.strip() 
     
-    # Koordinat Temizliği ve Düzeltme
+    # Koordinat Temizliği
     df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
 
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
 
-    # 90'dan büyükse 10'a bölme fonksiyonu (Hatalı giriş koruması)
+    # Koordinat Düzeltici (90'dan büyükse böl)
     def fix_coordinate(val, limit):
         if pd.isna(val): return val
         while abs(val) > limit: 
@@ -45,7 +45,7 @@ try:
 
     df = df.dropna(subset=['lat', 'lon'])
 
-    # Renk Ayarları (Yeşil: Gidildi, Kırmızı: Bekliyor)
+    # Renk Ayarları
     df['color_rgb'] = df['Durum'].apply(lambda x: [0, 255, 0, 200] if x == 'Gidildi' else [220, 20, 60, 200])
 
 except Exception as e:
@@ -58,7 +58,10 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("Toplam Klinik", len(df))
 col2.metric("✅ Ziyaret Edilen", len(df[df['Durum']=='Gidildi']))
 col3.metric("⏳ Bekleyen", len(df[df['Durum']!='Gidildi']), delta_color="inverse")
-col4.metric("Başarı Oranı", f"%{int(len(df[df['Durum']=='Gidildi'])/len(df)*100)}")
+if len(df) > 0:
+    col4.metric("Başarı Oranı", f"%{int(len(df[df['Durum']=='Gidildi'])/len(df)*100)}")
+else:
+    col4.metric("Başarı Oranı", "%0")
 
 # 5. Harita ve Liste
 tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (CRM)"])
@@ -106,12 +109,16 @@ with tab2:
     
     # Filtreleme
     durum_filtresi = st.multiselect("Duruma Göre Filtrele:", df["Durum"].unique(), default=df["Durum"].unique())
-    df_liste = df[df["Durum"].isin(durum_filtresi)].copy()
+    if durum_filtresi:
+        df_liste = df[df["Durum"].isin(durum_filtresi)].copy()
+    else:
+        df_liste = df.copy()
 
-    # Navigasyon Linki Ekleme
-    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"http://googleusercontent.com/maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
+    # 🛠️ GÜNCELLENEN KISIM BURASI 🛠️
+    # Eski hatalı link yerine standart Google Maps linki koyduk.
+    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}", axis=1)
     
-    # Tablo Gösterimi (AppSheet Mantığı)
+    # Tablo Gösterimi
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
         column_config={
