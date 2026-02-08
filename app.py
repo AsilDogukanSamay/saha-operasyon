@@ -8,24 +8,33 @@ st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
 gizle_style = """
     <style>
-    /* 1. 'Built with Streamlit' yazısını ve alt bilgiyi YOK ET */
-    footer {
-        visibility: hidden;
-        height: 0px;
+    /* 1. Üst Menü ve Başlıkları SİL */
+    #MainMenu {display: none !important;}
+    header {display: none !important;}
+    
+    /* 2. Alt Bilgi ve 'Built with Streamlit' SİL */
+    footer {display: none !important;}
+    
+    /* 3. Manage App ve Alt Toolbar SİL (En Önemlisi) */
+    div[data-testid="stToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
     }
     
-    /* 2. Sağ üstteki 3 noktalı menüyü ve renkli şeridi GİZLE */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    /* 3. Sağ alttaki 'Fullscreen' butonunu tamamen SİL */
+    /* 4. Fullscreen Butonu SİL */
     button[title="View Fullscreen"] {
         display: none !important;
     }
     
-    /* 4. Harita üzerindeki butonları ve gereksiz öğeleri temizle */
+    /* 5. Harita üzerindeki gereksiz butonları SİL */
     .stDeckGlJsonChart button {
         display: none !important;
+    }
+    
+    /* 6. Sayfa boşluklarını sıfırla */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
     }
     </style>
     """
@@ -46,7 +55,6 @@ st.markdown("---")
 
 # --------------------------------------------------------
 # 3. VERİ BAĞLANTISI
-
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
 try:
@@ -125,7 +133,12 @@ with tab1:
             layers=[uydu_layer, nokta_layer],
             tooltip={"text": "{Klinik Adı}\nYetkili: {Yetkili Kişi}\nDurum: {Durum}"}
         ))
-        st.caption("🔴 Kırmızı: Ziyaret Bekleyen | 🟢 Yeşil: Ziyaret Tamamlanan")
+        st.markdown("""
+        <div style='display: flex; gap: 15px; margin-top: 10px;'>
+            <div>🔴 <b>Kırmızı:</b> Ziyaret Bekleyen</div>
+            <div>🟢 <b>Yeşil:</b> Ziyaret Tamamlanan</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Harita hatası: {e}")
