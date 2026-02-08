@@ -2,56 +2,81 @@ import streamlit as st
 import pandas as pd
 import pydeck as pdk
 
-# 1. Sayfa Ayarları
-st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
-
-
-gizle_style = """
-    <style>
-    /* Üst, Alt ve Yan Menüleri SİL */
-    #MainMenu {display: none !important;}
-    header {display: none !important;}
-    footer {display: none !important;}
-    div[data-testid="stToolbar"] {display: none !important;}
-    button[title="View Fullscreen"] {display: none !important;}
-    .stDeckGlJsonChart button {display: none !important;}
-    .block-container {padding-top: 1rem !important; padding-bottom: 0rem !important;}
-    </style>
-    """
-st.markdown(gizle_style, unsafe_allow_html=True)
 # ------------------------------------------------
+# 1. Sayfa Ayarları
+st.set_page_config(
+    page_title="Medibulut Saha",
+    page_icon="📍",
+    layout="wide"
+)
 
-# 2. Logo ve Başlık
+# ------------------------------------------------
+# 2. Streamlit UI Temizleme
+gizle_style = """
+<style>
+#MainMenu {display: none !important;}
+header {display: none !important;}
+footer {display: none !important;}
+div[data-testid="stToolbar"] {display: none !important;}
+button[title="View Fullscreen"] {display: none !important;}
+.stDeckGlJsonChart button {display: none !important;}
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 0rem !important;
+}
+</style>
+"""
+st.markdown(gizle_style, unsafe_allow_html=True)
+
+# ------------------------------------------------
+# 3. Logo & Başlık
 col1, col2 = st.columns([1, 5])
 with col1:
     try:
         st.image("logo.png", width=100)
     except:
         st.write("📍")
+
 with col2:
     st.title("Medibulut Saha Operasyon - CRM Paneli")
 
 st.markdown("---")
 
-# --------------------------------------------------------
-# 3. VERİ BAĞLANTISI
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
+# ------------------------------------------------
+# 4. Veri Kaynağı (Google Sheets)
+sheet_url = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0"
+    "/pub?gid=0&single=true&output=csv"
+)
 
 try:
     df = pd.read_csv(sheet_url)
-    df.columns = df.columns.str.strip() 
-    
+    df.columns = df.columns.str.strip()
+
+    # ------------------------------------------------
     # Koordinat Temizliği
-    df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
-    df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
+    df['lat'] = (
+        df['lat']
+        .astype(str)
+        .str.replace(',', '.')
+        .str.replace(r'[^\d.-]', '', regex=True)
+    )
+
+    df['lon'] = (
+        df['lon']
+        .astype(str)
+        .str.replace(',', '.')
+        .str.replace(r'[^\d.-]', '', regex=True)
+    )
 
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
 
-    # Koordinat Düzeltici
     def fix_coordinate(val, limit):
-        if pd.isna(val): return val
-        while abs(val) > limit: 
+        if pd.isna(val):
+            return val
+        while abs(val) > limit:
             val = val / 10
         return val
 
@@ -60,69 +85,129 @@ try:
 
     df = df.dropna(subset=['lat', 'lon'])
 
-    # Renk Ayarları
-    df['color_rgb'] = df['Durum'].apply(lambda x: [0, 255, 0, 200] if x == 'Gidildi' else [220, 20, 60, 200])
+    # ------------------------------------------------
+    # Renkler
+    df['color_rgb'] = df['Durum'].apply(
+        lambda x: [0, 180, 0, 200] if x == 'Gidildi' else [220, 20, 60, 200]
+    )
 
 except Exception as e:
     st.error(f"Veri yüklenirken hata oluştu: {e}")
     st.stop()
-# --------------------------------------------------------
 
-# 4. İstatistikler
+# ------------------------------------------------
+# 5. İstatistikler
 col1, col2, col3, col4 = st.columns(4)
+
 col1.metric("Toplam Klinik", len(df))
-col2.metric("✅ Ziyaret Edilen", len(df[df['Durum']=='Gidildi']))
-col3.metric("⏳ Bekleyen", len(df[df['Durum']!='Gidildi']), delta_color="inverse")
+col2.metric("✅ Ziyaret Edilen", len(df[df['Durum'] == 'Gidildi']))
+col3.metric("⏳ Bekleyen", len(df[df['Durum'] != 'Gidildi']), delta_color="inverse")
+
 if len(df) > 0:
-    col4.metric("Başarı Oranı", f"%{int(len(df[df['Durum']=='Gidildi'])/len(df)*100)}")
+    col4.metric(
+        "Başarı Oranı",
+        f"%{int(len(df[df['Durum'] == 'Gidildi']) / len(df) * 100)}"
+    )
 else:
     col4.metric("Başarı Oranı", "%0")
 
-# 5. Harita ve Liste
+# ------------------------------------------------
+# 6. Harita & Liste
 tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (CRM)"])
 
+# ----------------- HARİTA -----------------
 with tab1:
-    try:
-        uydu_layer = pdk.Layer(
-            "TileLayer",
-            data=None,
-            get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    uydu_layer = pdk.Layer(
+        "TileLayer",
+        data=None,
+        get_tile_data=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        ),
+    )
+
+    nokta_layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=df,
+        get_position='[lon, lat]',
+        get_color='color_rgb',
+        get_radius=150,
+        pickable=True,
+    )
+
+    view_state = pdk.ViewState(
+        latitude=df['lat'].mean(),
+        longitude=df['lon'].mean(),
+        zoom=12,
+        pitch=45,
+    )
+
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style=None,
+            initial_view_state=view_state,
+            layers=[uydu_layer, nokta_layer],
+            tooltip={"text": "{Klinik Adı}\n{Durum}"}
         )
-        nokta_layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=df,
-            get_position='[lon, lat]',
-            get_color='color_rgb',
-            get_radius=150,
-            pickable=True,
-        )
-        view_state = pdk.ViewState(latitude=df['lat'].mean(), longitude=df['lon'].mean(), zoom=12, pitch=45)
+    )
 
-        st.pydeck_chart(pdk.Deck(map_style=None, initial_view_state=view_state, layers=[uydu_layer, nokta_layer], tooltip={"text": "{Klinik Adı}\n{Durum}"}))
-        st.markdown("<div style='display: flex; gap: 15px;'><div>🔴 Bekleyen</div><div>🟢 Tamamlanan</div></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='display:flex; gap:20px;'>"
+        "<div>🔴 Bekleyen</div>"
+        "<div>🟢 Tamamlanan</div>"
+        "</div>",
+        unsafe_allow_html=True
+    )
 
-    except Exception as e:
-        st.error(f"Harita hatası: {e}")
-
+# ----------------- LİSTE -----------------
 with tab2:
-    st.write("### 📋 Ziyaret Listesi")
-    
-    durum_filtresi = st.multiselect("Filtre:", df["Durum"].unique(), default=df["Durum"].unique())
-    df_liste = df[df["Durum"].isin(durum_filtresi)].copy() if durum_filtresi else df.copy()
+    st.subheader("📋 Ziyaret Listesi")
 
+    durum_filtresi = st.multiselect(
+        "Filtre:",
+        df["Durum"].unique(),
+        default=df["Durum"].unique()
+    )
 
-    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}", axis=1)
-    
+    df_liste = (
+        df[df["Durum"].isin(durum_filtresi)].copy()
+        if durum_filtresi else df.copy()
+    )
+
+    # ✅ Google Maps 404 FIX
+    df_liste['Navigasyon'] = df_liste.apply(
+        lambda x: (
+            "https://www.google.com/maps/search/"
+            f"?api=1&query={x['lat']},{x['lon']}"
+        ),
+        axis=1
+    )
+
     st.dataframe(
-        df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
+        df_liste[
+            [
+                'Klinik Adı',
+                'İlçe',
+                'Yetkili Kişi',
+                'İletişim',
+                'Durum',
+                'Ziyaret Notu',
+                'Navigasyon'
+            ]
+        ],
         column_config={
-            "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+            "Navigasyon": st.column_config.LinkColumn(
+                "Rota",
+                display_text="📍 Git"
+            ),
             "Durum": st.column_config.TextColumn("Statü"),
         },
         use_container_width=True,
         hide_index=True
     )
 
+# ------------------------------------------------
+# 7. Yenile
 if st.button('🔄 Verileri Güncelle'):
     st.cache_data.clear()
     st.rerun()
