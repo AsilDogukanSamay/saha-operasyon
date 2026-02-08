@@ -8,34 +8,14 @@ st.set_page_config(page_title="Medibulut Saha", page_icon="📍", layout="wide")
 
 gizle_style = """
     <style>
-    /* 1. Üst Menü ve Başlıkları SİL */
+    /* Üst, Alt ve Yan Menüleri SİL */
     #MainMenu {display: none !important;}
     header {display: none !important;}
-    
-    /* 2. Alt Bilgi ve 'Built with Streamlit' SİL */
     footer {display: none !important;}
-    
-    /* 3. Manage App ve Alt Toolbar SİL */
-    div[data-testid="stToolbar"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* 4. Fullscreen Butonu SİL */
-    button[title="View Fullscreen"] {
-        display: none !important;
-    }
-    
-    /* 5. Harita üzerindeki gereksiz butonları SİL */
-    .stDeckGlJsonChart button {
-        display: none !important;
-    }
-    
-    /* 6. Sayfa boşluklarını sıfırla */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-    }
+    div[data-testid="stToolbar"] {display: none !important;}
+    button[title="View Fullscreen"] {display: none !important;}
+    .stDeckGlJsonChart button {display: none !important;}
+    .block-container {padding-top: 1rem !important; padding-bottom: 0rem !important;}
     </style>
     """
 st.markdown(gizle_style, unsafe_allow_html=True)
@@ -103,14 +83,11 @@ tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (
 
 with tab1:
     try:
-        # Uydu Katmanı
         uydu_layer = pdk.Layer(
             "TileLayer",
             data=None,
             get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         )
-        
-        # Noktalar
         nokta_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -119,41 +96,21 @@ with tab1:
             get_radius=150,
             pickable=True,
         )
+        view_state = pdk.ViewState(latitude=df['lat'].mean(), longitude=df['lon'].mean(), zoom=12, pitch=45)
 
-        view_state = pdk.ViewState(
-            latitude=df['lat'].mean(), 
-            longitude=df['lon'].mean(), 
-            zoom=12,
-            pitch=45
-        )
-
-        st.pydeck_chart(pdk.Deck(
-            map_style=None,
-            initial_view_state=view_state,
-            layers=[uydu_layer, nokta_layer],
-            tooltip={"text": "{Klinik Adı}\nYetkili: {Yetkili Kişi}\nDurum: {Durum}"}
-        ))
-        st.markdown("""
-        <div style='display: flex; gap: 15px; margin-top: 10px;'>
-            <div>🔴 <b>Kırmızı:</b> Ziyaret Bekleyen</div>
-            <div>🟢 <b>Yeşil:</b> Ziyaret Tamamlanan</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.pydeck_chart(pdk.Deck(map_style=None, initial_view_state=view_state, layers=[uydu_layer, nokta_layer], tooltip={"text": "{Klinik Adı}\n{Durum}"}))
+        st.markdown("<div style='display: flex; gap: 15px;'><div>🔴 Bekleyen</div><div>🟢 Tamamlanan</div></div>", unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Harita hatası: {e}")
 
 with tab2:
-    st.write("### 📋 Ziyaret Listesi ve Detaylar")
+    st.write("### 📋 Ziyaret Listesi")
     
-    # Filtreleme
-    durum_filtresi = st.multiselect("Duruma Göre Filtrele:", df["Durum"].unique(), default=df["Durum"].unique())
-    if durum_filtresi:
-        df_liste = df[df["Durum"].isin(durum_filtresi)].copy()
-    else:
-        df_liste = df.copy()
+    durum_filtresi = st.multiselect("Filtre:", df["Durum"].unique(), default=df["Durum"].unique())
+    df_liste = df[df["Durum"].isin(durum_filtresi)].copy() if durum_filtresi else df.copy()
 
-   
+
     df_liste['Navigasyon'] = df_liste.apply(lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}", axis=1)
     
     st.dataframe(
@@ -161,7 +118,6 @@ with tab2:
         column_config={
             "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
             "Durum": st.column_config.TextColumn("Statü"),
-            "Ziyaret Notu": st.column_config.TextColumn("Saha Notları"),
         },
         use_container_width=True,
         hide_index=True
