@@ -15,7 +15,7 @@ gizle_style = """
     /* 2. Alt Bilgi ve 'Built with Streamlit' SİL */
     footer {display: none !important;}
     
-    /* 3. Manage App ve Alt Toolbar SİL (En Önemlisi) */
+    /* 3. Manage App ve Alt Toolbar SİL */
     div[data-testid="stToolbar"] {
         display: none !important;
         visibility: hidden !important;
@@ -153,8 +153,8 @@ with tab2:
     else:
         df_liste = df.copy()
 
-    # Link Yapısı
-    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"http://googleusercontent.com/maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
+   
+    df_liste['Navigasyon'] = df_liste.apply(lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}", axis=1)
     
     st.dataframe(
         df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
