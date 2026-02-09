@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# 2. UI Temizliği (Nükleer Mod ☢️)
+
 gizle_style = """
 <style>
 #MainMenu {display: none !important;}
@@ -60,7 +60,7 @@ try:
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
 
-    # Mantıksız koordinatları (900 gibi) mantıklı hale getir (90.0)
+  
     def fix_coordinate(val, limit):
         if pd.isna(val): return val
         while abs(val) > limit:
@@ -165,7 +165,7 @@ with tab2:
     else:
         df_liste = df.copy()
 
-    # 🛠️ DÜZELTİLEN LİNK FORMATI (Garanti Çalışan) 🛠️
+   
     # https://www.google.com/maps?q=
     df_liste['Navigasyon'] = df_liste.apply(
         lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
