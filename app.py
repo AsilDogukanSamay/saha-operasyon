@@ -12,7 +12,7 @@ st.set_page_config(
 
 # --- TEMA SEÇİCİ (Karanlık / Aydınlık Mod) ---
 st.sidebar.title("⚙️ Görünüm Ayarları")
-tema_secimi = st.sidebar.radio("Mod Seçiniz:", ["Aydınlık ☀️", "Karanlık 🌙"])
+tema_secimi = st.sidebar.radio("Mod Seçiniz:", ["Karanlık 🌙", "Aydınlık ☀️"])
 
 
 if tema_secimi == "Karanlık 🌙":
@@ -76,7 +76,8 @@ st.markdown("---")
 
 # ------------------------------------------------
 # 3. Veri Bağlantısı
-sheet_url = "BURAYA_KENDI_CSV_LINKINI_YAPISTIR" 
+
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
 
 try:
     df = pd.read_csv(sheet_url)
@@ -122,4 +123,84 @@ col2.metric("✅ Ziyaret Edilen", gidilen)
 col3.metric("⏳ Bekleyen", bekleyen, delta_color="inverse")
 
 basari_orani = int(gidilen / toplam * 100) if toplam > 0 else 0
-col4.metric("Başarı Oranı", f"%{basari_orani)
+
+col4.metric("Başarı Oranı", f"%{basari_orani}")
+
+# ------------------------------------------------
+# 5. Harita ve Liste
+tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (CRM)"])
+
+with tab1:
+    try:
+        # Uydu Katmanı
+        uydu_layer = pdk.Layer(
+            "TileLayer",
+            data=None,
+            get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        )
+        
+        nokta_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df,
+            get_position='[lon, lat]',
+            get_color='color_rgb',
+            get_radius=150,
+            pickable=True,
+        )
+        
+        view_state = pdk.ViewState(
+            latitude=df['lat'].mean(),
+            longitude=df['lon'].mean(),
+            zoom=12,
+            pitch=45,
+        )
+        
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style=None,
+                initial_view_state=view_state,
+                layers=[uydu_layer, nokta_layer],
+                tooltip={"text": "{Klinik Adı}\n{Durum}"}
+            )
+        )
+        st.markdown(
+            "<div style='display:flex; gap:20px; margin-top:10px;'>"
+            "<div>🔴 <b>Kırmızı:</b> Bekleyen</div>"
+            "<div>🟢 <b>Yeşil:</b> Tamamlanan</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        st.error(f"Harita hatası: {e}")
+
+with tab2:
+    st.subheader("📋 Ziyaret Listesi")
+    durum_filtresi = st.multiselect(
+        "Duruma Göre Filtrele:",
+        options=df["Durum"].unique(),
+        default=df["Durum"].unique()
+    )
+    if durum_filtresi:
+        df_liste = df[df["Durum"].isin(durum_filtresi)].copy()
+    else:
+        df_liste = df.copy()
+
+    # Navigasyon Linki 
+    df_liste['Navigasyon'] = df_liste.apply(
+        lambda x: f"https://www.google.com/maps?q=...?q={x['lat']},{x['lon']}",
+        axis=1
+    )
+
+    st.dataframe(
+        df_liste[['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Durum', 'Ziyaret Notu', 'Navigasyon']],
+        column_config={
+            "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+            "Durum": st.column_config.TextColumn("Statü"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+
+if st.button('🔄 Verileri Güncelle'):
+    st.cache_data.clear()
+    st.rerun()
