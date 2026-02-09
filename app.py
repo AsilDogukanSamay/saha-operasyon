@@ -2,48 +2,16 @@ import streamlit as st
 import pandas as pd
 import pydeck as pdk
 
-# 1. Sayfa Ayarları (Tema Hazırlığı)
+# ------------------------------------------------
+# 1. Sayfa Ayarları
 st.set_page_config(
     page_title="Medibulut Saha",
     page_icon="📍",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# --- TEMA SEÇİCİ (Karanlık / Aydınlık Mod) ---
-st.sidebar.title("⚙️ Görünüm Ayarları")
-tema_secimi = st.sidebar.radio("Mod Seçiniz:", ["Karanlık 🌙", "Aydınlık ☀️"])
-
-
-if tema_secimi == "Karanlık 🌙":
-    st.markdown("""
-        <style>
-        .stApp {
-            background-color: #0E1117;
-            color: #FAFAFA;
-        }
-        .stDataFrame {
-            background-color: #262730;
-        }
-        div[data-testid="stSidebar"] {
-            background-color: #262730;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-        <style>
-        .stApp {
-            background-color: #FFFFFF;
-            color: #000000;
-        }
-        div[data-testid="stSidebar"] {
-            background-color: #F0F2F6;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-
+# ------------------------------------------------
+# 2. UI Temizliği (Nükleer Mod ☢️)
 gizle_style = """
 <style>
 #MainMenu {display: none !important;}
@@ -61,7 +29,7 @@ button[title="View Fullscreen"] {display: none !important;}
 st.markdown(gizle_style, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 2. Logo & Başlık
+# 3. Logo & Başlık
 col1, col2 = st.columns([1, 5])
 with col1:
     try:
@@ -75,15 +43,14 @@ with col2:
 st.markdown("---")
 
 # ------------------------------------------------
-# 3. Veri Bağlantısı
-
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv" 
+# 4. Veri Bağlantısı
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 
 try:
     df = pd.read_csv(sheet_url)
     df.columns = df.columns.str.strip()
 
-    # Koordinat Temizliği
+    # --- Koordinat Temizliği ve Düzeltme ---
     df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
 
@@ -101,7 +68,7 @@ try:
 
     df = df.dropna(subset=['lat', 'lon'])
 
-    # Renk Ayarları
+    # --- Renk Ayarları ---
     df['color_rgb'] = df['Durum'].apply(
         lambda x: [0, 200, 0, 200] if x == 'Gidildi' else [220, 20, 60, 200]
     )
@@ -111,7 +78,7 @@ except Exception as e:
     st.stop()
 
 # ------------------------------------------------
-# 4. İstatistikler
+# 5. İstatistikler
 col1, col2, col3, col4 = st.columns(4)
 
 toplam = len(df)
@@ -123,22 +90,19 @@ col2.metric("✅ Ziyaret Edilen", gidilen)
 col3.metric("⏳ Bekleyen", bekleyen, delta_color="inverse")
 
 basari_orani = int(gidilen / toplam * 100) if toplam > 0 else 0
-
 col4.metric("Başarı Oranı", f"%{basari_orani}")
 
 # ------------------------------------------------
-# 5. Harita ve Liste
+# 6. Harita ve Liste
 tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (CRM)"])
 
 with tab1:
     try:
-        # Uydu Katmanı
         uydu_layer = pdk.Layer(
             "TileLayer",
             data=None,
             get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         )
-        
         nokta_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -147,14 +111,12 @@ with tab1:
             get_radius=150,
             pickable=True,
         )
-        
         view_state = pdk.ViewState(
             latitude=df['lat'].mean(),
             longitude=df['lon'].mean(),
             zoom=12,
             pitch=45,
         )
-        
         st.pydeck_chart(
             pdk.Deck(
                 map_style=None,
@@ -185,9 +147,9 @@ with tab2:
     else:
         df_liste = df.copy()
 
-    # Navigasyon Linki 
+    # Navigasyon Linki (Google Maps)
     df_liste['Navigasyon'] = df_liste.apply(
-        lambda x: f"https://www.google.com/maps?q=...?q={x['lat']},{x['lon']}",
+        lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
         axis=1
     )
 
@@ -201,6 +163,8 @@ with tab2:
         hide_index=True
     )
 
+# ------------------------------------------------
+# 7. Yenileme Butonu
 if st.button('🔄 Verileri Güncelle'):
     st.cache_data.clear()
     st.rerun()
