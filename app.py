@@ -122,4 +122,4 @@ col2.metric("✅ Ziyaret Edilen", gidilen)
 col3.metric("⏳ Bekleyen", bekleyen, delta_color="inverse")
 
 basari_orani = int(gidilen / toplam * 100) if toplam > 0 else 0
-col4.metric("Başarı Oranı", f"%{basari_orani
+col4.metric("Başarı Oranı", f"%{basari_orani)
