@@ -29,7 +29,7 @@ button[title="View Fullscreen"] {display: none !important;}
 st.markdown(gizle_style, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 3. Logo & Başlık
+# 2. Logo & Başlık
 col1, col2 = st.columns([1, 5])
 with col1:
     try:
@@ -43,8 +43,7 @@ with col2:
 st.markdown("---")
 
 # ------------------------------------------------
-# 4. Veri Bağlantısı
-# NOT: Buradaki link senin attığın link, eğer değiştiyse güncellemeyi unutma.
+# 3. Veri Bağlantısı
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 
 try:
@@ -84,7 +83,7 @@ except Exception as e:
     st.stop()
 
 # ------------------------------------------------
-# 5. İstatistikler
+# 4. İstatistikler
 col1, col2, col3, col4 = st.columns(4)
 
 toplam = len(df)
@@ -99,7 +98,7 @@ basari_orani = int(gidilen / toplam * 100) if toplam > 0 else 0
 col4.metric("Başarı Oranı", f"%{basari_orani}")
 
 # ------------------------------------------------
-# 6. Harita ve Liste Sekmeleri
+# 5. Harita ve Liste Sekmeleri
 tab1, tab2 = st.tabs(["🛰️ Uydu Haritası (Saha)", "📋 Müşteri Listesi (CRM)"])
 
 # --- TAB 1: HARİTA ---
@@ -186,7 +185,7 @@ with tab2:
     )
 
 # ------------------------------------------------
-# 7. Yenileme Butonu
+# 6. Yenileme Butonu
 if st.button('🔄 Verileri Güncelle'):
     st.cache_data.clear()
     st.rerun()
