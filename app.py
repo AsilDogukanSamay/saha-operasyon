@@ -38,30 +38,47 @@ rol = st.sidebar.selectbox(
 
 # ------------------------------------------------
 # 4. Veri Yükleme
-# ⚠️ Google Sheets CSV Linkini Buraya Yapıştır
+# ⚠️ Google Sheets Linkin (Aynı kalsın)
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 
 try:
     df = pd.read_csv(sheet_url)
-    df.columns = df.columns.str.strip() # Boşlukları temizle
+    df.columns = df.columns.str.strip() # Sütun isimlerindeki boşlukları al
 
-    # --- Koordinat Düzeltme ---
-    df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
-    df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
-    
-    df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
-    df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
+    # --- KOORDİNAT TEMİZLİK ROBOTU (YENİ) 🤖 ---
+    # Bu fonksiyon ne gelirse gelsin (Kısa, Uzun, Boşluklu) sayıya çevirir.
+    def temizle_koordinat(deger):
+        try:
+            # 1. Önce string'e (yazıya) çevirip kenar boşluklarını sil
+            s = str(deger).strip()
+            
+            # 2. Virgül varsa noktaya çevir (40,123 -> 40.123)
+            s = s.replace(',', '.')
+            
+            # 3. Sadece rakam, nokta ve eksi işaretini bırak (Harfleri sil)
+            import re
+            s = re.sub(r'[^\d.-]', '', s)
+            
+            # 4. Eğer boşsa (hiçbir şey kalmadıysa) None döndür
+            if not s: return None
+            
+            # 5. Sayıya (float) çevir
+            val = float(s)
+            
+            # 6. Eğer sayı 90'dan büyükse (örn: 40155) 10'a bölerek küçült
+            # (Çanakkale 40 enleminde, 400 olamaz)
+            while val > 90 and val < 1000000: # Sonsuz döngüye girmesin diye limit
+                val /= 10
+                
+            return val
+        except:
+            return None # Hata olursa boş geç
 
-    # 401.55 -> 40.155 Yapan Akıllı Fonksiyon (Senin veri formatın için şart)
-    def fix_coord(val, limit):
-        if pd.isna(val): return val
-        while val > limit:
-            val /= 10
-        return val
+    # Fonksiyonu Uygula
+    df['lat'] = df['lat'].apply(temizle_koordinat)
+    df['lon'] = df['lon'].apply(temizle_koordinat)
 
-    df['lat'] = df['lat'].apply(lambda x: fix_coord(x, 90))
-    df['lon'] = df['lon'].apply(lambda x: fix_coord(x, 180))
-
+    # Koordinatı kurtarılamayan bozuk satırları sil
     df = df.dropna(subset=['lat', 'lon'])
 
     # --- Tarih Formatı ---
@@ -73,6 +90,10 @@ try:
         isim = "Doğukan" if "Doğukan" in rol else "Ozan"
         if 'Personel' in df.columns:
             df = df[df['Personel'].str.contains(isim, case=False, na=False)]
+
+except Exception as e:
+    st.error(f"Veri okunurken hata oluştu: {e}")
+    st.stop()
 
     # ------------------------------------------------
     # 5. İstatistikler
