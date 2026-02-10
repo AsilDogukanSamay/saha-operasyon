@@ -8,8 +8,8 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V12.0",
-    page_icon="🔒",
+    page_title="Medibulut Saha V13.0",
+    page_icon="👁️",
     layout="wide"
 )
 
@@ -30,25 +30,21 @@ div.stButton > button:first-child {
 
 # ------------------------------------------------
 # 2. GİRİŞ SİSTEMİ (LOGIN) 🔐
-# Kullanıcı Adı ve Şifreler Burada Tanımlı
 KULLANICILAR = {
     "admin": {"sifre": "medibulut123", "rol": "Admin", "isim": "Yönetici"},
     "dogukan": {"sifre": "1234", "rol": "Personel", "isim": "Doğukan"},
     "ozan": {"sifre": "1234", "rol": "Personel", "isim": "Ozan"}
 }
 
-# Oturum Durumu Kontrolü
 if 'giris_yapildi' not in st.session_state:
     st.session_state['giris_yapildi'] = False
     st.session_state['aktif_kullanici'] = None
 
-# --- GİRİŞ EKRANI TASARIMI ---
 if not st.session_state['giris_yapildi']:
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
         st.title("🔒 Medibulut Giriş Paneli")
         st.info("Lütfen kullanıcı adı ve şifrenizle giriş yapınız.")
-        
         kullanici_adi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
         
@@ -57,26 +53,24 @@ if not st.session_state['giris_yapildi']:
                 if KULLANICILAR[kullanici_adi]["sifre"] == sifre:
                     st.session_state['giris_yapildi'] = True
                     st.session_state['aktif_kullanici'] = KULLANICILAR[kullanici_adi]
-                    st.success("Giriş Başarılı! Yönlendiriliyorsunuz...")
+                    st.success("Giriş Başarılı!")
                     st.rerun()
                 else:
                     st.error("Hatalı Şifre!")
             else:
                 st.error("Kullanıcı Bulunamadı!")
-    st.stop() # Giriş yapılmadıysa kodun geri kalanını çalıştırma
+    st.stop()
 
 # ------------------------------------------------
-# 3. ANA UYGULAMA (Giriş Yapıldıysa Burası Çalışır)
+# 3. ANA UYGULAMA
 
-# Aktif Kullanıcı Bilgilerini Al
 kullanici = st.session_state['aktif_kullanici']
 
-# Üst Bar (Kullanıcı Bilgisi ve Çıkış)
 c1, c2 = st.columns([6, 1])
 with c1:
     st.title(f"Hoşgeldin, {kullanici['isim']} 👋")
     if kullanici['rol'] == "Admin":
-        st.caption("Yönetici Modu: Tüm Veriler Görüntüleniyor")
+        st.caption("Yönetici Modu: Tüm Ekibin Verileri Görüntüleniyor")
     else:
         st.caption("Personel Modu: Sadece Kendi Verileriniz Görüntüleniyor")
 with c2:
@@ -124,16 +118,14 @@ try:
     if 'İletişim' in df.columns:
         df['İletişim'] = df['İletişim'].apply(telefon_susle)
 
-    # --- Diğer İşlemler ---
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'], dayfirst=True, errors='coerce')
 
     if 'Gidildi mi?' not in df.columns:
         df['Gidildi mi?'] = "Hayır"
 
-    # --- 🚨 KİŞİYE ÖZEL FİLTRELEME (EN ÖNEMLİ KISIM) ---
+    # --- 🚨 KİŞİYE ÖZEL FİLTRELEME ---
     if kullanici['rol'] != "Admin":
-        # Eğer yönetici değilse, sadece kendi ismini içeren satırları getir
         if 'Personel' in df.columns:
             df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
     
@@ -143,23 +135,21 @@ try:
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
     bekleyen = toplam - gidilen
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
-    warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
     
     # Mail İçeriği
     konu = f"Günlük Rapor - {kullanici['isim']}"
-    govde = f"""Merhaba,
-    
-Kullanıcı: {kullanici['isim']}
-📊 GENEL DURUM:
-✅ Ziyaret: {gidilen}
-⏳ Kalan: {bekleyen}
+    govde = f"""Rapor Sahibi: {kullanici['isim']}
+📊 DURUM:
+✅ Ziyaret: {gidilen} / {toplam}
 🔥 Hot Lead: {hot}
 
 🚨 DETAYLAR:
 """
     hot_leads = df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)]
     for i, row in hot_leads.iterrows():
-        govde += f"- {row['Klinik Adı']} ({row['Yetkili Kişi']}) -> {row['Ziyaret Notu']}\n"
+        # Mailde de Personel ismini gösterelim
+        personel_bilgi = f" ({row['Personel']})" if 'Personel' in row else ""
+        govde += f"- {row['Klinik Adı']}{personel_bilgi} -> {row['Ziyaret Notu']}\n"
     
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
 
@@ -208,6 +198,11 @@ Kullanıcı: {kullanici['isim']}
 
     with tab1:
         if len(df) > 0:
+            # Tooltip'e de Personel bilgisini ekleyelim
+            tooltip_html = "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"
+            if 'Personel' in df.columns:
+                tooltip_html += "\n👤 {Personel}"
+
             layer = pdk.Layer(
                 "ScatterplotLayer",
                 data=df,
@@ -225,14 +220,17 @@ Kullanıcı: {kullanici['isim']}
                 map_style=None,
                 layers=[layer],
                 initial_view_state=view,
-                tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
+                tooltip={"text": tooltip_html}
             ))
         else:
             st.warning("Veri bulunamadı.")
 
     with tab2:
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
-        cols = ['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Gidildi mi?', 'Lead Status', 'Rota']
+        
+        # ⚠️ İŞTE BURASI: 'Personel' sütununu listeye ekledik!
+        cols = ['Klinik Adı', 'Personel', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Gidildi mi?', 'Lead Status', 'Rota']
+        
         mevcut = [c for c in cols if c in df.columns]
         st.dataframe(
             df[mevcut],
