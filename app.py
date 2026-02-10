@@ -32,7 +32,7 @@ with col1:
         st.write("🦷")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.2 - Admin & Personel Yönetim Modülü")
+    st.caption("v2.3 - Admin & Personel Yönetim Modülü")
 
 st.markdown("---")
 
@@ -54,20 +54,17 @@ try:
     df = pd.read_csv(sheet_url)
     df.columns = df.columns.str.strip()
 
-    # --- Koordinatları Zorla Sayıya Çevir ---
-    # Virgülleri noktaya çevir, harfleri sil
+    # --- Koordinat Temizliği ---
     df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
 
-    # Koordinatı bozuk olanları sil (Harita patlamasın)
     df = df.dropna(subset=['lat', 'lon'])
 
-    # --- Tarih Formatı (Hata Önleyici) ---
+    # --- Tarih Formatı ---
     if 'Tarih' in df.columns:
-        # Önce string'e çevirip temizleyelim, sonra datetime yapalım
         df['Tarih'] = pd.to_datetime(df['Tarih'].astype(str), dayfirst=True, errors='coerce')
 
     # --- Renk Atama (Lead Status) ---
@@ -76,7 +73,7 @@ try:
         if 'hot' in s: return [255, 0, 0, 200]     # Kırmızı 🔥
         if 'warm' in s: return [255, 165, 0, 200]  # Turuncu 🟠
         if 'cold' in s: return [0, 0, 255, 200]    # Mavi ❄️
-        return [0, 200, 0, 200]                    # Yeşil (Standart)
+        return [0, 200, 0, 200]                    # Yeşil
 
     if 'Lead Status' in df.columns:
         df['color_rgb'] = df['Lead Status'].apply(get_color)
@@ -90,47 +87,35 @@ try:
     )
 
 except Exception as e:
-    st.error(f"Veri okunurken hata oluştu. Lütfen Excel linkini ve sütun adlarını kontrol edin. Hata: {e}")
+    st.error(f"Veri Hatası: {e}")
     st.stop()
 
 # ------------------------------------------------
-# 5. Filtreleme (Admin vs Personel)
+# 5. Filtreleme
 
 if "Admin" in kullanici_rolu:
     st.info("🔑 **Yönetici Modu:** Tüm saha ekibi görüntüleniyor.")
-    
-    # Tarih Filtresi (Varsayılan olarak filtreleme YAPMAZ, hepsini gösterir)
     if 'Tarih' in df.columns and not df['Tarih'].isnull().all():
         min_date = df['Tarih'].min()
         max_date = df['Tarih'].max()
-        
-        # Eğer tarih verisi varsa filtreyi göster
         if pd.notnull(min_date) and pd.notnull(max_date):
             c1, c2 = st.sidebar.columns(2)
             baslangic = c1.date_input("Başlangıç", min_date)
             bitis = c2.date_input("Bitiş", max_date)
-            
-            # Filtrele
             df = df[(df['Tarih'].dt.date >= baslangic) & (df['Tarih'].dt.date <= bitis)]
-
 else:
-    # Personel Modu
     isim = "Doğukan" if "Doğukan" in kullanici_rolu else "Ozan"
     st.warning(f"👤 **Personel Modu:** Sadece {isim} verileri.")
     if 'Personel' in df.columns:
         df = df[df['Personel'].str.contains(isim, na=False, case=False)]
 
 # ------------------------------------------------
-# 6. İstatistikler & BAŞARI ORANI
+# 6. İstatistikler
 c1, c2, c3, c4 = st.columns(4)
 
 total = len(df)
-# Sıcak + Ilık + Gidildi = Başarılı sayalım (Örnek Mantık)
-basarili_sayisi = len(df[df['Lead Status'].astype(str).str.contains('Hot|Warm', case=False, na=False)])
-if 'Hot' not in str(df['Lead Status'].unique()): # Eğer Lead Status yoksa eski usul
-    basarili_sayisi = len(df) 
-
-oran = int((basarili_sayisi / total) * 100) if total > 0 else 0
+basarili = len(df[df['Lead Status'].astype(str).str.contains('Hot|Warm', case=False, na=False)]) if 'Lead Status' in df.columns else 0
+oran = int((basarili / total) * 100) if total > 0 else 0
 
 c1.metric("Toplam Ziyaret", total)
 
@@ -138,23 +123,18 @@ if 'Lead Status' in df.columns:
     c2.metric("🔥 Hot Lead", len(df[df['Lead Status'].astype(str).str.contains('Hot', case=False, na=False)]))
     c3.metric("🟠 Warm Lead", len(df[df['Lead Status'].astype(str).str.contains('Warm', case=False, na=False)]))
 else:
-    c2.metric("Gidilen", total)
-    c3.metric("Bekleyen", 0)
+    c2.metric("-", "-")
+    c3.metric("-", "-")
 
-# BAŞARI ORANI GERİ GELDİ!
 c4.metric("🎯 Başarı Oranı", f"%{oran}")
 
 # ------------------------------------------------
 # 7. Harita ve Liste
-tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Listesi"])
+tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
 with tab1:
     try:
-        uydu_layer = pdk.Layer(
-            "TileLayer",
-            data=None,
-            get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        )
+        # 🛠️ DÜZELTİLEN KISIM: Garantili Harita Stili
         nokta_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -163,22 +143,31 @@ with tab1:
             get_radius=200,
             pickable=True,
         )
+        
         view_state = pdk.ViewState(
             latitude=df['lat'].mean() if len(df) > 0 else 40.1553,
             longitude=df['lon'].mean() if len(df) > 0 else 26.4142,
             zoom=12,
             pitch=45,
         )
-        st.pydeck_chart(pdk.Deck(map_style=None, initial_view_state=view_state, layers=[uydu_layer, nokta_layer], tooltip={"text": "{Klinik Adı}\n{Lead Status}"}))
+        
+        # 'mapbox://styles/mapbox/dark-v10' veya 'light-v9' gibi standart stiller kullanıyoruz.
+        # Böylece ekstra uydu katmanına gerek kalmıyor ve siyah ekran hatası çözülüyor.
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="mapbox://styles/mapbox/dark-v10",
+                initial_view_state=view_state,
+                layers=[nokta_layer],
+                tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
+            )
+        )
         
         st.markdown("🔥 **Hot:** Satışa Hazır | 🟠 **Warm:** İlgili | ❄️ **Cold:** İlgisiz | 🟢 **Yeşil:** Standart")
-    except:
-        st.write("Harita yüklenemedi.")
+    except Exception as e:
+        st.error(f"Harita yüklenemedi: {e}")
 
 with tab2:
-    # Gösterilecek Sütunlar (Temiz Liste)
     cols = ['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Lead Status', 'Ziyaret Notu', 'Tarih', 'Personel', 'Navigasyon']
-    # Olanları seç
     final_cols = [c for c in cols if c in df.columns]
     
     st.dataframe(
