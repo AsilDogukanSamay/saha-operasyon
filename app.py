@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import re
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V4.2",
+    page_title="Medibulut Saha V5.0",
     page_icon="📍",
     layout="wide"
 )
@@ -16,6 +17,11 @@ st.markdown("""
 #MainMenu {display:none;}
 header {display:none;}
 footer {display:none;}
+div.stButton > button:first-child {
+    background-color: #0099ff;
+    color: white;
+    border-radius: 8px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -24,7 +30,7 @@ footer {display:none;}
 c1, c2 = st.columns([4,1])
 with c1:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v4.2 – Tam Detaylı Liste & Akıllı Harita")
+    st.caption("v5.0 – Final Stabil Sürüm (Otomatik Koordinat + Çift Mod)")
 
 st.markdown("---")
 
@@ -37,36 +43,49 @@ rol = st.sidebar.selectbox(
 )
 
 # ------------------------------------------------
-# 4. Veri Yükleme
-# ⚠️ Google Sheets CSV Linkini Buraya Yapıştır
+# 4. Veri Yükleme ve Temizleme
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 
 try:
     df = pd.read_csv(sheet_url)
     df.columns = df.columns.str.strip() # Boşlukları temizle
 
-    # --- Koordinat Düzeltme ---
-    df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
-    df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
-    
-    df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
-    df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
+    # --- SÜPER AKILLI KOORDİNAT TEMİZLEYİCİ 🤖 ---
+    # Bu fonksiyon hem 40.1250'yi hem de 40.1653942248... olanı tanır.
+    def temizle_koordinat(deger):
+        try:
+            # Önce metne çevir, boşlukları sil
+            s = str(deger).strip()
+            # Virgülü noktaya çevir
+            s = s.replace(',', '.')
+            # İçindeki harfleri ve garip işaretleri sil, sadece sayı kalsın
+            s = re.sub(r'[^\d.-]', '', s)
+            
+            if not s: return None
+            
+            val = float(s)
+            
+            # Eğer sayı 90'dan büyükse (örn: 40155) küçült
+            while val > 90:
+                val /= 10
+            return val
+        except:
+            return None
 
-    # 401.55 -> 40.155 Yapan Akıllı Fonksiyon (Senin veri formatın için şart)
-    def fix_coord(val, limit):
-        if pd.isna(val): return val
-        while val > limit:
-            val /= 10
-        return val
+    # Koordinatları temizle
+    df['lat'] = df['lat'].apply(temizle_koordinat)
+    df['lon'] = df['lon'].apply(temizle_koordinat)
 
-    df['lat'] = df['lat'].apply(lambda x: fix_coord(x, 90))
-    df['lon'] = df['lon'].apply(lambda x: fix_coord(x, 180))
-
+    # Bozuk olan satırları sil (Haritayı çökertmesin)
     df = df.dropna(subset=['lat', 'lon'])
 
-    # --- Tarih Formatı ---
+    # --- Diğer Düzenlemeler ---
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'], dayfirst=True, errors='coerce')
+
+    # "Gidildi mi?" sütunu yoksa varsayılan olarak "Hayır" yap
+    if 'Gidildi mi?' not in df.columns:
+        df['Gidildi mi?'] = "Hayır"
 
     # --- Rol Filtresi ---
     if "Admin" not in rol:
@@ -76,29 +95,25 @@ try:
 
     # ------------------------------------------------
     # 5. İstatistikler
-    if 'Gidildi mi?' not in df.columns:
-        df['Gidildi mi?'] = "Hayır" # Sütun yoksa varsayılan Hayır olsun
-
     c1, c2, c3, c4 = st.columns(4)
     toplam = len(df)
     
-    # "Gidildi mi?" sütununda "Evet" yazanları say
-    gidilen_sayisi = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
-    bekleyen_sayisi = toplam - gidilen_sayisi
+    # İstatistik Hesaplama
+    gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
+    bekleyen = toplam - gidilen
     
-    # Lead Analizi
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
     warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
     
-    basari_orani = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
+    basari = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
 
     c1.metric("Toplam Hedef", toplam)
-    c2.metric("✅ Ziyaret Edilen", gidilen_sayisi)
-    c3.metric("⏳ Bekleyen", bekleyen_sayisi)
-    c4.metric("🎯 Potansiyel Başarı", f"%{basari_orani}")
+    c2.metric("✅ Ziyaret Edilen", gidilen)
+    c3.metric("⏳ Bekleyen", bekleyen)
+    c4.metric("🎯 Potansiyel Başarı", f"%{basari}")
 
     # ------------------------------------------------
-    # 6. Harita Modu
+    # 6. Harita Modu ve Renklendirme
     st.write("")
     harita_modu = st.radio(
         "🗺️ Harita Görünüm Modu:",
@@ -106,33 +121,42 @@ try:
         horizontal=True
     )
 
-    # --- RENK FONKSİYONU ---
-    def renk_belirle(row):
-        gidildi = str(row['Gidildi mi?']).lower()
-        status = str(row['Lead Status']).lower()
+    # Renkleri belirle (Safe Mode)
+    renk_listesi = []
+    
+    for index, row in df.iterrows():
+        gidildi = str(row.get('Gidildi mi?', '')).lower()
+        status = str(row.get('Lead Status', '')).lower()
+        
+        renk = [0, 200, 0] # Varsayılan Yeşil
 
-        # MOD 1: OPERASYON (Gidildi mi?)
         if "Operasyon" in harita_modu:
+            # Mod 1: Operasyon
             if "evet" in gidildi:
-                return [0, 200, 0] # YEŞİL (Tamam)
+                renk = [0, 200, 0] # Yeşil
             else:
-                return [200, 0, 0] # KIRMIZI (Gitmen Lazım)
-
-        # MOD 2: ANALİZ (Lead Durumu)
+                renk = [200, 0, 0] # Kırmızı
         else:
+            # Mod 2: Analiz
             if "hayır" in gidildi:
-                return [128, 128, 128] # GRİ (Gitmediysen analiz yok)
-            
-            if "hot" in status: return [255, 0, 0]    # Alev Kırmızısı
-            if "warm" in status: return [255, 165, 0] # Turuncu
-            if "cold" in status: return [0, 0, 255]   # Mavi
-            return [0, 200, 0] # Standart Yeşil
+                renk = [128, 128, 128] # Gri
+            elif "hot" in status:
+                renk = [255, 0, 0] # Kırmızı
+            elif "warm" in status:
+                renk = [255, 165, 0] # Turuncu
+            elif "cold" in status:
+                renk = [0, 0, 255] # Mavi
+            else:
+                renk = [0, 200, 0] # Yeşil
+        
+        renk_listesi.append(renk)
 
-    df[['r','g','b']] = df.apply(lambda row: pd.Series(renk_belirle(row)), axis=1)
+    # Renkleri DataFrame'e ekle
+    df['color_final'] = renk_listesi
 
     # ------------------------------------------------
     # 7. Harita ve Liste
-    tab1, tab2 = st.tabs(["🗺️ Harita", "📋 Tüm Detaylar & Rota"])
+    tab1, tab2 = st.tabs(["🗺️ Harita", "📋 Detaylı Liste & Rota"])
 
     with tab1:
         if len(df) > 0:
@@ -140,7 +164,7 @@ try:
                 "ScatterplotLayer",
                 data=df,
                 get_position='[lon, lat]',
-                get_color='[r, g, b]',
+                get_color='color_final', # Hesapladığımız renk sütunu
                 get_radius=150,
                 pickable=True
             )
@@ -159,27 +183,26 @@ try:
             ))
 
             if "Operasyon" in harita_modu:
-                st.info("🔴 **Kırmızı:** Henüz Gidilmedi | 🟢 **Yeşil:** Ziyaret Yapıldı")
+                st.info("🔴 **Kırmızı:** Henüz Gidilmedi | 🟢 **Yeşil:** Ziyaret Tamamlandı")
             else:
                 st.info("🔥 **Hot:** Sıcak | 🟠 **Warm:** Ilık | 🔵 **Cold:** Soğuk | ⚪ **Gri:** Ziyaret Bekliyor")
         else:
-            st.error("Veri yok.")
+            st.warning("Gösterilecek veri bulunamadı.")
 
     with tab2:
+        # Navigasyon Linki Oluştur
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
 
-        # BURASI SENİN İSTEDİĞİN TÜM SÜTUNLAR
         cols = [
             'Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 
             'Gidildi mi?', 'Lead Status', 'Ziyaret Notu', 
             'Tarih', 'Personel', 'Rota'
         ]
         
-        # Excel'de olup olmadığını kontrol et
-        mevcut = [c for c in cols if c in df.columns]
+        mevcut_cols = [c for c in cols if c in df.columns]
 
         st.dataframe(
-            df[mevcut],
+            df[mevcut_cols],
             column_config={
                 "Rota": st.column_config.LinkColumn("Navigasyon", display_text="📍 Git"),
                 "Gidildi mi?": st.column_config.TextColumn("Ziyaret?", help="Evet/Hayır"),
@@ -190,10 +213,10 @@ try:
         )
 
 except Exception as e:
-    st.error(f"Bir hata oluştu: {e}")
+    st.error(f"Sistemde bir hata oluştu: {e}")
 
 # ------------------------------------------------
-# 8. Yenile
+# 8. Yenile Butonu
 if st.button("🔄 Verileri Güncelle"):
     st.cache_data.clear()
     st.rerun()
