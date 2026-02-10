@@ -32,7 +32,7 @@ with col1:
         st.write("🦷")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.3 - Admin & Personel Yönetim Modülü")
+    st.caption("v2.4 - Admin & Personel Yönetim Modülü")
 
 st.markdown("---")
 
@@ -134,7 +134,14 @@ tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
 with tab1:
     try:
-        # 🛠️ DÜZELTİLEN KISIM: Garantili Harita Stili
+        # 🛠️ DÜZELTME: TOKEN GEREKTİRMEYEN HARİTA (OpenStreetMap)
+        # Bu katman harita altlığını internetten bedava çeker
+        osm_layer = pdk.Layer(
+            "TileLayer",
+            data=None,
+            get_tile_data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        )
+        
         nokta_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -151,13 +158,12 @@ with tab1:
             pitch=45,
         )
         
-        # 'mapbox://styles/mapbox/dark-v10' veya 'light-v9' gibi standart stiller kullanıyoruz.
-        # Böylece ekstra uydu katmanına gerek kalmıyor ve siyah ekran hatası çözülüyor.
+        # map_style=None yaparak Mapbox zorunluluğunu kaldırdık
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/dark-v10",
+                map_style=None,
                 initial_view_state=view_state,
-                layers=[nokta_layer],
+                layers=[osm_layer, nokta_layer], # Önce harita, sonra noktalar
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
             )
         )
