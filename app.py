@@ -99,12 +99,35 @@ try:
 
     # ------------------------------------------------
     # 6. Harita Modu
-    st.write("")
-    harita_modu = st.radio(
-        "🗺️ Harita Görünüm Modu:",
-        ["🔴/🟢 Operasyon (Gidildi/Gidilmedi)", "🔥/❄️ Analiz (Sıcak/Soğuk)"],
-        horizontal=True
-    )
+   # --- GÜNCELLENMİŞ RENK KODU (HATA ÖNLEYİCİ) ---
+    def renk_belirle(row):
+        gidildi = str(row['Gidildi mi?']).lower() if 'Gidildi mi?' in row else ""
+        status = str(row['Lead Status']).lower() if 'Lead Status' in row else ""
+
+        # MOD 1: OPERASYON
+        if "Operasyon" in harita_modu:
+            if "evet" in gidildi: return [0, 200, 0] # Yeşil
+            else: return [200, 0, 0] # Kırmızı
+            
+        # MOD 2: ANALİZ
+        else:
+            if "hayır" in gidildi: return [128, 128, 128] # Gri
+            if "hot" in status: return [255, 0, 0]
+            if "warm" in status: return [255, 165, 0]
+            if "cold" in status: return [0, 0, 255]
+            return [0, 200, 0] # Varsayılan Yeşil
+
+    # Eğer veri varsa renkleri ata, yoksa boş geç (Hata vermesin)
+    if len(df) > 0:
+        try:
+            # apply fonksiyonuna result_type='expand' ekledik, listeyi sütunlara böler
+            renkler = df.apply(lambda row: renk_belirle(row), axis=1, result_type='expand')
+            df['r'] = renkler[0]
+            df['g'] = renkler[1]
+            df['b'] = renkler[2]
+        except Exception as e:
+            st.warning("Renkler oluşturulurken geçici bir sorun oldu, varsayılan renk kullanılıyor.")
+            df['r'], df['g'], df['b'] = 0, 200, 0
 
     # --- RENK FONKSİYONU ---
     def renk_belirle(row):
