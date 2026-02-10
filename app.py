@@ -3,7 +3,8 @@ import pandas as pd
 import pydeck as pdk
 from datetime import datetime
 
-# 1. Sayfa Ayarları
+# ------------------------------------------------
+# 1. Sayfa ve Tema Ayarları
 st.set_page_config(
     page_title="Medibulut Saha V2",
     page_icon="🦷",
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
+# Menüleri Gizle (Temiz Görünüm)
 st.markdown("""
 <style>
 #MainMenu {display: none !important;}
@@ -21,7 +22,8 @@ div[data-testid="stToolbar"] {display: none !important;}
 </style>
 """, unsafe_allow_html=True)
 
-# 2. BAŞLIK VE LOGO
+# ------------------------------------------------
+# 2. Başlık ve Logo
 col1, col2 = st.columns([1, 5])
 with col1:
     try:
@@ -35,132 +37,186 @@ with col2:
 st.markdown("---")
 
 # ------------------------------------------------
-# 3. SİMÜLASYON GİRİŞ SİSTEMİ
+# 3. Giriş Simülasyonu (Sidebar)
 st.sidebar.header("👤 Kullanıcı Girişi")
-
-# Gerçekte burası şifreli olur, şimdilik demo için seçmeli yapıyoruz
 kullanici_rolu = st.sidebar.selectbox(
-    "Giriş Yapılacak Rol:",
-    ["Admin (Orhan/Serkan)", "Saha Personeli (Doğukan)", "Saha Personeli (Ozan)"]
+    "Rol Seçiniz:",
+    ["Admin (Yönetici)", "Saha Personeli (Doğukan)", "Saha Personeli (Ozan)"]
 )
-
 st.sidebar.markdown("---")
 
 # ------------------------------------------------
-# 4. VERİ BAĞLANTISI
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
+# 4. Veri Bağlantısı ve İşleme
+# ⚠️ BURAYA KENDİ LİNKİNİ YAPIŞTIRMAYI UNUTMA!
+sheet_url = "BURAYA_KENDI_CSV_LINKINI_YAPISTIR"
 
 try:
     df = pd.read_csv(sheet_url)
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip() # Boşlukları temizle
 
-    # Koordinat Düzenleme
-    df['lat'] = pd.to_numeric(df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True), errors='coerce')
-    df['lon'] = pd.to_numeric(df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True), errors='coerce')
+    # --- Koordinat Temizliği ---
+    # Virgül varsa noktaya çevir ve temizle
+    df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
+    df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     
-    # Tarih Düzenleme (Tarih sütunu yoksa hata vermesin diye kontrol)
+    df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
+    df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
+
+    # Koordinat Olmayanları Sil
+    df = df.dropna(subset=['lat', 'lon'])
+
+    # --- Tarih İşleme ---
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'], dayfirst=True, errors='coerce')
-    
-    # Lead Status Renkleri (Orhan Bey'in istediği CRM mantığı)
-    def get_color(status):
-        if status == 'Hot 🔥': return [255, 0, 0, 200]    # Kırmızı
-        if status == 'Warm 🟠': return [255, 165, 0, 200] # Turuncu
-        if status == 'Cold ❄️': return [0, 0, 255, 200]   # Mavi
-        if status == 'Bekliyor': return [128, 128, 128, 200] # Gri
-        return [0, 200, 0, 200] # Varsayılan Yeşil (Gidildi)
 
-    # Eğer Lead Status sütunu varsa ona göre, yoksa eski 'Durum'a göre renk ver
+    # --- Renk Atama (Lead Status'a Göre) ---
+    def get_color(status):
+        if pd.isna(status): return [128, 128, 128, 200] # Boşsa Gri
+        if 'Hot' in str(status): return [255, 0, 0, 200]     # Kırmızı 🔥
+        if 'Warm' in str(status): return [255, 165, 0, 200]  # Turuncu 🟠
+        if 'Cold' in str(status): return [0, 0, 255, 200]    # Mavi ❄️
+        return [0, 200, 0, 200] # Diğerleri Yeşil
+
     if 'Lead Status' in df.columns:
         df['color_rgb'] = df['Lead Status'].apply(get_color)
     else:
-        df['color_rgb'] = df['Durum'].apply(lambda x: [0, 200, 0, 200] if x == 'Gidildi' else [220, 20, 60, 200])
-
-    df = df.dropna(subset=['lat', 'lon'])
+        # Eğer Lead Status yoksa eski usul (Durum) çalışsın
+        df['color_rgb'] = df.apply(lambda x: [0, 200, 0, 200], axis=1)
 
 except Exception as e:
-    st.error(f"Veri hatası: {e}")
+    st.error(f"Veri yüklenirken hata oluştu: {e}")
     st.stop()
 
 # ------------------------------------------------
-# 5. FİLTRELEME MANTIĞI (Admin vs Personel)
+# 5. Filtreleme Mantığı (Admin vs Personel)
 
-# Eğer ADMIN ise -> Her şeyi görsün + Tarih Filtresi
 if "Admin" in kullanici_rolu:
-    st.info(f"🔑 **Admin Modu Aktif:** Tüm personelin verileri görüntüleniyor.")
+    st.info("🔑 **Yönetici Modu:** Tüm saha ekibi görüntüleniyor.")
     
-    # Tarih Filtresi
-    if 'Tarih' in df.columns:
-        min_date = df['Tarih'].min()
-        max_date = df['Tarih'].max()
-        # Eğer veri yoksa bugünü baz al
-        if pd.isnull(min_date): min_date = datetime.now()
-        if pd.isnull(max_date): max_date = datetime.now()
+    # Tarih Filtresi (Admin için)
+    if 'Tarih' in df.columns and not df['Tarih'].isnull().all():
+        min_date = df['Tarih'].min().date()
+        max_date = df['Tarih'].max().date()
+        
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            baslangic = st.date_input("Başlangıç Tarihi", min_date)
+        with col_f2:
+            bitis = st.date_input("Bitiş Tarihi", max_date)
             
-        baslangic, bitis = st.sidebar.date_input(
-            "Tarih Aralığı Seçin:",
-            [min_date, max_date]
-        )
-        df = df[(df['Tarih'] >= pd.to_datetime(baslangic)) & (df['Tarih'] <= pd.to_datetime(bitis))]
+        # Filtre Uygula
+        df = df[(df['Tarih'].dt.date >= baslangic) & (df['Tarih'].dt.date <= bitis)]
 
-# Eğer PERSONEL ise -> Sadece kendi adını görsün
 else:
+    # Personel Modu
     personel_adi = "Doğukan" if "Doğukan" in kullanici_rolu else "Ozan"
-    st.warning(f"👤 **Personel Modu:** Hoşgeldin {personel_adi}, sadece kendi rotanı görüyorsun.")
+    st.warning(f"👤 **Personel Modu:** Sadece {personel_adi} rotası gösteriliyor.")
     
-    # Personel Filtresi (Excel'de 'Personel' sütunu olmalı)
+    # İsme Göre Filtrele
     if 'Personel' in df.columns:
-        df = df[df['Personel'] == personel_adi]
+        df = df[df['Personel'].str.contains(personel_adi, na=False, case=False)]
 
 # ------------------------------------------------
-# 6. İSTATİSTİKLER (CRM ODAKLI)
+# 6. İstatistikler (Lead Scoring)
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Toplam Ziyaret", len(df))
+
+col1.metric("📋 Toplam Ziyaret", len(df))
 
 if 'Lead Status' in df.columns:
-    col2.metric("🔥 Hot Lead", len(df[df['Lead Status']=='Hot 🔥']))
-    col3.metric("🟠 Warm Lead", len(df[df['Lead Status']=='Warm 🟠']))
-    col4.metric("❄️ Cold Lead", len(df[df['Lead Status']=='Cold ❄️']))
-else:
-    col2.metric("Gidilen", len(df[df['Durum']=='Gidildi']))
+    hot_lead = len(df[df['Lead Status'].astype(str).str.contains('Hot', na=False)])
+    warm_lead = len(df[df['Lead Status'].astype(str).str.contains('Warm', na=False)])
+    cold_lead = len(df[df['Lead Status'].astype(str).str.contains('Cold', na=False)])
+    
+    col2.metric("🔥 Hot Lead", hot_lead)
+    col3.metric("🟠 Warm Lead", warm_lead)
+    col4.metric("❄️ Cold Lead", cold_lead)
 
 # ------------------------------------------------
-# 7. HARİTA VE LİSTE
-tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Listesi"])
+# 7. Harita ve Liste Görünümü
+tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
+# --- TAB 1: HARİTA ---
 with tab1:
-    uydu_layer = pdk.Layer(
-        "TileLayer",
-        data=None,
-        get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    )
-    nokta_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position='[lon, lat]',
-        get_color='color_rgb',
-        get_radius=200,
-        pickable=True,
-    )
-    
-    view_state = pdk.ViewState(latitude=df['lat'].mean(), longitude=df['lon'].mean(), zoom=12, pitch=45)
-    
-    st.pydeck_chart(pdk.Deck(map_style=None, initial_view_state=view_state, layers=[uydu_layer, nokta_layer], tooltip={"text": "{Klinik Adı}\n{Lead Status}"}))
-    
-    # Legend (Renk Açıklaması)
-    st.markdown("""
-    <div style='background-color:white; padding:10px; border-radius:10px; color:black; display:inline-block;'>
-        <b>Harita Lejandı:</b><br>
-        🔥 Kırmızı: Hot Lead (Satışa Yakın)<br>
-        🟠 Turuncu: Warm Lead (İlgili)<br>
-        ❄️ Mavi: Cold Lead (İlgisiz)<br>
-        ⚪ Gri: Ziyaret Bekleyen
-    </div>
-    """, unsafe_allow_html=True)
+    try:
+        uydu_layer = pdk.Layer(
+            "TileLayer",
+            data=None,
+            get_tile_data="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        )
+        
+        nokta_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df,
+            get_position='[lon, lat]',
+            get_color='color_rgb',
+            get_radius=200,
+            pickable=True,
+        )
+        
+        # Harita Ortalaması
+        view_state = pdk.ViewState(
+            latitude=df['lat'].mean() if len(df) > 0 else 40.1553,
+            longitude=df['lon'].mean() if len(df) > 0 else 26.4142,
+            zoom=12,
+            pitch=45,
+        )
+        
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style=None,
+                initial_view_state=view_state,
+                layers=[uydu_layer, nokta_layer],
+                tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
+            )
+        )
+        
+        # Lejand (Renk Açıklaması)
+        st.markdown("""
+        <div style='background-color:#262730; padding:10px; border-radius:5px; color:white; font-size:14px;'>
+            <b>Lead Durumları:</b> &nbsp;
+            <span style='color:#FF4B4B'>●</span> Hot (Sıcak) &nbsp;
+            <span style='color:#FFA500'>●</span> Warm (Ilık) &nbsp;
+            <span style='color:#0000FF'>●</span> Cold (Soğuk)
+        </div>
+        """, unsafe_allow_html=True)
+        
+    except Exception as e:
+        st.error(f"Harita yüklenemedi: {e}")
 
+# --- TAB 2: LİSTE (GİZLİ SÜTUNLARLA) ---
 with tab2:
+    # Navigasyon Linkini Oluştur (Arka Planda)
+    df['Navigasyon'] = df.apply(
+        lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
+        axis=1
+    )
+    
+    # Tablo Konfigürasyonu (Gizlenecekler ve Gösterilecekler)
+    column_config = {
+        "Navigasyon": st.column_config.LinkColumn(
+            "Rota", display_text="📍 Git"
+        ),
+        "lat": st.column_config.NumberColumn(hidden=True),       # Gizle
+        "lon": st.column_config.NumberColumn(hidden=True),       # Gizle
+        "color_rgb": st.column_config.TextColumn(hidden=True),   # Gizle
+        "Tarih": st.column_config.DateColumn("Ziyaret Tarihi", format="DD.MM.YYYY"),
+        "Klinik Adı": st.column_config.TextColumn("Klinik"),
+        "Lead Status": st.column_config.TextColumn("Durum"),
+    }
+    
+    # Hangi sütunların tabloda görüneceğini seçiyoruz
+    gosterilecek_sutunlar = [
+        'Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 
+        'Lead Status', 'Ziyaret Notu', 'Tarih', 'Personel', 'Navigasyon', 
+        'lat', 'lon', 'color_rgb' # Bunları config ile gizleyeceğiz ama df'de olmalı
+    ]
+    
+    # Sütun kontrolü (Excel'de eksik varsa hata vermesin)
+    mevcut_sutunlar = [col for col in gosterilecek_sutunlar if col in df.columns]
+
     st.dataframe(
-        df,
+        df[mevcut_sutunlar],
+        column_config=column_config,
         use_container_width=True,
         hide_index=True
     )
