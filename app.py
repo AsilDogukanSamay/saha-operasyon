@@ -3,13 +3,13 @@ import pandas as pd
 import pydeck as pdk
 import re
 import time
-import urllib.parse # Mail linki oluşturmak için lazım
+import urllib.parse
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V11.0",
-    page_icon="📧",
+    page_title="Medibulut Saha V12.0",
+    page_icon="🔒",
     layout="wide"
 )
 
@@ -29,21 +29,62 @@ div.stButton > button:first-child {
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 2. Başlık
-c1, c2 = st.columns([4,1])
-with c1:
-    st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v11.0 – Akıllı Mail Raporlama Sistemi")
+# 2. GİRİŞ SİSTEMİ (LOGIN) 🔐
+# Kullanıcı Adı ve Şifreler Burada Tanımlı
+KULLANICILAR = {
+    "admin": {"sifre": "medibulut123", "rol": "Admin", "isim": "Yönetici"},
+    "dogukan": {"sifre": "1234", "rol": "Personel", "isim": "Doğukan"},
+    "ozan": {"sifre": "1234", "rol": "Personel", "isim": "Ozan"}
+}
 
-st.markdown("---")
+# Oturum Durumu Kontrolü
+if 'giris_yapildi' not in st.session_state:
+    st.session_state['giris_yapildi'] = False
+    st.session_state['aktif_kullanici'] = None
+
+# --- GİRİŞ EKRANI TASARIMI ---
+if not st.session_state['giris_yapildi']:
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        st.title("🔒 Medibulut Giriş Paneli")
+        st.info("Lütfen kullanıcı adı ve şifrenizle giriş yapınız.")
+        
+        kullanici_adi = st.text_input("Kullanıcı Adı")
+        sifre = st.text_input("Şifre", type="password")
+        
+        if st.button("Giriş Yap"):
+            if kullanici_adi in KULLANICILAR:
+                if KULLANICILAR[kullanici_adi]["sifre"] == sifre:
+                    st.session_state['giris_yapildi'] = True
+                    st.session_state['aktif_kullanici'] = KULLANICILAR[kullanici_adi]
+                    st.success("Giriş Başarılı! Yönlendiriliyorsunuz...")
+                    st.rerun()
+                else:
+                    st.error("Hatalı Şifre!")
+            else:
+                st.error("Kullanıcı Bulunamadı!")
+    st.stop() # Giriş yapılmadıysa kodun geri kalanını çalıştırma
 
 # ------------------------------------------------
-# 3. Sidebar
-st.sidebar.header("👤 Kullanıcı Girişi")
-rol = st.sidebar.selectbox(
-    "Rol Seçiniz",
-    ["Admin (Yönetici)", "Saha Personeli (Doğukan)", "Saha Personeli (Ozan)"]
-)
+# 3. ANA UYGULAMA (Giriş Yapıldıysa Burası Çalışır)
+
+# Aktif Kullanıcı Bilgilerini Al
+kullanici = st.session_state['aktif_kullanici']
+
+# Üst Bar (Kullanıcı Bilgisi ve Çıkış)
+c1, c2 = st.columns([6, 1])
+with c1:
+    st.title(f"Hoşgeldin, {kullanici['isim']} 👋")
+    if kullanici['rol'] == "Admin":
+        st.caption("Yönetici Modu: Tüm Veriler Görüntüleniyor")
+    else:
+        st.caption("Personel Modu: Sadece Kendi Verileriniz Görüntüleniyor")
+with c2:
+    if st.button("Çıkış Yap"):
+        st.session_state['giris_yapildi'] = False
+        st.rerun()
+
+st.markdown("---")
 
 # ------------------------------------------------
 # 4. Veri Yükleme
@@ -90,78 +131,55 @@ try:
     if 'Gidildi mi?' not in df.columns:
         df['Gidildi mi?'] = "Hayır"
 
-    if "Admin" not in rol:
-        isim = "Doğukan" if "Doğukan" in rol else "Ozan"
+    # --- 🚨 KİŞİYE ÖZEL FİLTRELEME (EN ÖNEMLİ KISIM) ---
+    if kullanici['rol'] != "Admin":
+        # Eğer yönetici değilse, sadece kendi ismini içeren satırları getir
         if 'Personel' in df.columns:
-            df = df[df['Personel'].str.contains(isim, case=False, na=False)]
-
-    # ------------------------------------------------
-    # 5. İSTATİSTİKLER VE MAİL İÇERİĞİ HAZIRLAMA 📧
+            df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
     
-    # İstatistikler
+    # ------------------------------------------------
+    # 5. İSTATİSTİKLER VE MAİL
     toplam = len(df)
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
     bekleyen = toplam - gidilen
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
     warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
     
-    # Mail İçeriği Oluşturma (Metin Hazırlama)
-    konu = "Günlük Saha Operasyon Raporu"
-    
+    # Mail İçeriği
+    konu = f"Günlük Rapor - {kullanici['isim']}"
     govde = f"""Merhaba,
     
-Bugünkü saha operasyon özeti aşağıdadır:
-
+Kullanıcı: {kullanici['isim']}
 📊 GENEL DURUM:
---------------------------
-✅ Tamamlanan Ziyaret: {gidilen}
-⏳ Kalan Ziyaret: {bekleyen}
-🔥 Hot Lead (Sıcak): {hot}
-🟠 Warm Lead (Ilık): {warm}
+✅ Ziyaret: {gidilen}
+⏳ Kalan: {bekleyen}
+🔥 Hot Lead: {hot}
 
-🚨 KRİTİK MÜŞTERİLER (HOT LEAD):
---------------------------
+🚨 DETAYLAR:
 """
-    # Sadece Hot Lead olanları maile ekleyelim
     hot_leads = df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)]
     for i, row in hot_leads.iterrows():
         govde += f"- {row['Klinik Adı']} ({row['Yetkili Kişi']}) -> {row['Ziyaret Notu']}\n"
     
-    govde += "\nİyi çalışmalar."
-
-    # Linke çevirme (URL Encoding)
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
 
-    # ------------------------------------------------
-    # 6. UI GÖSTERİMİ
-    
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Toplam Hedef", toplam)
     c2.metric("✅ Ziyaret Edilen", gidilen)
     c3.metric("🔥 Hot Lead", hot)
     
-    # 📧 MAİL BUTONU BURADA
     with c4:
-        st.write("") # Hizalama boşluğu
-        # HTML Linki Buton Gibi Gösteriyoruz
+        st.write("")
         st.markdown(f'''
             <a href="{mail_link}" target="_blank">
-                <button style="
-                    background-color: #4CAF50; 
-                    color: white; 
-                    padding: 10px 20px; 
-                    border: none; 
-                    border-radius: 5px; 
-                    cursor: pointer;
-                    width: 100%;
-                    font-weight: bold;">
+                <button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
                     📧 Raporu Maille
                 </button>
             </a>
             ''', unsafe_allow_html=True)
 
     # ------------------------------------------------
-    # 7. Harita Modu
+    # 6. Harita
     st.write("")
     harita_modu = st.radio(
         "Harita Modu:",
@@ -173,7 +191,6 @@ Bugünkü saha operasyon özeti aşağıdadır:
     for index, row in df.iterrows():
         gidildi = str(row.get('Gidildi mi?', '')).lower()
         status = str(row.get('Lead Status', '')).lower()
-        
         renk = [0, 200, 0]
         if "Operasyon" in harita_modu:
             if "evet" in gidildi: renk = [0, 200, 0]
@@ -187,8 +204,6 @@ Bugünkü saha operasyon özeti aşağıdadır:
         renk_listesi.append(renk)
     df['color_final'] = renk_listesi
 
-    # ------------------------------------------------
-    # 8. Harita ve Liste
     tab1, tab2 = st.tabs(["🗺️ Canlı Harita", "📋 Liste & Rota"])
 
     with tab1:
@@ -213,7 +228,7 @@ Bugünkü saha operasyon özeti aşağıdadır:
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
             ))
         else:
-            st.warning("Veri bekleniyor...")
+            st.warning("Veri bulunamadı.")
 
     with tab2:
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
