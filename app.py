@@ -8,8 +8,8 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V13.0",
-    page_icon="👁️",
+    page_title="Medibulut Saha V14.0",
+    page_icon="📊",
     layout="wide"
 )
 
@@ -130,40 +130,51 @@ try:
             df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
     
     # ------------------------------------------------
-    # 5. İSTATİSTİKLER VE MAİL
+    # 5. İSTATİSTİKLER (HOT/WARM/COLD) 📊
     toplam = len(df)
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
     bekleyen = toplam - gidilen
+    
+    # Detaylı Analiz
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
+    warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
+    cold = len(df[df['Lead Status'].astype(str).str.contains("Cold", case=False, na=False)])
     
     # Mail İçeriği
-    konu = f"Günlük Rapor - {kullanici['isim']}"
+    konu = f"Saha Raporu - {kullanici['isim']}"
     govde = f"""Rapor Sahibi: {kullanici['isim']}
-📊 DURUM:
+    
+📊 GENEL DURUM:
 ✅ Ziyaret: {gidilen} / {toplam}
-🔥 Hot Lead: {hot}
 
-🚨 DETAYLAR:
+🎯 SATIŞ ANALİZİ:
+🔥 Hot Lead: {hot}
+🟠 Warm Lead: {warm}
+❄️ Cold Lead: {cold}
+
+🚨 HOT LEAD DETAYLARI:
 """
     hot_leads = df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)]
     for i, row in hot_leads.iterrows():
-        # Mailde de Personel ismini gösterelim
         personel_bilgi = f" ({row['Personel']})" if 'Personel' in row else ""
         govde += f"- {row['Klinik Adı']}{personel_bilgi} -> {row['Ziyaret Notu']}\n"
     
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Toplam Hedef", toplam)
-    c2.metric("✅ Ziyaret Edilen", gidilen)
-    c3.metric("🔥 Hot Lead", hot)
+    # --- ÜST PANEL (5 SÜTUN) ---
+    c1, c2, c3, c4, c5 = st.columns(5)
     
-    with c4:
-        st.write("")
+    c1.metric("✅ Ziyaret / Hedef", f"{gidilen} / {toplam}")
+    c2.metric("🔥 Hot (Sıcak)", hot)
+    c3.metric("🟠 Warm (Ilık)", warm)
+    c4.metric("❄️ Cold (Soğuk)", cold)
+    
+    with c5:
+        st.write("") # Hizalama boşluğu
         st.markdown(f'''
             <a href="{mail_link}" target="_blank">
-                <button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
-                    📧 Raporu Maille
+                <button style="background-color: #4CAF50; color: white; padding: 10px 5px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
+                    📧 Raporla
                 </button>
             </a>
             ''', unsafe_allow_html=True)
@@ -198,7 +209,6 @@ try:
 
     with tab1:
         if len(df) > 0:
-            # Tooltip'e de Personel bilgisini ekleyelim
             tooltip_html = "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"
             if 'Personel' in df.columns:
                 tooltip_html += "\n👤 {Personel}"
@@ -228,7 +238,6 @@ try:
     with tab2:
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
         
-        # ⚠️ İŞTE BURASI: 'Personel' sütununu listeye ekledik!
         cols = ['Klinik Adı', 'Personel', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Gidildi mi?', 'Lead Status', 'Rota']
         
         mevcut = [c for c in cols if c in df.columns]
