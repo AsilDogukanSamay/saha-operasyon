@@ -32,7 +32,7 @@ with col1:
         st.write("🦷")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.4 - Admin & Personel Yönetim Modülü")
+    st.caption("v2.5 - Admin & Personel Yönetim Modülü")
 
 st.markdown("---")
 
@@ -67,12 +67,12 @@ try:
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'].astype(str), dayfirst=True, errors='coerce')
 
-    # --- Renk Atama (Lead Status) ---
+    # --- Renk Atama ---
     def get_color(status):
         s = str(status).lower()
-        if 'hot' in s: return [255, 0, 0, 200]     # Kırmızı 🔥
-        if 'warm' in s: return [255, 165, 0, 200]  # Turuncu 🟠
-        if 'cold' in s: return [0, 0, 255, 200]    # Mavi ❄️
+        if 'hot' in s: return [255, 0, 0, 200]     # Kırmızı
+        if 'warm' in s: return [255, 165, 0, 200]  # Turuncu
+        if 'cold' in s: return [0, 0, 255, 200]    # Mavi
         return [0, 200, 0, 200]                    # Yeşil
 
     if 'Lead Status' in df.columns:
@@ -112,20 +112,17 @@ else:
 # ------------------------------------------------
 # 6. İstatistikler
 c1, c2, c3, c4 = st.columns(4)
-
 total = len(df)
 basarili = len(df[df['Lead Status'].astype(str).str.contains('Hot|Warm', case=False, na=False)]) if 'Lead Status' in df.columns else 0
 oran = int((basarili / total) * 100) if total > 0 else 0
 
 c1.metric("Toplam Ziyaret", total)
-
 if 'Lead Status' in df.columns:
     c2.metric("🔥 Hot Lead", len(df[df['Lead Status'].astype(str).str.contains('Hot', case=False, na=False)]))
     c3.metric("🟠 Warm Lead", len(df[df['Lead Status'].astype(str).str.contains('Warm', case=False, na=False)]))
 else:
     c2.metric("-", "-")
     c3.metric("-", "-")
-
 c4.metric("🎯 Başarı Oranı", f"%{oran}")
 
 # ------------------------------------------------
@@ -134,12 +131,12 @@ tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
 with tab1:
     try:
-        # 🛠️ DÜZELTME: TOKEN GEREKTİRMEYEN HARİTA (OpenStreetMap)
-        # Bu katman harita altlığını internetten bedava çeker
-        osm_layer = pdk.Layer(
+        # 🛠️ DÜZELTME: CARTO DARK MAP (En Sağlam Yöntem)
+        # Bu link dünyadaki en hızlı ve şık dark mode haritasıdır.
+        carto_layer = pdk.Layer(
             "TileLayer",
             data=None,
-            get_tile_data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            get_tile_data="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
         )
         
         nokta_layer = pdk.Layer(
@@ -158,14 +155,14 @@ with tab1:
             pitch=45,
         )
         
-        # map_style=None yaparak Mapbox zorunluluğunu kaldırdık
         st.pydeck_chart(
             pdk.Deck(
-                map_style=None,
+                map_style=None, # Mapbox stilini kapattık, kendi tile'ımızı kullanıyoruz
                 initial_view_state=view_state,
-                layers=[osm_layer, nokta_layer], # Önce harita, sonra noktalar
+                layers=[carto_layer, nokta_layer], # Önce zemin, sonra noktalar
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
-            )
+            ),
+            use_container_width=True # Ekrana tam oturması için
         )
         
         st.markdown("🔥 **Hot:** Satışa Hazır | 🟠 **Warm:** İlgili | ❄️ **Cold:** İlgisiz | 🟢 **Yeşil:** Standart")
