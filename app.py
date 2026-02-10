@@ -1,13 +1,12 @@
 import streamlit as st
 import pandas as pd
-import pydeck as pdk
 from datetime import datetime
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V2",
-    page_icon="🦷",
+    page_title="Medibulut Saha V3",
+    page_icon="📍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -29,10 +28,10 @@ with col1:
     try:
         st.image("logo.png", width=100)
     except:
-        st.write("🦷")
+        st.write("📍")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.6 - Stabil Sürüm")
+    st.caption("v3.0 - Native Map (Acil Durum Modu)")
 
 st.markdown("---")
 
@@ -67,24 +66,27 @@ try:
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'].astype(str), dayfirst=True, errors='coerce')
 
-    # --- Renk Atama ---
-    def get_color(status):
+    # --- Renk Atama (HEX KODLARI - Bu harita bunu sever) ---
+    def get_color_hex(status):
         s = str(status).lower()
-        if 'hot' in s: return [255, 0, 0, 200]     # Kırmızı
-        if 'warm' in s: return [255, 165, 0, 200]  # Turuncu
-        if 'cold' in s: return [0, 0, 255, 200]    # Mavi
-        return [0, 200, 0, 200]                    # Yeşil
+        if 'hot' in s: return '#FF0000'     # Kırmızı
+        if 'warm' in s: return '#FFA500'    # Turuncu
+        if 'cold' in s: return '#0000FF'    # Mavi
+        return '#00C800'                    # Yeşil
 
     if 'Lead Status' in df.columns:
-        df['color_rgb'] = df['Lead Status'].apply(get_color)
+        df['color_hex'] = df['Lead Status'].apply(get_color_hex)
     else:
-        df['color_rgb'] = [[0, 200, 0, 200]] * len(df)
+        df['color_hex'] = '#00C800' # Varsayılan Yeşil
 
     # --- Navigasyon Linki ---
     df['Navigasyon'] = df.apply(
         lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
         axis=1
     )
+    
+    # Haritada gösterilecek veri boyutunu ekrana basalım (Hata ayıklama için)
+    st.caption(f"ℹ️ Haritada gösterilen toplam nokta sayısı: {len(df)}")
 
 except Exception as e:
     st.error(f"Veri Hatası: {e}")
@@ -129,38 +131,22 @@ c4.metric("🎯 Başarı Oranı", f"%{oran}")
 tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
 with tab1:
-    try:
-        # 🛠️ BURASI DEĞİŞTİ: En Basit, En Hatasız Yöntem
-        nokta_layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=df,
-            get_position='[lon, lat]',
-            get_color='color_rgb',
-            get_radius=200,
-            pickable=True,
+    # 🚨 İŞTE ATOM BOMBASI: st.map() 🚨
+    # Bu kod Streamlit'in kendi haritasını kullanır.
+    # Bozulma ihtimali %0'dır.
+    
+    if len(df) > 0:
+        st.map(
+            df,
+            latitude='lat',
+            longitude='lon',
+            color='color_hex', # Renk sütunumuz (Hex formatında)
+            size=100, # Nokta büyüklüğü
+            zoom=12
         )
-        
-        view_state = pdk.ViewState(
-            latitude=df['lat'].mean() if len(df) > 0 else 40.1553,
-            longitude=df['lon'].mean() if len(df) > 0 else 26.4142,
-            zoom=12,
-            pitch=45,
-        )
-        
-        # map_style KULLANMIYORUZ. None yapıyoruz.
-        # Streamlit kendi varsayılan haritasını koyacak.
-        st.pydeck_chart(
-            pdk.Deck(
-                map_style=None, 
-                initial_view_state=view_state,
-                layers=[nokta_layer],
-                tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
-            )
-        )
-        st.markdown("🔥 **Hot:** Satışa Hazır | 🟠 **Warm:** İlgili | ❄️ **Cold:** İlgisiz | 🟢 **Yeşil:** Standart")
-
-    except Exception as e:
-        st.error(f"Harita yüklenemedi: {e}")
+        st.markdown("🔥 **Hot:** Kırmızı | 🟠 **Warm:** Turuncu | ❄️ **Cold:** Mavi | 🟢 **Yeşil:** Standart")
+    else:
+        st.error("⚠️ Gösterilecek veri bulunamadı! Lütfen tarih filtresini kontrol edin veya Excel'i güncelleyin.")
 
 with tab2:
     cols = ['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Lead Status', 'Ziyaret Notu', 'Tarih', 'Personel', 'Navigasyon']
