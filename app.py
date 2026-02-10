@@ -3,12 +3,13 @@ import pandas as pd
 import pydeck as pdk
 import re
 import time
+import urllib.parse # Mail linki oluşturmak için lazım
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V10.0",
-    page_icon="📊",
+    page_title="Medibulut Saha V11.0",
+    page_icon="📧",
     layout="wide"
 )
 
@@ -32,7 +33,7 @@ div.stButton > button:first-child {
 c1, c2 = st.columns([4,1])
 with c1:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v10.0 – Dinamik Analiz Ekranı (Hot/Warm/Cold Sayacı)")
+    st.caption("v11.0 – Akıllı Mail Raporlama Sistemi")
 
 st.markdown("---")
 
@@ -95,69 +96,99 @@ try:
             df = df[df['Personel'].str.contains(isim, case=False, na=False)]
 
     # ------------------------------------------------
-    # 5. MOD SEÇİMİ VE DİNAMİK İSTATİSTİKLER 📊
+    # 5. İSTATİSTİKLER VE MAİL İÇERİĞİ HAZIRLAMA 📧
     
-    # Mod seçimini üste aldık ki sayıları ona göre değiştirelim
-    harita_modu = st.radio(
-        "Görünüm Modu Seçiniz:",
-        ["🔴/🟢 Operasyon Modu (Ziyaret Durumu)", "🔥/❄️ Analiz Modu (Satış Potansiyeli)"],
-        horizontal=True
-    )
-
-    st.write("") # Biraz boşluk
-
-    # Sayıları Hesapla
+    # İstatistikler
     toplam = len(df)
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
     bekleyen = toplam - gidilen
-    
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
     warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
-    cold = len(df[df['Lead Status'].astype(str).str.contains("Cold", case=False, na=False)])
     
-    # Sütunları Aç
-    c1, c2, c3, c4 = st.columns(4)
+    # Mail İçeriği Oluşturma (Metin Hazırlama)
+    konu = "Günlük Saha Operasyon Raporu"
+    
+    govde = f"""Merhaba,
+    
+Bugünkü saha operasyon özeti aşağıdadır:
 
-    # --- DİNAMİK GÖSTERİM MANTIĞI ---
-    if "Analiz" in harita_modu:
-        # EĞER ANALİZ MODUNDAYSA: Hot/Warm/Cold göster
-        c1.metric("Toplam Görüşme", gidilen)
-        c2.metric("🔥 Hot (Sıcak)", hot)
-        c3.metric("🟠 Warm (Ilık)", warm)
-        c4.metric("❄️ Cold (Soğuk)", cold)
-    else:
-        # EĞER OPERASYON MODUNDAYSA: Gidildi/Kaldı göster
-        basari = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
-        c1.metric("Toplam Hedef", toplam)
-        c2.metric("✅ Ziyaret Edilen", gidilen)
-        c3.metric("⏳ Bekleyen", bekleyen)
-        c4.metric("🎯 Başarı Şansı", f"%{basari}")
+📊 GENEL DURUM:
+--------------------------
+✅ Tamamlanan Ziyaret: {gidilen}
+⏳ Kalan Ziyaret: {bekleyen}
+🔥 Hot Lead (Sıcak): {hot}
+🟠 Warm Lead (Ilık): {warm}
+
+🚨 KRİTİK MÜŞTERİLER (HOT LEAD):
+--------------------------
+"""
+    # Sadece Hot Lead olanları maile ekleyelim
+    hot_leads = df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)]
+    for i, row in hot_leads.iterrows():
+        govde += f"- {row['Klinik Adı']} ({row['Yetkili Kişi']}) -> {row['Ziyaret Notu']}\n"
+    
+    govde += "\nİyi çalışmalar."
+
+    # Linke çevirme (URL Encoding)
+    mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
 
     # ------------------------------------------------
-    # 6. Harita Renklendirme
+    # 6. UI GÖSTERİMİ
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Toplam Hedef", toplam)
+    c2.metric("✅ Ziyaret Edilen", gidilen)
+    c3.metric("🔥 Hot Lead", hot)
+    
+    # 📧 MAİL BUTONU BURADA
+    with c4:
+        st.write("") # Hizalama boşluğu
+        # HTML Linki Buton Gibi Gösteriyoruz
+        st.markdown(f'''
+            <a href="{mail_link}" target="_blank">
+                <button style="
+                    background-color: #4CAF50; 
+                    color: white; 
+                    padding: 10px 20px; 
+                    border: none; 
+                    border-radius: 5px; 
+                    cursor: pointer;
+                    width: 100%;
+                    font-weight: bold;">
+                    📧 Raporu Maille
+                </button>
+            </a>
+            ''', unsafe_allow_html=True)
+
+    # ------------------------------------------------
+    # 7. Harita Modu
+    st.write("")
+    harita_modu = st.radio(
+        "Harita Modu:",
+        ["🔴/🟢 Operasyon", "🔥/❄️ Analiz"],
+        horizontal=True
+    )
+
     renk_listesi = []
     for index, row in df.iterrows():
         gidildi = str(row.get('Gidildi mi?', '')).lower()
         status = str(row.get('Lead Status', '')).lower()
         
         renk = [0, 200, 0]
-
         if "Operasyon" in harita_modu:
-            if "evet" in gidildi: renk = [0, 200, 0] # Yeşil
-            else: renk = [200, 0, 0] # Kırmızı
+            if "evet" in gidildi: renk = [0, 200, 0]
+            else: renk = [200, 0, 0]
         else:
-            if "hayır" in gidildi: renk = [128, 128, 128] # Gri
-            elif "hot" in status: renk = [255, 0, 0] # Kırmızı
-            elif "warm" in status: renk = [255, 165, 0] # Turuncu
-            elif "cold" in status: renk = [0, 0, 255] # Mavi
+            if "hayır" in gidildi: renk = [128, 128, 128]
+            elif "hot" in status: renk = [255, 0, 0]
+            elif "warm" in status: renk = [255, 165, 0]
+            elif "cold" in status: renk = [0, 0, 255]
             else: renk = [0, 200, 0]
-        
         renk_listesi.append(renk)
-
     df['color_final'] = renk_listesi
 
     # ------------------------------------------------
-    # 7. Harita ve Liste Tabları
+    # 8. Harita ve Liste
     tab1, tab2 = st.tabs(["🗺️ Canlı Harita", "📋 Liste & Rota"])
 
     with tab1:
@@ -186,15 +217,12 @@ try:
 
     with tab2:
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
-        
         cols = ['Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Gidildi mi?', 'Lead Status', 'Rota']
         mevcut = [c for c in cols if c in df.columns]
-        
         st.dataframe(
             df[mevcut],
             column_config={
                 "Rota": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
-                "İletişim": st.column_config.TextColumn("Telefon", help="İletişim Numarası"),
             },
             use_container_width=True,
             hide_index=True
