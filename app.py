@@ -7,8 +7,8 @@ import time
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V8.0",
-    page_icon="📍",
+    page_title="Medibulut Saha V10.0",
+    page_icon="📊",
     layout="wide"
 )
 
@@ -32,7 +32,7 @@ div.stButton > button:first-child {
 c1, c2 = st.columns([4,1])
 with c1:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v8.0 – Kesin Çözüm (String Kesme Yöntemi)")
+    st.caption("v10.0 – Dinamik Analiz Ekranı (Hot/Warm/Cold Sayacı)")
 
 st.markdown("---")
 
@@ -46,7 +46,6 @@ rol = st.sidebar.selectbox(
 
 # ------------------------------------------------
 # 4. Veri Yükleme
-# Cache Buster
 base_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 sheet_url = f"{base_url}&t={time.time()}"
 
@@ -54,35 +53,34 @@ try:
     df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
     df.columns = df.columns.str.strip()
 
-    # --- 🛠️ ÇANAKKALE ÖZEL KOORDİNAT DÜZELTİCİ ---
-    # Bu fonksiyon sayıyı 10'a bölmez. Direkt metin olarak ilk 2 haneden sonrasına nokta koyar.
+    # --- 🛠️ KOORDİNAT DÜZELTİCİ ---
     def koordinat_duzelt(deger):
         try:
-            # 1. Önce veriyi tamamen yazıya çevir
             text = str(deger)
-            
-            # 2. İçindeki nokta, virgül ne varsa sil, SADECE RAKAMLARI AL
-            # Örn: "40.155" -> "40155" | "40,155" -> "40155" | "40155" -> "40155"
             sadece_rakamlar = re.sub(r'\D', '', text)
-            
-            # 3. Eğer veri çok kısaysa (örn boşsa) None dön
-            if len(sadece_rakamlar) < 4: 
-                return None
-            
-            # 4. İLK İKİ RAKAMDAN SONRA NOKTA KOY (40... veya 26...)
-            # "40155" -> "40" + "." + "155" -> "40.155"
+            if len(sadece_rakamlar) < 4: return None
             yeni_format = sadece_rakamlar[:2] + "." + sadece_rakamlar[2:]
-            
             return float(yeni_format)
         except:
             return None
 
-    # Fonksiyonu Uygula
     df['lat'] = df['lat'].apply(koordinat_duzelt)
     df['lon'] = df['lon'].apply(koordinat_duzelt)
-
-    # Bozuk satırları temizle
     df = df.dropna(subset=['lat', 'lon'])
+
+    # --- ☎️ TELEFON MAKYAJLAYICI ---
+    def telefon_susle(tel):
+        try:
+            s = str(tel).split('.')[0]
+            s = re.sub(r'\D', '', s)
+            if len(s) == 10: s = '0' + s
+            if len(s) == 11: return f"{s[0]} ({s[1:4]}) {s[4:7]} {s[7:9]} {s[9:]}"
+            return tel
+        except:
+            return tel
+
+    if 'İletişim' in df.columns:
+        df['İletişim'] = df['İletişim'].apply(telefon_susle)
 
     # --- Diğer İşlemler ---
     if 'Tarih' in df.columns:
@@ -97,49 +95,69 @@ try:
             df = df[df['Personel'].str.contains(isim, case=False, na=False)]
 
     # ------------------------------------------------
-    # 5. İstatistikler
-    c1, c2, c3, c4 = st.columns(4)
+    # 5. MOD SEÇİMİ VE DİNAMİK İSTATİSTİKLER 📊
+    
+    # Mod seçimini üste aldık ki sayıları ona göre değiştirelim
+    harita_modu = st.radio(
+        "Görünüm Modu Seçiniz:",
+        ["🔴/🟢 Operasyon Modu (Ziyaret Durumu)", "🔥/❄️ Analiz Modu (Satış Potansiyeli)"],
+        horizontal=True
+    )
+
+    st.write("") # Biraz boşluk
+
+    # Sayıları Hesapla
     toplam = len(df)
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
     bekleyen = toplam - gidilen
     
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
     warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", case=False, na=False)])
-    basari = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
+    cold = len(df[df['Lead Status'].astype(str).str.contains("Cold", case=False, na=False)])
+    
+    # Sütunları Aç
+    c1, c2, c3, c4 = st.columns(4)
 
-    c1.metric("Toplam Hedef", toplam)
-    c2.metric("✅ Ziyaret Edilen", gidilen)
-    c3.metric("⏳ Bekleyen", bekleyen)
-    c4.metric("🎯 Potansiyel Başarı", f"%{basari}")
+    # --- DİNAMİK GÖSTERİM MANTIĞI ---
+    if "Analiz" in harita_modu:
+        # EĞER ANALİZ MODUNDAYSA: Hot/Warm/Cold göster
+        c1.metric("Toplam Görüşme", gidilen)
+        c2.metric("🔥 Hot (Sıcak)", hot)
+        c3.metric("🟠 Warm (Ilık)", warm)
+        c4.metric("❄️ Cold (Soğuk)", cold)
+    else:
+        # EĞER OPERASYON MODUNDAYSA: Gidildi/Kaldı göster
+        basari = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
+        c1.metric("Toplam Hedef", toplam)
+        c2.metric("✅ Ziyaret Edilen", gidilen)
+        c3.metric("⏳ Bekleyen", bekleyen)
+        c4.metric("🎯 Başarı Şansı", f"%{basari}")
 
     # ------------------------------------------------
-    # 6. Harita
-    st.write("")
-    harita_modu = st.radio(
-        "🗺️ Harita Görünüm Modu:",
-        ["🔴/🟢 Operasyon", "🔥/❄️ Analiz"],
-        horizontal=True
-    )
-
+    # 6. Harita Renklendirme
     renk_listesi = []
     for index, row in df.iterrows():
         gidildi = str(row.get('Gidildi mi?', '')).lower()
         status = str(row.get('Lead Status', '')).lower()
         
         renk = [0, 200, 0]
+
         if "Operasyon" in harita_modu:
-            if "evet" in gidildi: renk = [0, 200, 0]
-            else: renk = [200, 0, 0]
+            if "evet" in gidildi: renk = [0, 200, 0] # Yeşil
+            else: renk = [200, 0, 0] # Kırmızı
         else:
-            if "hayır" in gidildi: renk = [128, 128, 128]
-            elif "hot" in status: renk = [255, 0, 0]
-            elif "warm" in status: renk = [255, 165, 0]
-            elif "cold" in status: renk = [0, 0, 255]
+            if "hayır" in gidildi: renk = [128, 128, 128] # Gri
+            elif "hot" in status: renk = [255, 0, 0] # Kırmızı
+            elif "warm" in status: renk = [255, 165, 0] # Turuncu
+            elif "cold" in status: renk = [0, 0, 255] # Mavi
             else: renk = [0, 200, 0]
+        
         renk_listesi.append(renk)
 
     df['color_final'] = renk_listesi
 
+    # ------------------------------------------------
+    # 7. Harita ve Liste Tabları
     tab1, tab2 = st.tabs(["🗺️ Canlı Harita", "📋 Liste & Rota"])
 
     with tab1:
@@ -163,10 +181,6 @@ try:
                 initial_view_state=view,
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
             ))
-            if "Operasyon" in harita_modu:
-                st.info("🔴 Kırmızı: Gidilmedi | 🟢 Yeşil: Gidildi")
-            else:
-                st.info("Analiz Modu Aktif")
         else:
             st.warning("Veri bekleniyor...")
 
@@ -178,7 +192,10 @@ try:
         
         st.dataframe(
             df[mevcut],
-            column_config={"Rota": st.column_config.LinkColumn("Rota", display_text="📍 Git")},
+            column_config={
+                "Rota": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+                "İletişim": st.column_config.TextColumn("Telefon", help="İletişim Numarası"),
+            },
             use_container_width=True,
             hide_index=True
         )
