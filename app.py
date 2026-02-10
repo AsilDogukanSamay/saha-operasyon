@@ -32,7 +32,7 @@ with col1:
         st.write("🦷")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.0 - Admin & Personel Yönetim Modülü")
+    st.caption("v2.1 - Admin & Personel Yönetim Modülü")
 
 st.markdown("---")
 
@@ -48,14 +48,13 @@ st.sidebar.markdown("---")
 # ------------------------------------------------
 # 4. Veri Bağlantısı ve İşleme
 # ⚠️ BURAYA KENDİ LİNKİNİ YAPIŞTIRMAYI UNUTMA!
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
+sheet_url = "BURAYA_KENDI_CSV_LINKINI_YAPISTIR"
 
 try:
     df = pd.read_csv(sheet_url)
     df.columns = df.columns.str.strip() # Boşlukları temizle
 
     # --- Koordinat Temizliği ---
-    # Virgül varsa noktaya çevir ve temizle
     df['lat'] = df['lat'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     df['lon'] = df['lon'].astype(str).str.replace(',', '.').str.replace(r'[^\d.-]', '', regex=True)
     
@@ -80,8 +79,13 @@ try:
     if 'Lead Status' in df.columns:
         df['color_rgb'] = df['Lead Status'].apply(get_color)
     else:
-        # Eğer Lead Status yoksa eski usul (Durum) çalışsın
         df['color_rgb'] = df.apply(lambda x: [0, 200, 0, 200], axis=1)
+
+    # --- Navigasyon Linkini Önceden Oluştur ---
+    df['Navigasyon'] = df.apply(
+        lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
+        axis=1
+    )
 
 except Exception as e:
     st.error(f"Veri yüklenirken hata oluştu: {e}")
@@ -153,7 +157,6 @@ with tab1:
             pickable=True,
         )
         
-        # Harita Ortalaması
         view_state = pdk.ViewState(
             latitude=df['lat'].mean() if len(df) > 0 else 40.1553,
             longitude=df['lon'].mean() if len(df) > 0 else 26.4142,
@@ -170,12 +173,11 @@ with tab1:
             )
         )
         
-        # Lejand (Renk Açıklaması)
         st.markdown("""
         <div style='background-color:#262730; padding:10px; border-radius:5px; color:white; font-size:14px;'>
-            <b>Lead Durumları:</b> &nbsp;
-            <span style='color:#FF4B4B'>●</span> Hot (Sıcak) &nbsp;
-            <span style='color:#FFA500'>●</span> Warm (Ilık) &nbsp;
+            <b>Lead Durumları:</b>  
+            <span style='color:#FF4B4B'>●</span> Hot (Sıcak)  
+            <span style='color:#FFA500'>●</span> Warm (Ilık)  
             <span style='color:#0000FF'>●</span> Cold (Soğuk)
         </div>
         """, unsafe_allow_html=True)
@@ -183,40 +185,28 @@ with tab1:
     except Exception as e:
         st.error(f"Harita yüklenemedi: {e}")
 
-# --- TAB 2: LİSTE (GİZLİ SÜTUNLARLA) ---
+# --- TAB 2: LİSTE ---
 with tab2:
-    # Navigasyon Linkini Oluştur (Arka Planda)
-    df['Navigasyon'] = df.apply(
-        lambda x: f"https://www.google.com/maps?q={x['lat']},{x['lon']}",
-        axis=1
-    )
+    # 🛠️ HATAYI ÇÖZEN KISIM BURASI 🛠️
+    # Sütunları "gizle" demek yerine, sadece istediklerimizi yeni bir listeye alıyoruz.
+    # lat, lon ve color_rgb bu listede olmadığı için tabloda görünmeyecek.
     
-    # Tablo Konfigürasyonu (Gizlenecekler ve Gösterilecekler)
-    column_config = {
-        "Navigasyon": st.column_config.LinkColumn(
-            "Rota", display_text="📍 Git"
-        ),
-        "lat": st.column_config.NumberColumn(hidden=True),       # Gizle
-        "lon": st.column_config.NumberColumn(hidden=True),       # Gizle
-        "color_rgb": st.column_config.TextColumn(hidden=True),   # Gizle
-        "Tarih": st.column_config.DateColumn("Ziyaret Tarihi", format="DD.MM.YYYY"),
-        "Klinik Adı": st.column_config.TextColumn("Klinik"),
-        "Lead Status": st.column_config.TextColumn("Durum"),
-    }
-    
-    # Hangi sütunların tabloda görüneceğini seçiyoruz
     gosterilecek_sutunlar = [
         'Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 
-        'Lead Status', 'Ziyaret Notu', 'Tarih', 'Personel', 'Navigasyon', 
-        'lat', 'lon', 'color_rgb' # Bunları config ile gizleyeceğiz ama df'de olmalı
+        'Lead Status', 'Ziyaret Notu', 'Tarih', 'Personel', 'Navigasyon'
     ]
     
-    # Sütun kontrolü (Excel'de eksik varsa hata vermesin)
-    mevcut_sutunlar = [col for col in gosterilecek_sutunlar if col in df.columns]
+    # Excel'de bu sütunlar var mı diye kontrol et (Hata vermesin diye)
+    final_sutunlar = [col for col in gosterilecek_sutunlar if col in df.columns]
 
     st.dataframe(
-        df[mevcut_sutunlar],
-        column_config=column_config,
+        df[final_sutunlar], # Sadece temiz sütunları gönderiyoruz
+        column_config={
+            "Navigasyon": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+            "Tarih": st.column_config.DateColumn("Ziyaret Tarihi", format="DD.MM.YYYY"),
+            "Klinik Adı": st.column_config.TextColumn("Klinik"),
+            "Lead Status": st.column_config.TextColumn("Durum"),
+        },
         use_container_width=True,
         hide_index=True
     )
