@@ -32,7 +32,7 @@ with col1:
         st.write("🦷")
 with col2:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v2.5 - Admin & Personel Yönetim Modülü")
+    st.caption("v2.6 - Stabil Sürüm")
 
 st.markdown("---")
 
@@ -92,7 +92,6 @@ except Exception as e:
 
 # ------------------------------------------------
 # 5. Filtreleme
-
 if "Admin" in kullanici_rolu:
     st.info("🔑 **Yönetici Modu:** Tüm saha ekibi görüntüleniyor.")
     if 'Tarih' in df.columns and not df['Tarih'].isnull().all():
@@ -131,14 +130,7 @@ tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
 
 with tab1:
     try:
-        # 🛠️ DÜZELTME: CARTO DARK MAP (En Sağlam Yöntem)
-        # Bu link dünyadaki en hızlı ve şık dark mode haritasıdır.
-        carto_layer = pdk.Layer(
-            "TileLayer",
-            data=None,
-            get_tile_data="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        )
-        
+        # 🛠️ BURASI DEĞİŞTİ: En Basit, En Hatasız Yöntem
         nokta_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -155,17 +147,18 @@ with tab1:
             pitch=45,
         )
         
+        # map_style KULLANMIYORUZ. None yapıyoruz.
+        # Streamlit kendi varsayılan haritasını koyacak.
         st.pydeck_chart(
             pdk.Deck(
-                map_style=None, # Mapbox stilini kapattık, kendi tile'ımızı kullanıyoruz
+                map_style=None, 
                 initial_view_state=view_state,
-                layers=[carto_layer, nokta_layer], # Önce zemin, sonra noktalar
+                layers=[nokta_layer],
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
-            ),
-            use_container_width=True # Ekrana tam oturması için
+            )
         )
-        
         st.markdown("🔥 **Hot:** Satışa Hazır | 🟠 **Warm:** İlgili | ❄️ **Cold:** İlgisiz | 🟢 **Yeşil:** Standart")
+
     except Exception as e:
         st.error(f"Harita yüklenemedi: {e}")
 
