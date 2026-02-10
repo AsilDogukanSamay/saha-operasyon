@@ -48,7 +48,7 @@ st.sidebar.markdown("---")
 # ------------------------------------------------
 # 4. Veri Bağlantısı ve İşleme
 # ⚠️ BURAYA KENDİ LİNKİNİ YAPIŞTIRMAYI UNUTMA!
-sheet_url = "BURAYA_KENDI_CSV_LINKINI_YAPISTIR"
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
 
 try:
     df = pd.read_csv(sheet_url)
