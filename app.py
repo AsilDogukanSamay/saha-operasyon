@@ -1,43 +1,36 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
-from datetime import datetime
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
     page_title="Medibulut Saha V3",
     page_icon="📍",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Temiz Görünüm
+# Temiz UI
 st.markdown("""
 <style>
-#MainMenu {display: none !important;}
-header {display: none !important;}
-footer {display: none !important;}
-div[data-testid="stToolbar"] {display: none !important;}
+#MainMenu {display:none;}
+header {display:none;}
+footer {display:none;}
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
 # 2. Başlık
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.write("📍")
-with col2:
-    st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v3.0 - Native Map (Stabil)")
+st.title("Medibulut Saha & CRM Paneli")
+st.caption("v3.0 – Stabil Harita")
 
 st.markdown("---")
 
 # ------------------------------------------------
 # 3. Sidebar
 st.sidebar.header("👤 Kullanıcı Girişi")
-kullanici_rolu = st.sidebar.selectbox(
-    "Rol Seçiniz:",
+rol = st.sidebar.selectbox(
+    "Rol Seçiniz",
     ["Admin (Yönetici)", "Saha Personeli (Doğukan)", "Saha Personeli (Ozan)"]
 )
 
@@ -48,53 +41,54 @@ sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT
 df = pd.read_csv(sheet_url)
 df.columns = df.columns.str.strip()
 
-# Koordinatlar
-df['lat'] = df['lat'].astype(str).str.replace(',', '.')
-df['lon'] = df['lon'].astype(str).str.replace(',', '.')
+# ------------------------------------------------
+# 5. Koordinat Temizleme + DÜZELTME
 df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
 df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
+
+# HATALI KOORDİNATLARI OTOMATİK DÜZELT
+df['lat'] = df['lat'].apply(lambda x: x / 10 if x > 90 else x)
+df['lon'] = df['lon'].apply(lambda x: x / 10 if x > 180 else x)
+
 df = df.dropna(subset=['lat', 'lon'])
 
-# Tarih
-if 'Tarih' in df.columns:
-    df['Tarih'] = pd.to_datetime(df['Tarih'], errors='coerce', dayfirst=True)
+# ------------------------------------------------
+# 6. Tarih
+df['Tarih'] = pd.to_datetime(df['Tarih'], dayfirst=True, errors='coerce')
 
 # ------------------------------------------------
-# 5. Renkler (PYDECK RGB)
-def color_rgb(status):
+# 7. Rol Filtresi
+if "Admin" not in rol:
+    isim = "Doğukan" if "Doğukan" in rol else "Ozan"
+    df = df[df['Personel'].str.contains(isim, case=False, na=False)]
+
+# ------------------------------------------------
+# 8. Renkler (RGB – pydeck)
+def renk(status):
     s = str(status).lower()
-    if 'hot' in s: return [255, 0, 0]
-    if 'warm' in s: return [255, 165, 0]
-    if 'cold' in s: return [0, 0, 255]
+    if "hot" in s: return [255, 0, 0]
+    if "warm" in s: return [255, 165, 0]
+    if "cold" in s: return [0, 0, 255]
     return [0, 200, 0]
 
-df[['r', 'g', 'b']] = df['Lead Status'].apply(
-    lambda x: pd.Series(color_rgb(x))
-)
+df[['r','g','b']] = df['Lead Status'].apply(lambda x: pd.Series(renk(x)))
 
 # ------------------------------------------------
-# 6. Filtre
-if "Admin" not in kullanici_rolu:
-    isim = "Doğukan" if "Doğukan" in kullanici_rolu else "Ozan"
-    if 'Personel' in df.columns:
-        df = df[df['Personel'].str.contains(isim, case=False, na=False)]
-
-# ------------------------------------------------
-# 7. İstatistikler
+# 9. İstatistik
 c1, c2, c3, c4 = st.columns(4)
-total = len(df)
-hot = len(df[df['Lead Status'].str.contains('Hot', case=False, na=False)])
-warm = len(df[df['Lead Status'].str.contains('Warm', case=False, na=False)])
-oran = int(((hot + warm) / total) * 100) if total > 0 else 0
+toplam = len(df)
+hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
+warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
+oran = int(((hot + warm) / toplam) * 100) if toplam > 0 else 0
 
-c1.metric("Toplam Ziyaret", total)
+c1.metric("Toplam Ziyaret", toplam)
 c2.metric("🔥 Hot", hot)
 c3.metric("🟠 Warm", warm)
 c4.metric("🎯 Başarı", f"%{oran}")
 
 # ------------------------------------------------
-# 8. Harita + Liste
-tab1, tab2 = st.tabs(["🗺️ CRM Haritası", "📋 Ziyaret Detayları"])
+# 10. Harita + Liste
+tab1, tab2 = st.tabs(["🗺️ Harita", "📋 Detaylar"])
 
 with tab1:
     if len(df) > 0:
@@ -107,7 +101,7 @@ with tab1:
             pickable=True
         )
 
-        view_state = pdk.ViewState(
+        view = pdk.ViewState(
             latitude=df['lat'].mean(),
             longitude=df['lon'].mean(),
             zoom=12
@@ -115,23 +109,20 @@ with tab1:
 
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
-            initial_view_state=view_state,
-            tooltip={"text": "{Klinik Adı}\nDurum: {Lead Status}"}
+            initial_view_state=view,
+            tooltip={"text": "{Klinik Adı}\n{Lead Status}"}
         ))
     else:
-        st.error("Gösterilecek veri yok")
+        st.error("Haritada gösterilecek veri yok")
 
 with tab2:
-    goster = [c for c in [
-        'Klinik Adı', 'İlçe', 'Yetkili Kişi',
-        'İletişim', 'Lead Status', 'Ziyaret Notu',
-        'Tarih', 'Personel'
-    ] if c in df.columns]
-
-    st.dataframe(df[goster], use_container_width=True, hide_index=True)
+    st.dataframe(
+        df[['Klinik Adı','İlçe','Yetkili Kişi','İletişim','Lead Status','Ziyaret Notu','Tarih','Personel']],
+        use_container_width=True,
+        hide_index=True
+    )
 
 # ------------------------------------------------
-# 9. Yenile
+# 11. Yenile
 if st.button("🔄 Verileri Güncelle"):
-    st.cache_data.clear()
     st.rerun()
