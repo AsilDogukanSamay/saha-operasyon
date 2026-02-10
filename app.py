@@ -2,16 +2,17 @@ import streamlit as st
 import pandas as pd
 import pydeck as pdk
 import re
+import time
 
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V5.0",
+    page_title="Medibulut Saha V6.0",
     page_icon="📍",
     layout="wide"
 )
 
-# Temiz UI
+# Temiz UI (Gereksiz menüleri gizle)
 st.markdown("""
 <style>
 #MainMenu {display:none;}
@@ -21,6 +22,7 @@ div.stButton > button:first-child {
     background-color: #0099ff;
     color: white;
     border-radius: 8px;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -30,7 +32,7 @@ div.stButton > button:first-child {
 c1, c2 = st.columns([4,1])
 with c1:
     st.title("Medibulut Saha & CRM Paneli")
-    st.caption("v5.0 – Final Stabil Sürüm (Otomatik Koordinat + Çift Mod)")
+    st.caption("v6.0 – Final Sürüm (Cache Buster + Akıllı Koordinat)")
 
 st.markdown("---")
 
@@ -44,28 +46,30 @@ rol = st.sidebar.selectbox(
 
 # ------------------------------------------------
 # 4. Veri Yükleme ve Temizleme
-sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
+# Linkin sonuna rastgele zaman ekleyerek "Taze Veri" çekmeye zorluyoruz.
+base_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
+sheet_url = f"{base_url}&t={time.time()}"
 
 try:
-    df = pd.read_csv(sheet_url)
-    df.columns = df.columns.str.strip() # Boşlukları temizle
+    # Pandas'a her seferinde yeni indir diyoruz
+    df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
+    df.columns = df.columns.str.strip() # Sütun isimlerindeki boşlukları al
 
     # --- SÜPER AKILLI KOORDİNAT TEMİZLEYİCİ 🤖 ---
-    # Bu fonksiyon hem 40.1250'yi hem de 40.1653942248... olanı tanır.
     def temizle_koordinat(deger):
         try:
             # Önce metne çevir, boşlukları sil
             s = str(deger).strip()
-            # Virgülü noktaya çevir
+            # Virgülü noktaya çevir (Excel hatasını düzeltir)
             s = s.replace(',', '.')
-            # İçindeki harfleri ve garip işaretleri sil, sadece sayı kalsın
+            # İçindeki harfleri sil, sadece rakam ve nokta kalsın
             s = re.sub(r'[^\d.-]', '', s)
             
             if not s: return None
             
             val = float(s)
             
-            # Eğer sayı 90'dan büyükse (örn: 40155) küçült
+            # Eğer sayı 90'dan büyükse (örn: 40155) küçült (GPS formatına sok)
             while val > 90:
                 val /= 10
             return val
@@ -76,14 +80,14 @@ try:
     df['lat'] = df['lat'].apply(temizle_koordinat)
     df['lon'] = df['lon'].apply(temizle_koordinat)
 
-    # Bozuk olan satırları sil (Haritayı çökertmesin)
+    # Koordinatı olmayan satırları sil (Harita çökmesin diye)
     df = df.dropna(subset=['lat', 'lon'])
 
     # --- Diğer Düzenlemeler ---
     if 'Tarih' in df.columns:
         df['Tarih'] = pd.to_datetime(df['Tarih'], dayfirst=True, errors='coerce')
 
-    # "Gidildi mi?" sütunu yoksa varsayılan olarak "Hayır" yap
+    # "Gidildi mi?" sütunu yoksa varsayılan olarak "Hayır" yap (Hata önleyici)
     if 'Gidildi mi?' not in df.columns:
         df['Gidildi mi?'] = "Hayır"
 
@@ -121,23 +125,24 @@ try:
         horizontal=True
     )
 
-    # Renkleri belirle (Safe Mode)
+    # Renkleri belirle (Güvenli Mod)
     renk_listesi = []
     
     for index, row in df.iterrows():
         gidildi = str(row.get('Gidildi mi?', '')).lower()
         status = str(row.get('Lead Status', '')).lower()
         
-        renk = [0, 200, 0] # Varsayılan Yeşil
+        # Varsayılan Renk
+        renk = [0, 200, 0] 
 
         if "Operasyon" in harita_modu:
-            # Mod 1: Operasyon
+            # Mod 1: Operasyon (Evet: Yeşil, Hayır: Kırmızı)
             if "evet" in gidildi:
-                renk = [0, 200, 0] # Yeşil
+                renk = [0, 200, 0] 
             else:
-                renk = [200, 0, 0] # Kırmızı
+                renk = [200, 0, 0] 
         else:
-            # Mod 2: Analiz
+            # Mod 2: Analiz (Gidilmediyse Gri)
             if "hayır" in gidildi:
                 renk = [128, 128, 128] # Gri
             elif "hot" in status:
@@ -156,7 +161,7 @@ try:
 
     # ------------------------------------------------
     # 7. Harita ve Liste
-    tab1, tab2 = st.tabs(["🗺️ Harita", "📋 Detaylı Liste & Rota"])
+    tab1, tab2 = st.tabs(["🗺️ Canlı Harita", "📋 Detaylı Liste & Rota"])
 
     with tab1:
         if len(df) > 0:
@@ -165,7 +170,7 @@ try:
                 data=df,
                 get_position='[lon, lat]',
                 get_color='color_final', # Hesapladığımız renk sütunu
-                get_radius=150,
+                get_radius=150, # Nokta büyüklüğü
                 pickable=True
             )
 
@@ -176,7 +181,7 @@ try:
             )
 
             st.pydeck_chart(pdk.Deck(
-                map_style=None,
+                map_style=None, # Standart harita (Hatasız)
                 layers=[layer],
                 initial_view_state=view,
                 tooltip={"text": "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}"}
@@ -187,12 +192,13 @@ try:
             else:
                 st.info("🔥 **Hot:** Sıcak | 🟠 **Warm:** Ilık | 🔵 **Cold:** Soğuk | ⚪ **Gri:** Ziyaret Bekliyor")
         else:
-            st.warning("Gösterilecek veri bulunamadı.")
+            st.warning("Gösterilecek veri bulunamadı. Lütfen Excel dosyasını kontrol edin.")
 
     with tab2:
         # Navigasyon Linki Oluştur
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
 
+        # Tüm sütunları göster
         cols = [
             'Klinik Adı', 'İlçe', 'Yetkili Kişi', 'İletişim', 
             'Gidildi mi?', 'Lead Status', 'Ziyaret Notu', 
@@ -217,6 +223,6 @@ except Exception as e:
 
 # ------------------------------------------------
 # 8. Yenile Butonu
-if st.button("🔄 Verileri Güncelle"):
+if st.button("🔄 Verileri Güncelle (Yeni Veriler)"):
     st.cache_data.clear()
     st.rerun()
