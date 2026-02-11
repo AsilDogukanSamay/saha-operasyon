@@ -6,3 +6,7 @@ openpyxl
 scikit-learn
 numpy
 streamlit-js-eval
+streamlit
+eval
+xlsxwriter
+openpyxl
