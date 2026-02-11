@@ -8,91 +8,84 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V28.0",
+    page_title="Medibulut Saha V28.1",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS TASARIM (ZORLA KARANLIK MOD + DÜZELTMELER 🛠️)
+# 2. CSS TASARIM (GİRİŞ KUTULARI VE RENK DÜZELTMELERİ 🛠️)
 st.markdown("""
 <style>
-    /* 1. TÜM SAYFAYI ZORLA SİYAH YAP */
+    /* 1. ZORLA KARANLIK MOD (Force Dark Theme) */
     [data-testid="stAppViewContainer"] {
-        background-color: #0E1117 !important; /* Streamlit Standart Koyu Renk */
-        color: #ffffff !important;
-    }
-    
-    [data-testid="stHeader"] {
-        background-color: #0E1117 !important; /* Üst Bar Siyah */
-    }
-    
-    [data-testid="stSidebar"] {
-        background-color: #262730 !important; /* Sol Menü Koyu Gri */
-    }
-    
-    /* 2. ANA DÜZENLEMELER */
-    .block-container {
-        padding-top: 4rem !important; 
-        padding-bottom: 5rem;
-    }
-    
-    /* 3. METRİK KARTLARI */
-    div[data-testid="stMetric"] {
-        background-color: #262730 !important;
-        border: 1px solid #41444b !important;
-        padding: 15px !important;
-        border-radius: 12px !important;
-        min-height: 120px;
-    }
-    
-    /* Yazı Renklerini Zorla Beyaz Yap (Yöneticide siyah çıkmasın) */
-    div[data-testid="stMetricLabel"] p {
-        color: #d1d5db !important; /* Başlık Açık Gri */
-        font-size: 15px !important;
-    }
-    div[data-testid="stMetricValue"] {
-        color: #0099ff !important; /* Değer Mavi */
-    }
-    div[data-testid="stMetricDelta"] > div {
-        color: #e0e0e0 !important; /* Açıklama Beyaz */
-    }
-    
-    /* 4. GİRİŞ KUTULARI (INPUTS) */
-    /* Yöneticide beyaz kutu olmasın diye kutuları da karartıyoruz */
-    div[data-baseweb="input"] > div {
-        background-color: #262730 !important;
+        background-color: #0E1117 !important;
         color: white !important;
-        border-color: #555 !important;
     }
+    [data-testid="stHeader"] {
+        background-color: #0E1117 !important;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #262730 !important;
+    }
+
+    /* 2. GİRİŞ KUTULARI (INPUT FIELDS) - SORUN BURADAYDI */
+    div[data-baseweb="input"] {
+        background-color: #262730 !important; /* Kutu rengi */
+        border-color: #444 !important;
+        border-radius: 8px !important;
+    }
+    div[data-baseweb="input"] > div {
+        background-color: transparent !important;
+        color: white !important; /* Yazı Rengi BEYAZ */
+    }
+    input[type="text"], input[type="password"] {
+        color: white !important; /* Yazılan yazı BEYAZ */
+        -webkit-text-fill-color: white !important;
+    }
+    
+    /* 3. SEÇİM KUTULARI (Selectbox & Multiselect) */
     div[data-baseweb="select"] > div {
         background-color: #262730 !important;
         color: white !important;
+        border-color: #444 !important;
     }
-    input {
+    div[data-baseweb="tag"] {
+        background-color: #0099ff !important; /* Seçilen etiketler mavi */
         color: white !important;
     }
-    
-    /* 5. DİĞER DETAYLAR */
+
+    /* 4. METRİK KARTLARI */
+    div[data-testid="stMetric"] {
+        background-color: #1f2937 !important;
+        border: 1px solid #374151 !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+    }
+    div[data-testid="stMetricLabel"] p {
+        color: #9ca3af !important; /* Başlık Gri */
+    }
+    div[data-testid="stMetricValue"] {
+        color: #f3f4f6 !important; /* Değer Beyaz */
+    }
+
+    /* 5. GİRİŞ BAŞLIĞI */
     .login-header {
         color: white !important;
         text-align: center;
         font-size: 32px;
         font-weight: bold;
         margin-bottom: 30px;
-        margin-top: 20px;
+        margin-top: 40px;
     }
     
     /* Sekme (Tabs) */
-    button[data-baseweb="tab"] div {
-        color: #ffffff !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] div {
-        color: #0099ff !important;
-        border-bottom-color: #0099ff !important;
-    }
-    
+    button[data-baseweb="tab"] div { color: #9ca3af !important; }
+    button[data-baseweb="tab"][aria-selected="true"] div { color: #60a5fa !important; }
+
+    /* Genel Düzen */
+    .block-container { padding-top: 2rem !important; }
     div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
     thead tr th:first-child {display:none}
     tbody th {display:none}
@@ -213,7 +206,7 @@ st.write("")
 
 tab_harita, tab_liste = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Rapor"])
 
-# --- FİLTRELEME MANTIĞI (Ortak) ---
+# --- FİLTRELEME ---
 filtreli_df = df.copy()
 
 status_map = {"Hot 🔥": "Hot", "Warm 🟠": "Warm", "Cold ❄️": "Cold"}
@@ -229,7 +222,7 @@ if "✅ Gidilenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_d
 if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
 
 # ------------------------------------------------
-# TAB 1: HARİTA 🌍
+# TAB 1: HARİTA (KOYU TEMA DÜZELTİLDİ 🌍⚫)
 with tab_harita:
     renkler = []
     for _, row in filtreli_df.iterrows():
@@ -254,6 +247,21 @@ with tab_harita:
             "style": {"backgroundColor": "#262730", "color": "white", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #555"}
         }
         
+        # SİYAH HARİTA KATMANI (CartoDB Dark Matter)
+        # Bu kod haritayı ZORLA siyah yapar.
+        dark_map_style = pdk.Layer(
+            "TileLayer",
+            data=None,
+            get_line_color=[0, 0, 0],
+            # CartoDB Dark Matter Tiles (Ücretsiz ve Simsiyah)
+            data_utils=None,
+            render_sub_layers=None, 
+            id="dark-map",
+            opacity=1,
+            # CartoDB'nin resmi siyah harita servisi
+            data_source="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"
+        )
+
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=filtreli_df,
@@ -274,9 +282,10 @@ with tab_harita:
             pitch=0
         )
         
+        # Haritayı oluştururken 'dark_map_style' katmanını en alta ekliyoruz
         st.pydeck_chart(pdk.Deck(
-            map_style=None, 
-            layers=[layer],
+            map_style=None, # Varsayılan stili kapatıyoruz, kendi TileLayer'ımızı kullanacağız
+            layers=[dark_map_style, layer], # Önce harita zeminini, sonra noktaları çiz
             initial_view_state=view,
             tooltip=tooltip
         ))
