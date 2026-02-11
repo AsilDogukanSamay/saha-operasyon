@@ -11,7 +11,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG & STİL
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V95", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Pro V96", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -78,15 +78,14 @@ def fix_coord(val):
     except: return None
 
 # =================================================
-# 4. VERİ MOTORU (GVIZ API - DAHA HIZLI)
+# 4. VERİ MOTORU (GVIZ API - HIZLI)
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-# Not: gviz/tq genellikle normal export'tan daha hızlı güncellenir
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-@st.cache_data(ttl=0) # TTL=0 yaparak her seferinde taze veri çekmeye zorluyoruz
-def load_data_v95(url):
+@st.cache_data(ttl=0)
+def load_data_v96(url):
     try:
         data = pd.read_csv(url)
         data.columns = [c.strip() for c in data.columns]
@@ -105,7 +104,7 @@ def load_data_v95(url):
         st.error(f"Veri Hatası: {e}")
         return pd.DataFrame()
 
-all_df = load_data_v95(CSV_URL)
+all_df = load_data_v96(CSV_URL)
 
 # FİLTRELEME
 if st.session_state.role == "Admin":
@@ -133,15 +132,12 @@ with st.sidebar:
         st.warning(debug_msg)
     else:
         st.success(debug_msg)
-        
-    st.caption("Veri gelmezse 1-2 dk bekleyip yenileyin.")
     
     st.divider()
     m_view = st.radio("Mod:", ["Ziyaret Durumu", "Lead Durumu"])
     s_plan = st.toggle("📅 Sadece Bugünün Planı")
     
     st.divider()
-    # Butona basınca cache'i tamamen temizle
     if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
@@ -207,11 +203,18 @@ if not df.empty:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=300, pickable=False))
 
-        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Lead: {Lead Status}<br/>Durum: {Gidildi mi?}"}))
+        # TOOLTIP GÜNCELLENDİ: Personel eklendi
+        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 Personel: {Personel}<br/>Durum: {Lead Status}"}))
         
     with t2:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
+        # LİSTE GÜNCELLENDİ: Personel Sütunu Eklendi
+        st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], 
+                     column_config={
+                         "Git": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+                         "Personel": st.column_config.TextColumn("Sorumlu", width="medium")
+                     }, 
+                     use_container_width=True, hide_index=True)
         
     with t3:
         if c_lat:
