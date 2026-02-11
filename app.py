@@ -12,7 +12,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG & STİL
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V100", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V101", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -70,15 +70,21 @@ def normalize_text(text):
     text = re.sub(r'[^a-z0-9]', '', text)
     return text
 
-def fix_coord(val):
+# 🔥 YENİ KOORDİNAT DÜZELTİCİ (NÜKLEER TEMİZLİK)
+def fix_coord_nuclear(val):
     try:
-        s = re.sub(r"[^\d.]", "", str(val).replace(',', '.'))
-        if not s: return None
-        if len(s) >= 4 and "." not in s: 
-            return float(s[:2] + "." + s[2:])
-        val_float = float(s)
-        if val_float > 90: return val_float / 10 
-        return val_float
+        # 1. İçinde rakam olmayan her şeyi sil (Nokta, virgül, harf hepsini at)
+        # "4.016.542..." -> "4016542..."
+        s = re.sub(r"\D", "", str(val))
+        
+        if not s or len(s) < 2: return None
+        
+        # 2. Türkiye Koordinatları (Lat: 36-42, Lon: 26-45)
+        # Bu yüzden sayının ilk 2 hanesini al, araya nokta koy, gerisini ekle.
+        # Örnek: "401250" -> "40.1250"
+        new_val = float(s[:2] + "." + s[2:])
+        
+        return new_val
     except: return None
 
 def calculate_score(row):
@@ -91,24 +97,21 @@ def calculate_score(row):
     return points
 
 # =================================================
-# 4. VERİ MOTORU (CANLI URL YAPISI)
+# 4. VERİ MOTORU
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-# TTL=0 : Önbellek tutma, her seferinde yeni çek
-@st.cache_data(ttl=0) 
-def load_data_v100(sheet_id):
+@st.cache_data(ttl=0)
+def load_data_v101(url):
     try:
-        # URL'i fonksiyonun içinde oluşturuyoruz ki her saniye değişsin (Cache Busting)
-        live_url = f"https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
-        
-        data = pd.read_csv(live_url)
+        data = pd.read_csv(url)
         data.columns = [c.strip() for c in data.columns]
         
-        # 1. KOORDİNAT FIX
-        data["lat"] = data["lat"].apply(fix_coord)
-        data["lon"] = data["lon"].apply(fix_coord)
+        # 1. KOORDİNATLARI ZORLA DÜZELT
+        data["lat"] = data["lat"].apply(fix_coord_nuclear)
+        data["lon"] = data["lon"].apply(fix_coord_nuclear)
         data = data.dropna(subset=["lat", "lon"])
         
         # 2. KOLON GARANTİSİ
@@ -122,10 +125,10 @@ def load_data_v100(sheet_id):
             
         return data
     except Exception as e:
-        st.error(f"Veri Çekme Hatası: {e}")
+        st.error(f"Veri Hatası: {e}")
         return pd.DataFrame()
 
-all_df = load_data_v100(SHEET_ID)
+all_df = load_data_v101(CSV_URL)
 
 # FİLTRELEME
 if st.session_state.role == "Admin":
@@ -149,14 +152,12 @@ with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     
-    # SON GÜNCELLEME SAATİ (Güven verici özellik)
-    now = datetime.now().strftime("%H:%M:%S")
-    st.caption(f"🕒 Son Güncelleme: {now}")
-    
     if "⚠️" in debug_msg:
         st.warning(debug_msg)
     else:
         st.success(debug_msg)
+        
+    st.caption(f"Son Kontrol: {datetime.now().strftime('%H:%M:%S')}")
     
     st.divider()
     m_view = st.radio("Mod:", ["Ziyaret Durumu", "Lead Durumu"])
@@ -164,9 +165,9 @@ with st.sidebar:
     
     st.divider()
     if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
-        st.cache_data.clear() # Tüm hafızayı sil
-        st.toast("Google Sheets'e Bağlanılıyor...", icon="⏳")
-        time.sleep(1) # Kullanıcıya işlem yapıldığını hissettir
+        st.cache_data.clear()
+        st.toast("Yenileniyor...", icon="🔄")
+        time.sleep(0.5)
         st.rerun()
         
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
@@ -265,4 +266,4 @@ if not df.empty:
         else: st.info("Yetkisiz alan.")
 
 else:
-    st.error("⚠️ Veri bekleniyor... (Excel'e yeni veri girdiysen Google'ın işlemesi için 1-2 dakika bekle)")
+    st.error("⚠️ Veri bekleniyor... (Excel'e veri yeni girildiyse Google 1-2 dakikada işler)")
