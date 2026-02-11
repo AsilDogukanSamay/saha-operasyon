@@ -8,8 +8,8 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V14.0",
-    page_icon="📊",
+    page_title="Medibulut Saha V16.0",
+    page_icon="📂",
     layout="wide"
 )
 
@@ -62,28 +62,41 @@ if not st.session_state['giris_yapildi']:
     st.stop()
 
 # ------------------------------------------------
-# 3. ANA UYGULAMA
+# 3. ANA UYGULAMA VE SIDEBAR ⚙️
 
 kullanici = st.session_state['aktif_kullanici']
 
+# SIDEBAR AYARLARI
+st.sidebar.title(f"👤 {kullanici['isim']}")
+if kullanici['rol'] == "Admin":
+    st.sidebar.info("Yetki: Yönetici")
+else:
+    st.sidebar.success("Yetki: Saha Personeli")
+
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ Veri Yönetimi")
+
+# 🔗 SENİN VERDİĞİN LİNK BURAYA EKLENDİ
+excel_linki = "https://docs.google.com/spreadsheets/d/1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o/edit?gid=0#gid=0"
+
+st.sidebar.link_button("📂 Excel Dosyasını Aç (Veri Gir)", excel_linki)
+
+st.sidebar.markdown("---")
+if st.sidebar.button("Çıkış Yap"):
+    st.session_state['giris_yapildi'] = False
+    st.rerun()
+
+# Ana Ekran Başlık
 c1, c2 = st.columns([6, 1])
 with c1:
-    st.title(f"Hoşgeldin, {kullanici['isim']} 👋")
-    if kullanici['rol'] == "Admin":
-        st.caption("Yönetici Modu: Tüm Ekibin Verileri Görüntüleniyor")
-    else:
-        st.caption("Personel Modu: Sadece Kendi Verileriniz Görüntüleniyor")
-with c2:
-    if st.button("Çıkış Yap"):
-        st.session_state['giris_yapildi'] = False
-        st.rerun()
-
-st.markdown("---")
+    st.title("Medibulut Saha & CRM Paneli")
+    st.caption("v16.0 – Entegre Google Sheets Modu")
 
 # ------------------------------------------------
 # 4. Veri Yükleme
-base_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
-sheet_url = f"{base_url}&t={time.time()}"
+# Senin dosyanın ID'sini alıp CSV formatına çeviriyoruz
+sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
+sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 
 try:
     df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
@@ -133,7 +146,6 @@ try:
     # 5. İSTATİSTİKLER (HOT/WARM/COLD) 📊
     toplam = len(df)
     gidilen = len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
-    bekleyen = toplam - gidilen
     
     # Detaylı Analiz
     hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", case=False, na=False)])
@@ -163,14 +175,13 @@ try:
 
     # --- ÜST PANEL (5 SÜTUN) ---
     c1, c2, c3, c4, c5 = st.columns(5)
-    
     c1.metric("✅ Ziyaret / Hedef", f"{gidilen} / {toplam}")
-    c2.metric("🔥 Hot (Sıcak)", hot)
-    c3.metric("🟠 Warm (Ilık)", warm)
-    c4.metric("❄️ Cold (Soğuk)", cold)
+    c2.metric("🔥 Hot", hot)
+    c3.metric("🟠 Warm", warm)
+    c4.metric("❄️ Cold", cold)
     
     with c5:
-        st.write("") # Hizalama boşluğu
+        st.write("")
         st.markdown(f'''
             <a href="{mail_link}" target="_blank">
                 <button style="background-color: #4CAF50; color: white; padding: 10px 5px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
@@ -233,7 +244,7 @@ try:
                 tooltip={"text": tooltip_html}
             ))
         else:
-            st.warning("Veri bulunamadı.")
+            st.warning("Veri bulunamadı. Lütfen Google Sheets dosyasının 'Bağlantıya sahip herkes görüntüleyebilir' olduğundan emin olun.")
 
     with tab2:
         df['Rota'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
@@ -251,7 +262,8 @@ try:
         )
 
 except Exception as e:
-    st.error(f"Hata: {e}")
+    st.error(f"Veri Okuma Hatası: {e}")
+    st.info("💡 İpucu: Google Sheets dosyasını 'Paylaş > Bağlantıya sahip herkes görüntüleyebilir' yapmanız gerekebilir.")
 
 if st.button("🔄 Verileri Güncelle"):
     st.cache_data.clear()
