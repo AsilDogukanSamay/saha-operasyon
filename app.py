@@ -8,7 +8,7 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları (Geniş Mod)
 st.set_page_config(
-    page_title="Medibulut Saha V22.0",
+    page_title="Medibulut Saha V22.1",
     page_icon="💎",
     layout="wide"
 )
@@ -57,14 +57,16 @@ if not st.session_state['giris_yapildi']:
     st.stop()
 
 # ------------------------------------------------
-# 3. VERİ HAZIRLIK
+# 3. VERİ HAZIRLIK (DÜZELTİLEN KISIM BURASI 🛠️)
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 
 try:
-    df = pd.read_csv(sheet_url)
+    # Google'ı kandırmak için 'User-Agent' ekledik (Sorunu çözen kod)
+    df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
+    
     # Veri Temizliği
     df['lat'] = df['lat'].astype(str).str.replace(r'[^\d.]', '', regex=True).apply(lambda x: float(x[:2]+"."+x[2:]) if len(x)>3 else None)
     df['lon'] = df['lon'].astype(str).str.replace(r'[^\d.]', '', regex=True).apply(lambda x: float(x[:2]+"."+x[2:]) if len(x)>3 else None)
@@ -81,8 +83,9 @@ try:
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
 
-except:
-    st.error("Veri bağlantısı kurulamadı."); st.stop()
+except Exception as e:
+    st.error(f"Veri bağlantısı hatası: {e}")
+    st.stop()
 
 # ------------------------------------------------
 # 4. SOL MENÜ (SIDEBAR) - KONTROL MERKEZİ 🕹️
@@ -109,7 +112,7 @@ with st.sidebar:
     )
 
     st.markdown("**🔍 Gösterilecekler:**")
-    # Varsayılan olarak hepsi seçili gelsin (Genel Hali)
+    # Varsayılan olarak hepsi seçili gelsin
     secilen_statu = st.multiselect(
         "Lead Durumu",
         ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"],
@@ -154,7 +157,11 @@ selected_codes = [status_map[x] for x in secilen_statu if x in status_map]
 if "Bekliyor ⚪" in secilen_statu:
     mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False) | ~filtreli_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)
 else:
-    mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False)
+    if selected_codes:
+        mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False)
+    else:
+        mask = pd.Series([False] * len(filtreli_df)) # Hiçbir şey seçilmediyse boş
+
 filtreli_df = filtreli_df[mask]
 
 # B. Ziyaret Filtresi
@@ -174,7 +181,7 @@ for _, row in filtreli_df.iterrows():
         if "hot" in stat: col = [255, 0, 0]
         elif "warm" in stat: col = [255, 165, 0]
         elif "cold" in stat: col = [0, 0, 255]
-        else: col = [0, 200, 0] # Yeşil
+        else: col = [0, 200, 0] # Yeşil (Diğer/Bekleyen)
     renkler.append(col)
 
 filtreli_df['color'] = renkler
