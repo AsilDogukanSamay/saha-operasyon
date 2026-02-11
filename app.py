@@ -9,9 +9,9 @@ from io import BytesIO
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. PREMIUM CONFIG & CSS
+# 1. PREMIUM CONFIG & STİL
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V94", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Pro V95", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -45,13 +45,12 @@ if not st.session_state.auth:
     st.stop()
 
 # =================================================
-# 3. YARDIMCI FONKSİYONLAR (DIŞARIDA TANIMLI)
+# 3. YARDIMCI FONKSİYONLAR
 # =================================================
 loc = get_geolocation()
 c_lat = loc['coords']['latitude'] if loc and 'coords' in loc else None
 c_lon = loc['coords']['longitude'] if loc and 'coords' in loc else None
 
-# Mesafe Hesaplama
 def haversine(lat1, lon1, lat2, lon2):
     try:
         R = 6371 
@@ -60,7 +59,13 @@ def haversine(lat1, lon1, lat2, lon2):
         return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
     except: return 0
 
-# Koordinat Düzeltme (401.55 -> 40.155)
+def normalize_text(text):
+    if pd.isna(text): return ""
+    text = str(text).lower()
+    text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
+    text = re.sub(r'[^a-z0-9]', '', text)
+    return text
+
 def fix_coord(val):
     try:
         s = re.sub(r"[^\d.]", "", str(val).replace(',', '.'))
@@ -72,45 +77,35 @@ def fix_coord(val):
         return val_float
     except: return None
 
-# İsim Temizleme (Doğukan -> dogukan)
-def normalize_text(text):
-    if pd.isna(text): return ""
-    text = str(text).lower()
-    text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
-    text = re.sub(r'[^a-z0-9]', '', text)
-    return text
-
 # =================================================
-# 4. VERİ MOTORU (SADELEŞTİRİLMİŞ)
+# 4. VERİ MOTORU (GVIZ API - DAHA HIZLI)
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
+# Not: gviz/tq genellikle normal export'tan daha hızlı güncellenir
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-@st.cache_data(ttl=5)
-def load_data_v94(url):
+@st.cache_data(ttl=0) # TTL=0 yaparak her seferinde taze veri çekmeye zorluyoruz
+def load_data_v95(url):
     try:
         data = pd.read_csv(url)
         data.columns = [c.strip() for c in data.columns]
         
-        # Koordinatları Düzelt
         data["lat"] = data["lat"].apply(fix_coord)
         data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
-        # Eksik Kolonları Tamamla
         for col in ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]:
             if col not in data.columns: data[col] = "Belirtilmedi"
         
-        # Temiz İsim Sütunu Oluştur
         data["Personel_Clean"] = data["Personel"].apply(normalize_text)
             
         return data
     except Exception as e:
-        st.error(f"Veri Yükleme Hatası: {e}") # Hatayı ekrana basar
+        st.error(f"Veri Hatası: {e}")
         return pd.DataFrame()
 
-all_df = load_data_v94(CSV_URL)
+all_df = load_data_v95(CSV_URL)
 
 # FİLTRELEME
 if st.session_state.role == "Admin":
@@ -122,10 +117,10 @@ else:
     
     if not filtered_df.empty:
         df = filtered_df
-        debug_msg = "✅ Veriler Eşleşti"
+        debug_msg = "✅ Veriler Güncel"
     else:
         df = all_df
-        debug_msg = f"⚠️ İsim Eşleşmedi: '{st.session_state.user}' (Tümü Gösteriliyor)"
+        debug_msg = f"⚠️ Eşleşme Bekleniyor (Tümü Gösteriliyor)"
 
 # =================================================
 # 5. SIDEBAR
@@ -136,19 +131,21 @@ with st.sidebar:
     
     if "⚠️" in debug_msg:
         st.warning(debug_msg)
-        if not all_df.empty:
-            st.caption("Excel'deki Personeller:")
-            st.code("\n".join(all_df["Personel"].unique()))
     else:
         st.success(debug_msg)
+        
+    st.caption("Veri gelmezse 1-2 dk bekleyip yenileyin.")
     
     st.divider()
     m_view = st.radio("Mod:", ["Ziyaret Durumu", "Lead Durumu"])
     s_plan = st.toggle("📅 Sadece Bugünün Planı")
     
     st.divider()
-    if st.button("🔄 Verileri Yenile", use_container_width=True):
-        st.cache_data.clear(); st.rerun()
+    # Butona basınca cache'i tamamen temizle
+    if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+        
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False; st.rerun()
@@ -168,7 +165,7 @@ if not df.empty:
         d_df = d_df.sort_values(by="Mesafe_km")
     else: d_df["Mesafe_km"] = 0
     
-    # RENKLENDİRME
+    # RENKLER
     def set_color(row):
         if "Ziyaret" in m_view:
             status = str(row["Gidildi mi?"]).lower()
@@ -210,7 +207,7 @@ if not df.empty:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=300, pickable=False))
 
-        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}"}))
+        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Lead: {Lead Status}<br/>Durum: {Gidildi mi?}"}))
         
     with t2:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
@@ -224,4 +221,14 @@ if not df.empty:
                 sel = st.selectbox("Klinik:", yakin["Klinik Adı"])
                 st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
             else: st.warning("Yakında (500m) klinik yok.")
-        else: st
+        else: st.error("GPS bekleniyor.")
+
+    with t4:
+        if st.session_state.role == "Admin":
+            out = BytesIO()
+            with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
+            st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
+        else: st.info("Yetkisiz alan.")
+
+else:
+    st.error("⚠️ Veri bekleniyor... (Excel'e veri yeni girildiyse 1-2 dakika sürebilir)")
