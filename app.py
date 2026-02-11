@@ -8,17 +8,17 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V28.1",
+    page_title="Medibulut Saha V28.2",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS TASARIM (GİRİŞ KUTULARI VE RENK DÜZELTMELERİ 🛠️)
+# 2. CSS: ZORLA KARANLIK MOD (HERKES İÇİN AYNI GÖRÜNTÜ) 🛠️
 st.markdown("""
 <style>
-    /* 1. ZORLA KARANLIK MOD (Force Dark Theme) */
+    /* 1. TÜM ARKA PLANI SİYAH YAP (Yönetici Light Mode olsa bile) */
     [data-testid="stAppViewContainer"] {
         background-color: #0E1117 !important;
         color: white !important;
@@ -30,62 +30,56 @@ st.markdown("""
         background-color: #262730 !important;
     }
 
-    /* 2. GİRİŞ KUTULARI (INPUT FIELDS) - SORUN BURADAYDI */
-    div[data-baseweb="input"] {
-        background-color: #262730 !important; /* Kutu rengi */
-        border-color: #444 !important;
-        border-radius: 8px !important;
-    }
-    div[data-baseweb="input"] > div {
-        background-color: transparent !important;
-        color: white !important; /* Yazı Rengi BEYAZ */
-    }
-    input[type="text"], input[type="password"] {
-        color: white !important; /* Yazılan yazı BEYAZ */
-        -webkit-text-fill-color: white !important;
-    }
-    
-    /* 3. SEÇİM KUTULARI (Selectbox & Multiselect) */
-    div[data-baseweb="select"] > div {
-        background-color: #262730 !important;
-        color: white !important;
-        border-color: #444 !important;
-    }
-    div[data-baseweb="tag"] {
-        background-color: #0099ff !important; /* Seçilen etiketler mavi */
-        color: white !important;
-    }
-
-    /* 4. METRİK KARTLARI */
+    /* 2. METRİK KARTLARI (Kutular) - SORUN BURADAYDI */
     div[data-testid="stMetric"] {
-        background-color: #1f2937 !important;
-        border: 1px solid #374151 !important;
+        background-color: #1f2937 !important; /* Koyu Gri Kutu */
+        border: 1px solid #374151 !important; /* Çerçeve */
         padding: 15px !important;
         border-radius: 12px !important;
     }
-    div[data-testid="stMetricLabel"] p {
-        color: #9ca3af !important; /* Başlık Gri */
-    }
-    div[data-testid="stMetricValue"] {
-        color: #f3f4f6 !important; /* Değer Beyaz */
-    }
-
-    /* 5. GİRİŞ BAŞLIĞI */
-    .login-header {
-        color: white !important;
-        text-align: center;
-        font-size: 32px;
-        font-weight: bold;
-        margin-bottom: 30px;
-        margin-top: 40px;
-    }
     
-    /* Sekme (Tabs) */
-    button[data-baseweb="tab"] div { color: #9ca3af !important; }
-    button[data-baseweb="tab"][aria-selected="true"] div { color: #60a5fa !important; }
+    /* BAŞLIKLAR (Hedef, Ziyaret vs.) - ZORLA BEYAZ */
+    div[data-testid="stMetricLabel"] label, 
+    div[data-testid="stMetricLabel"] div,
+    div[data-testid="stMetricLabel"] p {
+        color: #ffffff !important; /* BEMBEYAZ */
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }
 
-    /* Genel Düzen */
-    .block-container { padding-top: 2rem !important; }
+    /* DEĞERLER (Rakamlar) - PARLAK MAVİ */
+    div[data-testid="stMetricValue"] div {
+        color: #60a5fa !important; /* Açık Mavi */
+        font-size: 28px !important;
+        font-weight: 800 !important;
+    }
+
+    /* ALT YAZILAR (Delta) - AÇIK GRİ */
+    div[data-testid="stMetricDelta"] div {
+        color: #d1d5db !important;
+    }
+
+    /* 3. GİRİŞ KUTULARI (INPUTS) */
+    div[data-baseweb="input"] {
+        background-color: #262730 !important;
+        border-color: #4b5563 !important;
+    }
+    input {
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+    }
+    /* Kullanıcı Adı / Şifre Başlıkları */
+    label[data-baseweb="label"] {
+        color: white !important;
+    }
+
+    /* 4. SEKMELER (TABS) */
+    button[data-baseweb="tab"] { color: #9ca3af !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { color: #60a5fa !important; border-bottom-color: #60a5fa !important; }
+
+    /* 5. GENEL AYARLAR */
+    .block-container { padding-top: 3rem !important; }
     div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
     thead tr th:first-child {display:none}
     tbody th {display:none}
@@ -107,8 +101,7 @@ if 'giris_yapildi' not in st.session_state:
 if not st.session_state['giris_yapildi']:
     c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.markdown('<div class="login-header">🔒 Giriş Paneli</div>', unsafe_allow_html=True)
-        
+        st.markdown("<h2 style='text-align: center; color: white;'>🔒 Giriş Paneli</h2>", unsafe_allow_html=True)
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
         
@@ -222,7 +215,7 @@ if "✅ Gidilenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_d
 if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
 
 # ------------------------------------------------
-# TAB 1: HARİTA (KOYU TEMA DÜZELTİLDİ 🌍⚫)
+# TAB 1: HARİTA (ZORLA SİYAH HARİTA - DARK MATTER) 🌍⚫
 with tab_harita:
     renkler = []
     for _, row in filtreli_df.iterrows():
@@ -247,19 +240,14 @@ with tab_harita:
             "style": {"backgroundColor": "#262730", "color": "white", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #555"}
         }
         
-        # SİYAH HARİTA KATMANI (CartoDB Dark Matter)
-        # Bu kod haritayı ZORLA siyah yapar.
+        # SİYAH HARİTA ZEMİNİ (CartoDB Dark Matter)
         dark_map_style = pdk.Layer(
             "TileLayer",
             data=None,
             get_line_color=[0, 0, 0],
-            # CartoDB Dark Matter Tiles (Ücretsiz ve Simsiyah)
-            data_utils=None,
-            render_sub_layers=None, 
-            id="dark-map",
             opacity=1,
-            # CartoDB'nin resmi siyah harita servisi
-            data_source="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"
+            # CartoDB'nin resmi siyah harita servisi (API Key İstemez)
+            data=[{"url": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"}]
         )
 
         layer = pdk.Layer(
@@ -282,10 +270,9 @@ with tab_harita:
             pitch=0
         )
         
-        # Haritayı oluştururken 'dark_map_style' katmanını en alta ekliyoruz
         st.pydeck_chart(pdk.Deck(
-            map_style=None, # Varsayılan stili kapatıyoruz, kendi TileLayer'ımızı kullanacağız
-            layers=[dark_map_style, layer], # Önce harita zeminini, sonra noktaları çiz
+            map_style=None, 
+            layers=[dark_map_style, layer], # Siyah zemin + Noktalar
             initial_view_state=view,
             tooltip=tooltip
         ))
@@ -302,7 +289,6 @@ with tab_harita:
 with tab_liste:
     st.subheader("📋 Müşteri Listesi")
     
-    # Mail Butonu
     konu = f"Saha Raporu - {kullanici['isim']}"
     govde = f"Rapor Sahibi: {kullanici['isim']}\n\n✅ Ziyaret: {gidilen}/{toplam}\n🔥 Hot: {hot}"
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
@@ -310,7 +296,6 @@ with tab_liste:
     col1, col2 = st.columns([1, 5])
     col1.markdown(f'<a href="{mail_link}" target="_blank"><button style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">📧 Raporu Maille</button></a>', unsafe_allow_html=True)
 
-    # Tablo
     filtreli_df['Rota'] = filtreli_df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
     
     st.dataframe(
