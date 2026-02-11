@@ -11,7 +11,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V71", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Pro V72", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -47,10 +47,10 @@ if not st.session_state.login:
     st.stop()
 
 # =================================================
-# 3. GPS & MESAFE HESAPLAMA (HAVERSINE)
+# 3. GPS & MESAFE HESAPLAMA
 # =================================================
 def haversine(lat1, lon1, lat2, lon2):
-    R = 6371 # Dünya yarıçapı km
+    R = 6371 
     dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
     a = (math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2)
     return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
@@ -60,7 +60,7 @@ c_lat = loc['coords']['latitude'] if loc and 'coords' in loc else None
 c_lon = loc['coords']['longitude'] if loc and 'coords' in loc else None
 
 # =================================================
-# 4. VERİ MOTORU (G-SHEETS + OPTİMİZASYON)
+# 4. VERİ MOTORU
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
@@ -78,20 +78,18 @@ def load_and_optimize(url, role, u_lat, u_lon):
         data["lat"] = data["lat"].apply(f_co); data["lon"] = data["lon"].apply(f_co)
         data = data.dropna(subset=["lat", "lon"])
         
-        # Sütun Koruma
         for c in ['Gidildi mi?', 'Bugünün Planı', 'Lead Status', 'Personel']:
-            if c not in data.columns: data[c] = 'Hayır' if 'Gidildi' in c or 'Plan' in c else 'Bekliyor'
+            if c not in data.columns: data[c] = 'Hayır' if 'Gidildi' in c or 'Plan' in c else 'Belirtilmedi'
         
-        # Personel Filtresi
+        # Admin herkesi görür, Personel sadece kendini
         if role != "Admin":
             data = data[data["Personel"].str.contains("ogukan", case=False, na=False)]
         
-        # Mesafe Hesaplama & Sıralama
         if u_lat and u_lon:
             data["Mesafe_km"] = data.apply(lambda r: haversine(u_lat, u_lon, r["lat"], r["lon"]), axis=1)
             data = data.sort_values(by="Mesafe_km")
         else:
-            data["Mesafe_km"] = None
+            data["Mesafe_km"] = 0
             
         return data
     except: return pd.DataFrame()
@@ -104,22 +102,18 @@ df = load_and_optimize(CSV_URL, st.session_state.role, c_lat, c_lon)
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
     st.markdown(f"### 👤 {st.session_state.user}")
-    st.caption(f"Yetki: {st.session_state.role}")
     st.markdown("---")
     s_plan = st.checkbox("📍 Sadece Bugünün Planı", value=False)
-    m_view = st.radio("Harita Görünüm Modu:", ["Lead Durumu", "Ziyaret Durumu"])
-    
-    if c_lat: st.success("📡 GPS Aktif")
-    else: st.warning("📡 GPS Bekleniyor...")
+    m_view = st.radio("Harita Modu:", ["Lead Durumu", "Ziyaret Durumu"])
     
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear(); st.rerun()
-    st.link_button("📂 Google Sheets'e Git", url=EXCEL_URL, use_container_width=True)
-    if st.button("🚪 Güvenli Çıkış", type="primary", use_container_width=True):
+    st.link_button("📂 Google Sheets Paneli", url=EXCEL_URL, use_container_width=True)
+    if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.login = False; st.rerun()
 
 # =================================================
-# 6. DİNAMİK METRİKLER (KPI)
+# 6. DİNAMİK METRİKLER
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 total = len(df)
@@ -133,17 +127,17 @@ if m_view == "Lead Durumu":
     col1.metric("🔥 HOT LEAD", hot); col2.metric("🟠 WARM LEAD", warm)
 else:
     col1.metric("✅ TAMAMLANAN", gidilen); col2.metric("⏳ BEKLEYEN", total - gidilen)
-col3.metric("🎯 TOPLAM HEDEF", total); col4.metric("📈 PERFORMANS", f"%{performans}")
+col3.metric("👥 TOPLAM PERSONEL", df["Personel"].nunique())
+col4.metric("📈 PERFORMANS", f"%{performans}")
 
 # =================================================
 # 7. ANA PANEL
 # =================================================
-tab1, tab2, tab3 = st.tabs(["🗺️ Akıllı Harita", "📋 Navigasyon & Optimize Rota", "⚙️ Yönetim Paneli"])
+tab1, tab2, tab3 = st.tabs(["🗺️ Saha Haritası", "📋 Ekip & Rota Listesi", "⚙️ Yönetim Paneli"])
 
 with tab1:
     d_df = df[df['Bugünün Planı'].str.lower() == 'evet'] if s_plan else df
     if not d_df.empty:
-        # Renk ve Lejant
         if m_view == "Lead Durumu":
             d_df["color"] = d_df["Lead Status"].apply(lambda x: [239, 68, 68] if "Hot" in str(x) else ([245, 158, 11] if "Warm" in str(x) else [59, 130, 246]))
             st.markdown("""<div style='display:flex; margin-bottom:10px;'>
@@ -157,7 +151,6 @@ with tab1:
             st.markdown("""<div style='display:flex; margin-bottom:10px;'>
                 <div class='legend-box'><span class='legend-dot' style='background:#10B981;'></span>Gidildi</div>
                 <div class='legend-box'><span class='legend-dot' style='background:#EF4444;'></span>Gidilmedi</div>
-                <div class='legend-box'><span class='legend-dot' style='background:#00FFFF;'></span>Siz</div>
             </div>""", unsafe_allow_html=True)
 
         layers = [
@@ -167,29 +160,31 @@ with tab1:
         if c_lat and c_lon:
             layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat':c_lat,'lon':c_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=150))
         
-        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=12), tooltip={"text":"{Klinik Adı}\nMesafe: {Mesafe_km} km"}))
+        # Tooltip'e Personel ismini ekledik
+        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=12), 
+            tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 Sorumlu: {Personel}<br/>📏 Mesafe: {Mesafe_km:.2f} km<br/>Durum: {Lead Status}"}))
     else: st.info("Gösterilecek klinik verisi bulunamadı.")
 
 with tab2:
-    # Profesyonel Mail Butonu
     sub = urllib.parse.quote(f"Saha Raporu - {st.session_state.user}")
     bod = urllib.parse.quote(f"Sayın Yönetici,\n\n{st.session_state.user} Saha Raporu:\n✅ Tamamlanan: {gidilen}\n🎯 Toplam: {total}\n📈 Performans: %{performans}")
     st.markdown(f'<a href="mailto:?subject={sub}&body={bod}" style="background:#10B981; color:white; padding:15px 30px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-block; width:100%; text-align:center; margin-bottom:25px;">📧 KURUMSAL RAPOR GÖNDER</a>', unsafe_allow_html=True)
     
-    st.subheader("📍 Optimize Rota (En Yakından Başlar)")
+    st.subheader("📋 Ekip Dağılımı ve Optimize Rota")
     if not df.empty:
         df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(df[["Klinik Adı", "Mesafe_km", "Lead Status", "Gidildi mi?", "Git"]], 
+        # Tabloya Personel Sütununu Ekledik
+        st.dataframe(df[["Klinik Adı", "Personel", "Mesafe_km", "Gidildi mi?", "Git"]], 
                      column_config={
                          "Git": st.column_config.LinkColumn("📍 NAVİGASYON", display_text="BAŞLAT"),
-                         "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")
+                         "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f"),
+                         "Personel": st.column_config.TextColumn("👤 SORUMLU")
                      }, 
                      use_container_width=True, hide_index=True)
 
 with tab3:
     if st.session_state.role == "Admin":
         st.success("✅ Yönetici Paneli Aktif.")
-        
         def to_excel(df):
             output = BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
