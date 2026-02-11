@@ -8,91 +8,54 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V31.1",
+    page_title="Medibulut Saha V31.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. TAM DARK + GÖRÜNÜRLÜK CSS
+# 2. CSS DARK MODE
 st.markdown("""
 <style>
+    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
+    [data-testid="stHeader"] { background-color: #0E1117 !important; }
+    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
 
-/* ANA ARKA PLAN */
-.stApp {
-    background-color: #0E1117 !important;
-    color: #FFFFFF !important;
-}
+    div[data-baseweb="input"] {
+        background-color: #262730 !important;
+        border: 1px solid #4b5563 !important;
+    }
+    input {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        background-color: transparent !important;
+        caret-color: #FFFFFF !important;
+    }
 
-/* HEADER VE SIDEBAR */
-[data-testid="stHeader"] {
-    background-color: #0E1117 !important;
-}
-[data-testid="stSidebar"] {
-    background-color: #1a1c24 !important;
-}
+    div[data-testid="stMetric"] {
+        background-color: #1f2937 !important;
+        border: 1px solid #374151 !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+    }
+    div[data-testid="stMetricLabel"] p {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stMetricValue"] div {
+        color: #60a5fa !important;
+        font-weight: 800 !important;
+    }
 
-/* TÜM LABEL YAZILARI (LOGIN DAHİL) */
-label {
-    color: #FFFFFF !important;
-    font-weight: 600 !important;
-    opacity: 1 !important;
-}
-
-/* INPUT KUTULARI */
-div[data-baseweb="input"] {
-    background-color: #262730 !important;
-    border: 1px solid #4b5563 !important;
-}
-input {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    background-color: transparent !important;
-    caret-color: #FFFFFF !important;
-}
-
-/* METRIC KART */
-div[data-testid="stMetric"] {
-    background-color: #1f2937 !important;
-    border: 1px solid #374151 !important;
-    padding: 18px !important;
-    border-radius: 14px !important;
-}
-
-/* METRIC BAŞLIK */
-div[data-testid="stMetricLabel"] p {
-    color: #FFFFFF !important;
-    font-weight: 800 !important;
-    opacity: 1 !important;
-}
-
-/* METRIC SAYI */
-div[data-testid="stMetricValue"] div {
-    color: #60a5fa !important;
-    font-weight: 900 !important;
-    font-size: 30px !important;
-}
-
-/* LOGIN BAŞLIK */
-.login-header {
-    color: white !important;
-    text-align: center;
-    font-size: 32px;
-    font-weight: bold;
-    margin-bottom: 30px;
-    margin-top: 50px;
-}
-
-/* TAB YAZILARI */
-button[data-baseweb="tab"] p {
-    color: #d1d5db !important;
-}
-button[data-baseweb="tab"][aria-selected="true"] p {
-    color: #60a5fa !important;
-    font-weight: 700 !important;
-}
-
+    .login-header {
+        color: white !important;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        margin-bottom: 30px;
+        margin-top: 50px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -152,10 +115,25 @@ if kullanici['rol'] != "Admin":
 with st.sidebar:
     st.title(f"👋 {kullanici['isim']}")
     st.link_button("📂 Excel Veri Girişi", excel_linki, type="primary")
+
     if st.button("🔄 Verileri Yenile"):
         st.rerun()
+
     st.markdown("---")
+
     renk_modu = st.selectbox("Görünüm Modu:", ["Analiz (Sıcaklık)", "Operasyon (Ziyaret)"])
+    secilen_statu = st.multiselect(
+        "Lead Durumu",
+        ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"],
+        default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"]
+    )
+
+    secilen_ziyaret = st.multiselect(
+        "Ziyaret Durumu",
+        ["✅ Gidilenler", "❌ Gidilmeyenler"],
+        default=["✅ Gidilenler", "❌ Gidilmeyenler"]
+    )
+
     if st.button("Çıkış Yap"):
         st.session_state['giris_yapildi'] = False
         st.rerun()
@@ -174,47 +152,66 @@ k3.metric("🔥 Hot Lead", hot)
 k4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
-# 7. HARİTA
-if not df.empty:
+# 7. HARİTA & LİSTE
+tab_harita, tab_liste = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Rapor"])
 
-    renkler = []
-    for _, row in df.iterrows():
-        stat = str(row.get('Lead Status','')).lower()
-        visit = str(row.get('Gidildi mi?','')).lower()
+filtreli_df = df.copy()
 
-        if "Operasyon" in renk_modu:
-            col = [0,255,127] if "evet" in visit else [255,69,0]
-        else:
-            if "hot" in stat: col = [255,69,0]
-            elif "warm" in stat: col = [255,165,0]
-            elif "cold" in stat: col = [30,144,255]
-            else: col = [169,169,169]
+with tab_harita:
+    if not filtreli_df.empty:
 
-        renkler.append(col)
+        renkler = []
+        for _, row in filtreli_df.iterrows():
+            stat = str(row.get('Lead Status','')).lower()
+            visit = str(row.get('Gidildi mi?','')).lower()
 
-    df['color'] = renkler
+            if "Operasyon" in renk_modu:
+                col = [0,255,127] if "evet" in visit else [255,69,0]
+            else:
+                if "hot" in stat: col = [255,69,0]
+                elif "warm" in stat: col = [255,165,0]
+                elif "cold" in stat: col = [30,144,255]
+                else: col = [169,169,169]
 
-    scatter = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position='[lon, lat]',
-        get_color='color',
-        get_radius=300,
-        radius_min_pixels=5,
-        pickable=True
-    )
+            renkler.append(col)
 
-    st.pydeck_chart(
-        pdk.Deck(
-            map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-            layers=[scatter],
-            initial_view_state=pdk.ViewState(
-                latitude=df['lat'].mean(),
-                longitude=df['lon'].mean(),
-                zoom=11.5
-            ),
-            tooltip={"text": "{Klinik Adı}\n{Lead Status}"}
+        filtreli_df['color'] = renkler
+
+        scatter = pdk.Layer(
+            "ScatterplotLayer",
+            data=filtreli_df,
+            get_position='[lon, lat]',
+            get_color='color',
+            get_radius=300,
+            radius_min_pixels=5,
+            pickable=True
         )
+
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+                layers=[scatter],
+                initial_view_state=pdk.ViewState(
+                    latitude=filtreli_df['lat'].mean(),
+                    longitude=filtreli_df['lon'].mean(),
+                    zoom=11.5
+                ),
+                tooltip={"text": "{Klinik Adı}\n{Lead Status}"}
+            )
+        )
+
+    else:
+        st.warning("Veri yok.")
+
+with tab_liste:
+    filtreli_df['Rota'] = filtreli_df.apply(
+        lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}",
+        axis=1
     )
-else:
-    st.warning("Veri yok.")
+
+    st.dataframe(
+        filtreli_df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'Rota']],
+        column_config={"Rota": st.column_config.LinkColumn("Git")},
+        use_container_width=True,
+        hide_index=True
+    )
