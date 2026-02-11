@@ -19,24 +19,26 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* 1. ANA ZEMİN - ASLA BEYAZLAMAZ */
-    .stApp, [data-testid="stAppViewContainer"] {
+    .stApp, [data-testid="stAppViewContainer"], .stMain {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
     }
     
+    [data-testid="stHeader"] { background-color: #0E1117 !important; }
+    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
+
     /* 2. GİRİŞ KUTULARI (TEXT INPUT) - OKUNABİLİRLİK %100 */
     div[data-baseweb="input"] {
-        background-color: #1a1c24 !important; /* Koyu gri zemin */
-        border: 2px solid #4b5563 !important; /* Belirgin çerçeve */
+        background-color: #1a1c24 !important;
+        border: 2px solid #4b5563 !important;
     }
     input {
         color: #FFFFFF !important; /* YAZILAN YAZI BEMBEYAZ */
         -webkit-text-fill-color: #FFFFFF !important;
         background-color: transparent !important;
         caret-color: #FFFFFF !important;
-        font-weight: bold !important;
     }
-    label { color: #FFFFFF !important; font-weight: bold !important; }
+    label { color: #FFFFFF !important; font-weight: bold !important; opacity: 1 !important; }
 
     /* 3. METRİK BAŞLIKLARI (HEDEF, ZİYARET VB.) - SÖNÜKLÜĞÜ BİTİRDİK */
     div[data-testid="stMetricLabel"] p {
@@ -51,18 +53,11 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* 4. SIDEBAR VE SEÇİM KUTULARI */
-    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
-    div[data-baseweb="select"] > div {
-        background-color: #262730 !important;
-        color: #FFFFFF !important;
-    }
-
-    /* 5. SEKMELER (TABS) */
-    button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; }
+    /* 4. SEKMELER (TABS) */
+    button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; opacity: 1 !important; }
     button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
     
-    .block-container { padding-top: 3rem !important; }
+    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,58 +77,57 @@ if not st.session_state['giris_yapildi']:
     _, c2, _ = st.columns([1,1,1])
     with c2:
         st.markdown("<h1 style='text-align:center; color:white;'>🔒 Giriş</h1>", unsafe_allow_html=True)
-        # Kutuların içi artık her tarayıcıda karanlık ve yazı beyaz olacak
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
-        if st.button("Sisteme Giriş Yap", type="primary"):
+        if st.button("Sisteme Gir", type="primary"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
                 st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
                 st.rerun()
-            else: st.error("Giriş bilgileri hatalı.")
+            else: st.error("Giriş başarısız.")
     st.stop()
 
 # ------------------------------------------------
-# 4. VERİ YÜKLEME VE TEMİZLİK
+# 4. VERİ YÜKLEME
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 
 @st.cache_data(ttl=20)
-def veri_cek(url):
+def veri_getir(url):
     return pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
 
 try:
-    df = veri_cek(sheet_url)
-    def koordinat_temizle(deger):
+    df = veri_getir(sheet_url)
+    def koordinat_duzelt(deger):
         try:
             s = re.sub(r'\D', '', str(deger))
             return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
         except: return None
-    df['lat'] = df['lat'].apply(koordinat_temizle)
-    df['lon'] = df['lon'].apply(koordinat_temizle)
+    df['lat'] = df['lat'].apply(koordinat_duzelt)
+    df['lon'] = df['lon'].apply(koordinat_duzelt)
     df = df.dropna(subset=['lat', 'lon'])
     df['Gidildi mi?'] = df.get('Gidildi mi?', 'Hayır').fillna('Hayır')
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
-except Exception:
-    st.error("Veri bağlantısı hatası."); st.stop()
+except:
+    st.error("Bağlantı hatası."); st.stop()
 
 # ------------------------------------------------
 # 5. SIDEBAR
 with st.sidebar:
     st.title(f"👋 {kullanici['isim']}")
-    if st.button("🔄 Verileri Yenile"):
+    if st.button("🔄 Yenile"):
         st.cache_data.clear(); st.rerun()
     st.markdown("---")
-    renk_modu = st.selectbox("Harita Modu:", ["Analiz (Statü)", "Operasyon (Ziyaret)"])
-    statu_filtre = st.multiselect("Statü Filtresi:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
-    ziyaret_filtre = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
-    if st.button("Güvenli Çıkış"):
+    renk_modu = st.selectbox("Mod:", ["Analiz", "Operasyon"])
+    statu_f = st.multiselect("Lead:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
+    ziyaret_f = st.multiselect("Ziyaret:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
+    if st.button("Çıkış Yap"):
         st.session_state['giris_yapildi'] = False; st.rerun()
 
 # ------------------------------------------------
-# 6. DASHBOARD (PARLAK SAYILAR 💎)
+# 6. DASHBOARD (PARLAK SAYILAR)
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
@@ -146,16 +140,16 @@ m3.metric("🔥 Hot Lead", hot)
 m4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
-# 7. HARİTA VE LİSTE (DARK THEME FIXED)
-tab1, tab2 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste"])
+# 7. HARİTA & LİSTE (DARK TILELAYER FIXED)
+t1, t2 = st.tabs(["🗺️ Harita", "📋 Liste"])
 
-# Dinamik Filtreleme
+# Filtre Uygula
 f_df = df.copy()
-if ziyaret_filtre:
-    z_pattern = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziyaret_filtre])
-    f_df = f_df[f_df['Gidildi mi?'].str.contains(z_pattern, case=False, na=False)]
+if ziyaret_f:
+    pattern = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziyaret_f])
+    f_df = f_df[f_df['Gidildi mi?'].str.contains(pattern, case=False, na=False)]
 
-with tab1:
+with t1:
     if not f_df.empty:
         renkler = []
         for _, row in f_df.iterrows():
@@ -169,29 +163,22 @@ with tab1:
             renkler.append(col)
         f_df['color'] = renkler
 
-        # ZORLA SİYAH HARİTA ZEMİNİ (TILELAYER YÖNTEMİ)
-        # Bu yöntem Mapbox API'sine ihtiyaç duymaz ve tüm tarayıcılarda SİYAH açılır.
+        # ZORLA SİYAH HARİTA ZEMİNİ (Mapbox'tan bağımsız simsiyah durur)
         dark_tile = pdk.Layer(
             "TileLayer",
             data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
-            id="dark-tile-layer"
+            id="dark-layer"
         )
         scatter = pdk.Layer(
-            "ScatterplotLayer",
-            data=f_df,
-            get_position='[lon, lat]',
-            get_color='color',
-            get_radius=300,
-            pickable=True
+            "ScatterplotLayer", data=f_df, get_position='[lon, lat]',
+            get_color='color', get_radius=300, pickable=True
         )
-
         st.pydeck_chart(pdk.Deck(
-            map_style=None, # Varsayılan beyaz haritayı tamamen kapattık
-            layers=[dark_tile, scatter],
+            map_style=None, layers=[dark_tile, scatter],
             initial_view_state=pdk.ViewState(latitude=f_df['lat'].mean(), longitude=f_df['lon'].mean(), zoom=11),
             tooltip={"text": "{Klinik Adı}\nDurum: {Lead Status}"}
         ))
     else: st.warning("Veri bulunamadı.")
 
-with tab2:
+with t2:
     st.dataframe(f_df[['Klinik Adı', 'Personel', 'Lead Status', 'Gidildi mi?']], use_container_width=True, hide_index=True)
