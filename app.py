@@ -8,7 +8,7 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha V16.0",
+    page_title="Medibulut Saha Operasyon Uygulaması ",
     page_icon="📂",
     layout="wide"
 )
