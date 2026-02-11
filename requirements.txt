@@ -10,3 +10,5 @@ streamlit
 eval
 xlsxwriter
 openpyxl
+streamlit-geolocation
+xlsxwriter
