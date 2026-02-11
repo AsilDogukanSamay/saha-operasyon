@@ -11,19 +11,19 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V84", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Enterprise V85", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.05); }
-    div[data-testid="stMetric"] { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.1); }
+    div[data-testid="stMetric"] { background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
     .stButton > button { border-radius: 8px; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
 # =================================================
-# 2. GİRİŞ
+# 2. GİRİŞ KONTROLÜ
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
@@ -58,28 +58,25 @@ def haversine(lat1, lon1, lat2, lon2):
     except: return 0
 
 # =================================================
-# 4. VERİ MOTORU (Fix: Virgül/Nokta Sorunu)
+# 4. VERİ MOTORU (SÜTUN DEDEKTİFİ)
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_data_v84(url, role):
+def load_data_detective(url, role):
     try:
         data = pd.read_csv(url)
         data.columns = [c.strip() for c in data.columns]
         
-        # KOORDİNAT DÜZELTİCİ (VİRGÜLÜ NOKTA YAPAR)
+        # 1. AKILLI KOORDİNAT DÜZELTİCİ
         def fix_coord(val):
             try:
-                # Virgülü noktaya çevir, sayı dışındaki her şeyi sil (nokta hariç)
-                s = str(val).replace(',', '.')
-                s = re.sub(r"[^\d.]", "", s)
+                s = str(val).replace(',', '.') # Virgülü nokta yap
+                s = re.sub(r"[^\d.]", "", s)   # Sayı ve nokta dışını sil
                 if not s: return None
-                # Eğer sayı çok büyükse (örn: 391234) araya nokta koy
-                if len(s) > 4 and "." not in s: 
-                    return float(s[:2] + "." + s[2:])
+                if len(s) > 4 and "." not in s: return float(s[:2] + "." + s[2:])
                 return float(s)
             except: return None
 
@@ -87,19 +84,34 @@ def load_data_v84(url, role):
         data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
-        # Sütunları Garantiye Al
-        for col in ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]:
-            if col not in data.columns: data[col] = "Belirtilmedi"
-            
-        # FİLTRELEME
-        if role != "Admin":
+        # 2. SÜTUN İSMİ BULUCU (Status mu? Durum mu? Lead mi?)
+        def find_col(keywords):
+            for col in data.columns:
+                if any(k in col.lower() for k in keywords): return col
+            return None
+
+        # Sütunları Tespit Et ve Standartlaştır
+        status_col = find_col(["lead", "durum", "statü", "status"])
+        visit_col = find_col(["gidildi", "ziyaret", "check", "visit"])
+        personel_col = find_col(["personel", "sorumlu", "kullanıcı"])
+        
+        if status_col: data["Lead Status"] = data[status_col]
+        else: data["Lead Status"] = "Belirtilmedi"
+        
+        if visit_col: data["Gidildi mi?"] = data[visit_col]
+        else: data["Gidildi mi?"] = "Hayır"
+        
+        if personel_col: data["Personel"] = data[personel_col]
+        
+        # 3. DOĞUKAN FİLTRESİ
+        if role != "Admin" and "Personel" in data.columns:
             data = data[data["Personel"].astype(str).str.contains("ogukan", case=False, na=False)]
             
         return data
     except Exception as e:
         return pd.DataFrame()
 
-df = load_data_v84(CSV_URL, st.session_state.role)
+df = load_data_detective(CSV_URL, st.session_state.role)
 
 # =================================================
 # 5. SIDEBAR
@@ -109,18 +121,13 @@ with st.sidebar:
     st.markdown(f"### 👤 {st.session_state.user}")
     st.divider()
     
-    s_plan = st.toggle("📅 Sadece Bugünün Planı")
-    m_view = st.selectbox("Harita Görünümü", ["Lead Durumu (Renkli)", "Ziyaret Durumu"])
+    m_view = st.selectbox("Harita Görünümü", ["Lead Durumu", "Ziyaret Durumu"])
     
-    st.divider()
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear(); st.rerun()
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False; st.rerun()
-        
-    # DEBUG BİLGİSİ (Veri gelmezse buraya bak)
-    st.caption(f"📊 Yüklenen Veri: {len(df)} Satır")
 
 # =================================================
 # 6. ANA EKRAN
@@ -128,83 +135,77 @@ with st.sidebar:
 st.title("🚀 Medibulut Saha Enterprise")
 
 if not df.empty:
-    # Filtreler
-    d_df = df.copy()
-    if s_plan:
-        d_df = d_df[d_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
-        
     # Mesafe Hesapla
     if c_lat and c_lon:
-        d_df["Mesafe_km"] = d_df.apply(lambda r: haversine(c_lat, c_lon, r["lat"], r["lon"]), axis=1)
-        d_df = d_df.sort_values(by="Mesafe_km")
-    else: d_df["Mesafe_km"] = 0
+        df["Mesafe_km"] = df.apply(lambda r: haversine(c_lat, c_lon, r["lat"], r["lon"]), axis=1)
+        df = df.sort_values(by="Mesafe_km")
+    else: df["Mesafe_km"] = 0
     
+    # AKILLI RENKLENDİRME FONKSİYONU
+    def get_color(row):
+        # 1. Ziyaret Durumu Kontrolü (Genişletilmiş Kelimeler)
+        visit_val = str(row["Gidildi mi?"]).lower()
+        if any(x in visit_val for x in ["evet", "yes", "closed", "tamam", "yapıldı", "ok"]):
+            is_visited = True
+        else: is_visited = False
+
+        if m_view == "Ziyaret Durumu":
+            return [0, 200, 0] if is_visited else [200, 0, 0]
+        else:
+            # 2. Lead Durumu Kontrolü (Genişletilmiş Kelimeler)
+            status_val = str(row["Lead Status"]).lower()
+            if any(x in status_val for x in ["hot", "sıcak", "yüksek", "alev"]): return [239, 68, 68] # Kırmızı
+            if any(x in status_val for x in ["warm", "ılık", "orta"]): return [245, 158, 11] # Turuncu
+            if any(x in status_val for x in ["cold", "soğuk", "düşük"]): return [59, 130, 246] # Mavi
+            if is_visited: return [0, 200, 0] # Ziyaret edildiyse yeşil olsun
+            return [128, 128, 128] # Gri (Bilinmeyen)
+
+    df["color"] = df.apply(get_color, axis=1)
+
     # KPI
-    total = len(d_df)
-    hot = len(d_df[d_df["Lead Status"].astype(str).str.contains("hot", case=False, na=False)])
-    gidilen = len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
+    total = len(df)
+    hot = len(df[df["Lead Status"].astype(str).str.contains("hot|sıcak", case=False, na=False)])
+    visited_count = len(df[df["Gidildi mi?"].astype(str).str.contains("evet|closed|tamam", case=False, na=False)])
     
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Toplam Hedef", total)
-    k2.metric("Hot Lead", hot)
-    k3.metric("Ziyaret", gidilen)
-    k4.metric("Performans", f"%{int(gidilen/total*100) if total>0 else 0}")
-    
-    st.progress(gidilen/total if total>0 else 0)
+    k2.metric("Hot / Sıcak", hot)
+    k3.metric("Ziyaret Edilen", visited_count)
+    k4.metric("Başarı", f"%{int(visited_count/total*100) if total>0 else 0}")
     
     # TABS
-    t1, t2, t3, t4 = st.tabs(["🗺️ Harita", "📋 Liste", "✅ İşlem", "⚙️ Admin"])
+    t1, t2, t3 = st.tabs(["🗺️ Harita", "📋 Liste", "⚙️ Yönetim"])
     
     with t1:
-        # RENK MANTIĞI (Fix)
-        def get_color(row):
-            if m_view == "Ziyaret Durumu":
-                stat = str(row["Gidildi mi?"]).lower()
-                return [0, 200, 0] if stat in ["evet", "closed", "tamam"] else [200, 0, 0]
-            else:
-                stat = str(row["Lead Status"]).lower()
-                if "hot" in stat: return [239, 68, 68]     # Kırmızı
-                if "warm" in stat: return [245, 158, 11]    # Turuncu
-                if "cold" in stat: return [59, 130, 246]    # Mavi
-                return [128, 128, 128]                      # Gri (Tanımsız)
-
-        d_df["color"] = d_df.apply(get_color, axis=1)
-        
-        layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=200, pickable=True)]
-        
+        layers = [pdk.Layer("ScatterplotLayer", data=df, get_position='[lon, lat]', get_color='color', get_radius=200, pickable=True)]
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=300, pickable=False))
 
         st.pydeck_chart(pdk.Deck(
             layers=layers,
-            initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11),
-            tooltip={"html": "<b>{Klinik Adı}</b><br/>Lead: {Lead Status}<br/>Mesafe: {Mesafe_km:.2f} km"}
+            initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else df["lat"].mean(), longitude=c_lon if c_lon else df["lon"].mean(), zoom=11),
+            tooltip={"html": "<b>{Klinik Adı}</b><br/>Lead: {Lead Status}<br/>Durum: {Gidildi mi?}"}
         ))
         
     with t2:
-        d_df["Git"] = d_df.apply(lambda x: f"http://maps.google.com/?q={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Mesafe_km", "Git"]], 
+        df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
+        st.dataframe(df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], 
                      column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")},
                      use_container_width=True, hide_index=True)
-        
+    
     with t3:
-        if c_lat:
-            yakin = d_df[d_df["Mesafe_km"] <= 0.5]
-            if not yakin.empty:
-                sel = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
-                st.info(f"Seçilen: {sel}")
-                st.link_button("Ziyareti Kaydet", EXCEL_URL)
-            else: st.warning("Yakında klinik yok.")
-        else: st.error("GPS bekleniyor.")
-
-    with t4:
         if st.session_state.role == "Admin":
             out = BytesIO()
-            with pd.ExcelWriter(out, engine='xlsxwriter') as writer:
-                d_df.to_excel(writer, index=False)
+            with pd.ExcelWriter(out, engine='xlsxwriter') as writer: df.to_excel(writer, index=False)
             st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
-        else: st.warning("Yetkisiz alan.")
+        else:
+            # DEBUG: Personel için veri kontrol paneli
+            st.info("📊 Gelen Veri Önizleme (Debug)")
+            st.dataframe(df.head(), use_container_width=True)
 
 else:
-    st.error("Veri yüklenemedi. 'Personel' sütununda 'Doğukan' yazdığından ve koordinatların dolu olduğundan emin olun.")
+    st.error("Veri bulunamadı. Lütfen aşağıdakileri kontrol edin:")
+    st.warning("1. Google Sheets'te 'Personel' sütununda 'Doğukan' yazıyor mu?")
+    st.warning("2. 'Lead Status' sütunu var mı? (Adı 'Durum' veya 'Status' da olabilir)")
+    st.warning("3. 'Gidildi mi?' sütunu var mı? (Adı 'Ziyaret' veya 'Check' de olabilir)")
