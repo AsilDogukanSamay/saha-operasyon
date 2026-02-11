@@ -10,7 +10,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V64", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V65", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -42,7 +42,7 @@ if not st.session_state.login:
                 st.session_state.user = "Doğukan" if u_in.lower() == "dogukan" else "Yönetici"
                 st.session_state.login = True
                 st.rerun()
-            else: st.error("Kullanıcı adı veya şifre hatalı.")
+            else: st.error("Hatalı bilgiler.")
     st.stop()
 
 # =================================================
@@ -68,16 +68,14 @@ def load_data(url, role):
         data["lat"] = data["lat"].apply(f_co); data["lon"] = data["lon"].apply(f_co)
         data = data.dropna(subset=["lat", "lon"])
         
-        # Sütun Koruma
         for c in ['Gidildi mi?', 'Bugünün Planı', 'Lead Status', 'Personel']:
             if c not in data.columns: data[c] = 'Hayır' if 'Gidildi' in c or 'Plan' in c else 'Bekliyor'
             
         if role != "Admin":
-            # Doğukan için sağlam filtreleme (Türkçe karakter ve büyük-küçük harf duyarsız)
+            # Doğukan için güvenli isim filtresi
             data = data[data["Personel"].str.contains("ogukan", case=False, na=False)]
         return data
-    except Exception as e:
-        return pd.DataFrame()
+    except: return pd.DataFrame()
 
 df = load_data(CSV_URL, st.session_state.role)
 
@@ -87,17 +85,17 @@ df = load_data(CSV_URL, st.session_state.role)
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
     st.markdown(f"### 👤 {st.session_state.user}")
-    st.markdown(f"**Yetki:** {st.session_state.role}")
+    st.caption(f"Yetki: {st.session_state.role}")
     st.markdown("---")
     s_plan = st.checkbox("Sadece Bugünün Planını Göster", value=False)
-    m_view = st.radio("Harita Modu:", ["Lead Durumu", "Ziyaret Durumu"])
+    m_view = st.radio("Harita Modu Seçin:", ["Lead Durumu", "Ziyaret Durumu"])
     st.markdown("---")
     if st.button("🔄 Verileri Yenile", use_container_width=True): st.cache_data.clear(); st.rerun()
     st.link_button("📂 Ana Excel Tablosu", url=EXCEL_URL, use_container_width=True)
     if st.button("🚪 Güvenli Çıkış", type="primary", use_container_width=True): st.session_state.login = False; st.rerun()
 
 # =================================================
-# 5. DASHBOARD & METRİKLER
+# 5. DİNAMİK METRİKLER (KPI)
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 
@@ -114,13 +112,16 @@ else:
     col1.metric("✅ TAMAMLANAN", gidilen); col2.metric("⏳ BEKLEYEN", total - gidilen)
 col3.metric("🎯 TOPLAM HEDEF", total); col4.metric("📈 PERFORMANS", f"%{performans}")
 
-tab1, tab2, tab3 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Navigasyon", "⚙️ Yönetim Paneli"])
+# =================================================
+# 6. ANA PANEL
+# =================================================
+tab1, tab2, tab3 = st.tabs(["🗺️ Saha Haritası", "📋 Navigasyon & Rapor", "⚙️ Yönetim Paneli"])
 
 with tab1:
     d_df = df[df['Bugünün Planı'].str.lower() == 'evet'] if s_plan else df
-    if len(d_df) > 0:
+    if not d_df.empty:
+        # RENK MANTIĞI VE LEJANT
         if m_view == "Lead Durumu":
-            c_m = {"Hot": [239, 68,  red], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
             d_df["color"] = d_df["Lead Status"].apply(lambda x: [239, 68, 68] if "Hot" in str(x) else ([245, 158, 11] if "Warm" in str(x) else [59, 130, 246]))
             st.markdown("""<div style='display:flex; margin-bottom:10px;'>
                 <div class='legend-box'><span class='legend-dot' style='background:#EF4444;'></span>Hot</div>
@@ -142,23 +143,23 @@ with tab1:
             layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat':c_lat,'lon':c_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=150))
         
         st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=12), tooltip={"text":"{Klinik Adı}"}))
-    else: st.info("Görüntülenecek klinik bulunamadı.")
+    else:
+        st.info("Gösterilecek klinik verisi bulunamadı.")
 
 with tab2:
     sub = urllib.parse.quote(f"Saha Raporu - {st.session_state.user}")
     bod = urllib.parse.quote(f"Sayın Yönetici,\n\n{st.session_state.user} Raporu:\n✅ Tamamlanan: {gidilen}\n🎯 Toplam: {total}\n📈 Performans: %{performans}")
     st.markdown(f'<a href="mailto:?subject={sub}&body={bod}" style="background:#10B981; color:white; padding:15px 30px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-block; width:100%; text-align:center; margin-bottom:25px;">📧 KURUMSAL RAPOR GÖNDER</a>', unsafe_allow_html=True)
     
-    if total > 0:
+    if not df.empty:
         df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Git"]], 
                      column_config={"Git": st.column_config.LinkColumn("📍 NAVİGASYON", display_text="BAŞLAT")}, 
                      use_container_width=True, hide_index=True)
 
 with tab3:
-    # YÖNETİM PANELİ UYARISI VE İÇERİĞİ
     if st.session_state.role == "Admin":
-        st.success("✅ Yönetici Paneli Aktif. Tüm saha verilerini buradan yönetebilir ve Excel olarak indirebilirsiniz.")
-        st.download_button("📊 Tüm Verileri Excel İndir", data=df.to_csv(index=False).encode('utf-8'), file_name="medibulut_saha.csv")
+        st.success("✅ Yönetici Paneli Aktif. Tüm verileri aşağıdan indirebilirsiniz.")
+        st.download_button("📊 Excel Çıktısı Al", data=df.to_csv(index=False).encode('utf-8'), file_name="medibulut_saha.csv")
     else:
         st.warning("⚠️ Bu alan sadece yöneticiler içindir. Sizin yetkiniz: Personel.")
