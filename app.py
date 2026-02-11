@@ -8,76 +8,92 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V27.2",
+    page_title="Medibulut Saha V28.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS TASARIM (TAVAN BOŞLUĞU DÜZELTİLDİ 🛠️)
+# 2. CSS TASARIM (ZORLA KARANLIK MOD + DÜZELTMELER 🛠️)
 st.markdown("""
 <style>
-    /* Ana Font ve Boşluklar - İŞTE BURAYI DÜZELTTİK (1rem -> 5rem) */
+    /* 1. TÜM SAYFAYI ZORLA SİYAH YAP */
+    [data-testid="stAppViewContainer"] {
+        background-color: #0E1117 !important; /* Streamlit Standart Koyu Renk */
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stHeader"] {
+        background-color: #0E1117 !important; /* Üst Bar Siyah */
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: #262730 !important; /* Sol Menü Koyu Gri */
+    }
+    
+    /* 2. ANA DÜZENLEMELER */
     .block-container {
-        padding-top: 5rem !important; 
+        padding-top: 4rem !important; 
         padding-bottom: 5rem;
     }
     
-    /* Metrik Kartları */
+    /* 3. METRİK KARTLARI */
     div[data-testid="stMetric"] {
         background-color: #262730 !important;
-        border: 1px solid #555 !important;
+        border: 1px solid #41444b !important;
         padding: 15px !important;
         border-radius: 12px !important;
         min-height: 120px;
     }
     
-    /* Başlıklar (Label) */
+    /* Yazı Renklerini Zorla Beyaz Yap (Yöneticide siyah çıkmasın) */
     div[data-testid="stMetricLabel"] p {
-        color: #ffffff !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
+        color: #d1d5db !important; /* Başlık Açık Gri */
+        font-size: 15px !important;
     }
-
-    /* Sayılar (Value) */
     div[data-testid="stMetricValue"] {
-        color: #0099ff !important;
-        font-size: 28px !important;
-        font-weight: 800 !important;
+        color: #0099ff !important; /* Değer Mavi */
     }
-
-    /* Alt Yazı (Delta) */
     div[data-testid="stMetricDelta"] > div {
-        color: #e0e0e0 !important;
-        font-size: 14px !important;
-        white-space: normal !important;
+        color: #e0e0e0 !important; /* Açıklama Beyaz */
     }
     
-    /* Giriş Ekranı Başlığı */
+    /* 4. GİRİŞ KUTULARI (INPUTS) */
+    /* Yöneticide beyaz kutu olmasın diye kutuları da karartıyoruz */
+    div[data-baseweb="input"] > div {
+        background-color: #262730 !important;
+        color: white !important;
+        border-color: #555 !important;
+    }
+    div[data-baseweb="select"] > div {
+        background-color: #262730 !important;
+        color: white !important;
+    }
+    input {
+        color: white !important;
+    }
+    
+    /* 5. DİĞER DETAYLAR */
     .login-header {
         color: white !important;
         text-align: center;
         font-size: 32px;
         font-weight: bold;
         margin-bottom: 30px;
-        margin-top: 20px; /* Ekstra boşluk */
+        margin-top: 20px;
     }
     
     /* Sekme (Tabs) */
     button[data-baseweb="tab"] div {
         color: #ffffff !important;
-        font-size: 16px !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] div {
         color: #0099ff !important;
+        border-bottom-color: #0099ff !important;
     }
     
-    /* Sidebar */
-    section[data-testid="stSidebar"] { background-color: #1e1e1e; }
     div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
-    
-    /* Tablo Başlıkları Gizle */
     thead tr th:first-child {display:none}
     tbody th {display:none}
 </style>
@@ -184,7 +200,6 @@ gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
-# Kartlar
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("🎯 Hedef", toplam, delta="Toplam Klinik")
 k2.metric("✅ Ziyaret", gidilen, delta=f"%{int(gidilen/toplam*100) if toplam>0 else 0} Tamamlandı")
