@@ -8,52 +8,62 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V26.0",
+    page_title="Medibulut Saha V27.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. KOYU MOD İÇİN ÖZEL CSS (DÜZELTİLDİ 🛠️)
+# 2. CSS TASARIM (Yazı Sığdırma & Sekme Ayarları 🛠️)
 st.markdown("""
 <style>
     /* Ana Font ve Boşluklar */
     .block-container {padding-top: 1rem; padding-bottom: 5rem;}
     
-    /* Metrik Kartları (KOYU MODA UYGUN) */
+    /* Metrik Kartları (Koyu Mod & Yazı Sığdırma) */
     div[data-testid="stMetric"] {
-        background-color: #262730 !important; /* Koyu Gri Zemin */
+        background-color: #262730 !important;
         border: 1px solid #41444b;
-        padding: 15px;
+        padding: 10px;
         border-radius: 10px;
+        min-height: 120px; /* Kartları eşitlemek için min yükseklik */
     }
     
     /* Başlıklar (Label) */
     div[data-testid="stMetricLabel"] p {
-        color: #d1d5db !important; /* Açık Gri Yazı */
-        font-weight: 500;
+        color: #d1d5db !important;
         font-size: 14px;
     }
 
     /* Sayılar (Value) */
     div[data-testid="stMetricValue"] {
-        color: #ffffff !important; /* BEMBEYAZ Yazı */
-        font-size: 28px;
+        color: #ffffff !important;
+        font-size: 26px;
         font-weight: bold;
     }
-    
-    /* Sidebar (Sol Menü) */
-    section[data-testid="stSidebar"] {
-        background-color: #1e1e1e; /* Tam Siyah */
+
+    /* Alt Yazı (Delta) - Yazı Sığdırma Ayarı BURADA */
+    div[data-testid="stMetricDelta"] > div {
+        white-space: normal !important; /* Yazıyı alt satıra indir */
+        font-size: 13px !important;
+        line-height: 1.2 !important;
     }
     
-    /* Butonlar */
-    div.stButton > button {
-        width: 100%;
-        border-radius: 8px;
-        font-weight: bold;
+    /* Sekme (Tabs) Tasarımı */
+    button[data-baseweb="tab"] {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        background-color: transparent !important;
     }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #0099ff !important;
+        border-bottom-color: #0099ff !important;
+    }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] { background-color: #1e1e1e; }
+    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
     
     /* Tablo Başlıkları Gizle */
     thead tr th:first-child {display:none}
@@ -98,7 +108,6 @@ excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 try:
     df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
     
-    # Koordinat Temizleme
     def koordinat_duzelt(deger):
         try:
             s = str(deger)
@@ -155,24 +164,28 @@ with st.sidebar:
 
 # ------------------------------------------------
 # 6. ANA DASHBOARD (SAYILAR) 📊
-# Artık beyaz değil, koyu gri zemin ve beyaz yazı
 
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
+# Kartlar (CSS ile sığdırma ayarlandı)
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("🎯 Hedef", toplam)
-k2.metric("✅ Ziyaret", gidilen)
-k3.metric("🔥 Hot Lead", hot)
-k4.metric("🟠 Warm Lead", warm)
+k1.metric("🎯 Hedef", toplam, delta="Toplam Klinik")
+k2.metric("✅ Ziyaret", gidilen, delta=f"%{int(gidilen/toplam*100) if toplam>0 else 0} Tamamlandı")
+k3.metric("🔥 Hot Lead", hot, delta="Yüksek Potansiyel")
+k4.metric("🟠 Warm Lead", warm, delta="Takip Edilmeli")
 
 st.write("") 
 
 # ------------------------------------------------
-# 7. HARİTA (NET GÖRÜNÜM) 🌍
+# 7. SEKMELİ YAPI (HARİTA & LİSTE) 📑
+# İşte burası yeni! İki sekme oluşturuyoruz.
 
+tab_harita, tab_liste = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Rapor"])
+
+# --- FİLTRELEME MANTIĞI (Ortak) ---
 filtreli_df = df.copy()
 
 status_map = {"Hot 🔥": "Hot", "Warm 🟠": "Warm", "Cold ❄️": "Cold"}
@@ -187,82 +200,87 @@ filtreli_df = filtreli_df[mask]
 if "✅ Gidilenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] != 'Evet']
 if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
 
-renkler = []
-for _, row in filtreli_df.iterrows():
-    stat = str(row.get('Lead Status','')).lower()
-    visit = str(row.get('Gidildi mi?','')).lower()
-    
-    col = [200, 200, 200]
-    if "Operasyon" in renk_modu:
-        col = [0, 255, 127] if "evet" in visit else [255, 69, 0] # Neon Yeşil / Neon Kırmızı (Koyu modda parlar)
+# ------------------------------------------------
+# TAB 1: HARİTA 🌍
+with tab_harita:
+    renkler = []
+    for _, row in filtreli_df.iterrows():
+        stat = str(row.get('Lead Status','')).lower()
+        visit = str(row.get('Gidildi mi?','')).lower()
+        
+        col = [200, 200, 200]
+        if "Operasyon" in renk_modu:
+            col = [0, 255, 127] if "evet" in visit else [255, 69, 0]
+        else:
+            if "hot" in stat: col = [255, 69, 0]        # Neon Kırmızı
+            elif "warm" in stat: col = [255, 165, 0]    # Turuncu
+            elif "cold" in stat: col = [30, 144, 255]   # Mavi
+            else: col = [169, 169, 169]                 # Gri
+        renkler.append(col)
+
+    filtreli_df['color'] = renkler
+
+    if not filtreli_df.empty:
+        tooltip = {
+            "html": "<b>{Klinik Adı}</b><br/>{Lead Status}<br/>{Yetkili Kişi}",
+            "style": {"backgroundColor": "#262730", "color": "white", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #555"}
+        }
+        
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=filtreli_df,
+            get_position='[lon, lat]',
+            get_color='color',
+            get_radius=250,
+            pickable=True,
+            stroked=True,
+            filled=True,
+            line_width_min_pixels=1,
+            get_line_color=[255, 255, 255, 50]
+        )
+        
+        view = pdk.ViewState(
+            latitude=filtreli_df['lat'].mean(),
+            longitude=filtreli_df['lon'].mean(),
+            zoom=11.5,
+            pitch=0
+        )
+        
+        st.pydeck_chart(pdk.Deck(
+            map_style=None, 
+            layers=[layer],
+            initial_view_state=view,
+            tooltip=tooltip
+        ))
+        
+        if "Operasyon" in renk_modu:
+            st.caption("🟢 **Yeşil:** Ziyaret Edildi | 🔴 **Kırmızı:** Ziyaret Bekliyor")
+        else:
+            st.caption("🔴 **Hot:** Sıcak | 🟠 **Warm:** Takip | 🔵 **Cold:** Soğuk | ⚪ **Gri:** Diğer")
     else:
-        if "hot" in stat: col = [255, 69, 0]        # Neon Kırmızı
-        elif "warm" in stat: col = [255, 165, 0]    # Turuncu
-        elif "cold" in stat: col = [30, 144, 255]   # Mavi
-        else: col = [169, 169, 169]                 # Gri
-    renkler.append(col)
-
-filtreli_df['color'] = renkler
-
-if not filtreli_df.empty:
-    st.subheader("🗺️ Saha Haritası")
-    
-    tooltip = {
-        "html": "<b>{Klinik Adı}</b><br/>{Lead Status}<br/>{Yetkili Kişi}",
-        "style": {"backgroundColor": "#262730", "color": "white", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #555"}
-    }
-    
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=filtreli_df,
-        get_position='[lon, lat]',
-        get_color='color',
-        get_radius=250,
-        pickable=True,
-        stroked=True,
-        filled=True,
-        line_width_min_pixels=1,
-        get_line_color=[255, 255, 255, 50] # Beyaz kenarlık
-    )
-    
-    view = pdk.ViewState(
-        latitude=filtreli_df['lat'].mean(),
-        longitude=filtreli_df['lon'].mean(),
-        zoom=11.5,
-        pitch=0 # Düz harita (Daha net görünür)
-    )
-    
-    st.pydeck_chart(pdk.Deck(
-        map_style=None, 
-        layers=[layer],
-        initial_view_state=view,
-        tooltip=tooltip
-    ))
-    
-    if "Operasyon" in renk_modu:
-        st.caption("🟢 **Yeşil:** Ziyaret Edildi | 🔴 **Kırmızı:** Ziyaret Bekliyor")
-    else:
-        st.caption("🔴 **Hot:** Sıcak | 🟠 **Warm:** Takip | 🔵 **Cold:** Soğuk | ⚪ **Gri:** Diğer")
-
-else:
-    st.warning("⚠️ Veri bulunamadı.")
+        st.warning("⚠️ Veri bulunamadı.")
 
 # ------------------------------------------------
-# 8. LİSTE & RAPOR
-st.write("")
-with st.expander("📂 Detaylı Liste & Raporlama"):
+# TAB 2: LİSTE & RAPOR 📋
+with tab_liste:
+    st.subheader("📋 Müşteri Listesi")
+    
+    # Mail Butonu
     konu = f"Saha Raporu - {kullanici['isim']}"
     govde = f"Rapor Sahibi: {kullanici['isim']}\n\n✅ Ziyaret: {gidilen}/{toplam}\n🔥 Hot: {hot}"
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
     
-    st.markdown(f'<a href="{mail_link}" target="_blank"><button style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">📧 Raporu Maille</button></a>', unsafe_allow_html=True)
+    col1, col2 = st.columns([1, 5])
+    col1.markdown(f'<a href="{mail_link}" target="_blank"><button style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">📧 Raporu Maille</button></a>', unsafe_allow_html=True)
 
+    # Tablo
     filtreli_df['Rota'] = filtreli_df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
     
     st.dataframe(
-        filtreli_df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'Rota']],
+        filtreli_df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'İletişim', 'Rota']],
         column_config={
             "Rota": st.column_config.LinkColumn("Rota", display_text="📍 Git"),
+            "Lead Status": st.column_config.TextColumn("Durum"),
         },
         use_container_width=True,
         hide_index=True
