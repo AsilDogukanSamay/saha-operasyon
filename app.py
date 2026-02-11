@@ -8,81 +8,85 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V28.2",
+    page_title="Medibulut Saha V29.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS: ZORLA KARANLIK MOD (HERKES İÇİN AYNI GÖRÜNTÜ) 🛠️
+# 2. CSS: ZORLA KARANLIK MOD & GÖRÜNÜM DÜZELTMELERİ 🛠️
 st.markdown("""
 <style>
-    /* 1. TÜM ARKA PLANI SİYAH YAP (Yönetici Light Mode olsa bile) */
-    [data-testid="stAppViewContainer"] {
+    /* 1. TÜM ARKA PLANI ZORLA SİYAH YAP */
+    .stApp {
         background-color: #0E1117 !important;
         color: white !important;
     }
+    
     [data-testid="stHeader"] {
         background-color: #0E1117 !important;
     }
+    
     [data-testid="stSidebar"] {
         background-color: #262730 !important;
     }
 
-    /* 2. METRİK KARTLARI (Kutular) - SORUN BURADAYDI */
-    div[data-testid="stMetric"] {
-        background-color: #1f2937 !important; /* Koyu Gri Kutu */
-        border: 1px solid #374151 !important; /* Çerçeve */
-        padding: 15px !important;
-        border-radius: 12px !important;
-    }
-    
-    /* BAŞLIKLAR (Hedef, Ziyaret vs.) - ZORLA BEYAZ */
-    div[data-testid="stMetricLabel"] label, 
-    div[data-testid="stMetricLabel"] div,
-    div[data-testid="stMetricLabel"] p {
-        color: #ffffff !important; /* BEMBEYAZ */
-        font-size: 16px !important;
-        font-weight: 600 !important;
-        opacity: 1 !important;
-    }
-
-    /* DEĞERLER (Rakamlar) - PARLAK MAVİ */
-    div[data-testid="stMetricValue"] div {
-        color: #60a5fa !important; /* Açık Mavi */
-        font-size: 28px !important;
-        font-weight: 800 !important;
-    }
-
-    /* ALT YAZILAR (Delta) - AÇIK GRİ */
-    div[data-testid="stMetricDelta"] div {
-        color: #d1d5db !important;
-    }
-
-    /* 3. GİRİŞ KUTULARI (INPUTS) */
+    /* 2. GİRİŞ KUTULARI (INPUTS) - BEYAZ YAZI */
     div[data-baseweb="input"] {
         background-color: #262730 !important;
-        border-color: #4b5563 !important;
+        border: 1px solid #4b5563 !important;
+        border-radius: 8px !important;
     }
     input {
         color: white !important;
         -webkit-text-fill-color: white !important;
     }
-    /* Kullanıcı Adı / Şifre Başlıkları */
-    label[data-baseweb="label"] {
-        color: white !important;
+    
+    /* 3. METRİK KARTLARI */
+    div[data-testid="stMetric"] {
+        background-color: #1f2937 !important;
+        border: 1px solid #374151 !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Başlıklar -> Beyaz */
+    div[data-testid="stMetricLabel"] p {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    /* Değerler -> Mavi */
+    div[data-testid="stMetricValue"] div {
+        color: #60a5fa !important;
+    }
+    /* Alt Yazı -> Gri */
+    div[data-testid="stMetricDelta"] div {
+        color: #d1d5db !important;
     }
 
     /* 4. SEKMELER (TABS) */
     button[data-baseweb="tab"] { color: #9ca3af !important; }
-    button[data-baseweb="tab"][aria-selected="true"] { color: #60a5fa !important; border-bottom-color: #60a5fa !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { 
+        color: #60a5fa !important; 
+        border-bottom-color: #60a5fa !important; 
+    }
 
-    /* 5. GENEL AYARLAR */
-    .block-container { padding-top: 3rem !important; }
+    /* 5. BUTONLAR & DİĞER */
     div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
+    .login-header {
+        color: white !important;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        margin-bottom: 30px;
+        margin-top: 40px;
+    }
+    
+    /* Tablo Gizlemeleri */
     thead tr th:first-child {display:none}
     tbody th {display:none}
+    .block-container { padding-top: 2rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,7 +105,7 @@ if 'giris_yapildi' not in st.session_state:
 if not st.session_state['giris_yapildi']:
     c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.markdown("<h2 style='text-align: center; color: white;'>🔒 Giriş Paneli</h2>", unsafe_allow_html=True)
+        st.markdown('<div class="login-header">🔒 Giriş Paneli</div>', unsafe_allow_html=True)
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
         
@@ -215,7 +219,7 @@ if "✅ Gidilenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_d
 if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
 
 # ------------------------------------------------
-# TAB 1: HARİTA (ZORLA SİYAH HARİTA - DARK MATTER) 🌍⚫
+# TAB 1: HARİTA (DÜZELTİLDİ: SİYAH ZEMİN 🌍⚫)
 with tab_harita:
     renkler = []
     for _, row in filtreli_df.iterrows():
@@ -240,14 +244,13 @@ with tab_harita:
             "style": {"backgroundColor": "#262730", "color": "white", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #555"}
         }
         
-        # SİYAH HARİTA ZEMİNİ (CartoDB Dark Matter)
+        # SİYAH HARİTA KATMANI (CartoDB Dark Matter)
+        # Hata burada düzeltildi: data parametresi sadece bir kere kullanılıyor.
         dark_map_style = pdk.Layer(
             "TileLayer",
-            data=None,
-            get_line_color=[0, 0, 0],
-            opacity=1,
-            # CartoDB'nin resmi siyah harita servisi (API Key İstemez)
-            data=[{"url": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"}]
+            data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"], # URL buraya liste olarak girildi
+            id="dark-map",
+            opacity=1
         )
 
         layer = pdk.Layer(
@@ -272,7 +275,7 @@ with tab_harita:
         
         st.pydeck_chart(pdk.Deck(
             map_style=None, 
-            layers=[dark_map_style, layer], # Siyah zemin + Noktalar
+            layers=[dark_map_style, layer],
             initial_view_state=view,
             tooltip=tooltip
         ))
