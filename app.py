@@ -11,7 +11,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V91", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Pro V92", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -68,14 +68,14 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_data_v91(url):
+def load_data_v92(url):
     try:
         data = pd.read_csv(url)
         
-        # 1. SÜTUN İSİMLERİNİ TEMİZLE (Baş/Son boşlukları sil)
+        # 1. SÜTUN İSİMLERİNİ TEMİZLE
         data.columns = [c.strip() for c in data.columns]
         
-        # 2. KOORDİNAT FIX
+        # 2. KOORDİNAT FIX (401.553 -> 40.1553)
         def fix_coord(val):
             try:
                 s = re.sub(r"[^\d.]", "", str(val).replace(',', '.'))
@@ -83,7 +83,7 @@ def load_data_v91(url):
                 if len(s) >= 4 and "." not in s: 
                     return float(s[:2] + "." + s[2:])
                 val_float = float(s)
-                if val_float > 90: return val_float / 10 # Türkiye için basit fix
+                if val_float > 90: return val_float / 10 
                 return val_float
             except: return None
 
@@ -97,44 +97,41 @@ def load_data_v91(url):
             
         # 4. İSİM TEMİZLİĞİ (GİZLİ BOŞLUKLARI SİLER)
         if "Personel" in data.columns:
-            # Personel sütununu string yap ve baştaki/sondaki boşlukları sil
+            # Her şeyi string yap ve kenar boşluklarını sil
             data["Personel"] = data["Personel"].astype(str).str.strip()
             
         return data
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v91(CSV_URL)
+all_df = load_data_v92(CSV_URL)
 
 # FİLTRELEME MANTIĞI
 if st.session_state.role == "Admin":
     df = all_df
-    debug_msg = "Admin Modu: Tüm Veriler"
+    debug_msg = "Admin Modu"
 else:
-    # "dogukan" kelimesini her türlü yakala
-    # case=False: Büyük küçük harf fark etmez
-    # na=False: Boş satırları atla
+    # "ogukan" içerenleri bul (Doğukan, Dogukan, Dogukan ...)
     filtered_df = all_df[all_df["Personel"].str.contains("ogukan", case=False, na=False)]
     
     if not filtered_df.empty:
         df = filtered_df
-        debug_msg = "✅ Doğukan Verileri Bulundu"
+        debug_msg = "✅ Personel Eşleşti"
     else:
+        # Eşleşme yoksa TÜMÜNÜ GÖSTER (Çökmesin diye)
         df = all_df
-        debug_msg = "⚠️ Eşleşme Yok (Tümü Gösteriliyor)"
+        debug_msg = "⚠️ İsim Eşleşmedi (Tümü Gösteriliyor)"
 
 # =================================================
-# 5. SIDEBAR (DEBUG PENCERESİ İLE)
+# 5. SIDEBAR
 # =================================================
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     
-    # DURUM BİLDİRİMİ
     if "⚠️" in debug_msg:
-        st.error(debug_msg)
-        st.info("Excel'de isminin yanında boşluk olabilir. Aşağıdaki listeye bak:")
-        # Excel'de ne yazdığını gösteriyoruz ki hatayı gör
+        st.warning(debug_msg)
+        st.caption("Excel'deki İsimler:")
         if not all_df.empty:
             st.code("\n".join(all_df["Personel"].unique()))
     else:
@@ -212,7 +209,7 @@ if not df.empty:
         
     with t2:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
+        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
         
     with t3:
         if c_lat:
@@ -220,6 +217,7 @@ if not df.empty:
             if not yakin.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
                 sel = st.selectbox("Klinik:", yakin["Klinik Adı"])
+                # PARANTEZ HATASI DÜZELTİLDİ:
                 st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
@@ -232,4 +230,4 @@ if not df.empty:
         else: st.info("Bu alan yöneticilere özeldir.")
 
 else:
-    st.error("⚠️ Hiç veri çekilemedi.")
+    st.error("⚠️ Veri yüklenemedi. İnternet bağlantını kontrol et.")
