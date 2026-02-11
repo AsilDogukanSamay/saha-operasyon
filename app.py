@@ -8,40 +8,38 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V34.0",
+    page_title="Medibulut Saha V35.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS: ZORLA KARANLIK VE PARLAK YAZILAR (BEYAZLIK SAVAŞI ⚔️)
+# 2. CSS: AYDINLIK MODA KARŞI TAM KORUMA 🛡️
 st.markdown("""
 <style>
-    /* 1. TÜM ELEMENTLERİ KARART */
-    .stApp, .stAppViewContainer, .stMain {
+    /* 1. ANA ARKA PLAN */
+    .stApp {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
     }
     
-    [data-testid="stHeader"] { background-color: #0E1117 !important; }
-    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
-
-    /* 2. METRİK BAŞLIKLARINI PARLAT (Hedef, Ziyaret vb.) */
+    /* 2. METRİKLERİ PARLAT (HEDEF, ZİYARET, LEAD) */
     div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important; /* BEMBEYAZ */
-        font-weight: 800 !important;
+        color: #FFFFFF !important; /* ULTRA BEYAZ */
+        font-weight: 900 !important;
+        font-size: 18px !important;
         opacity: 1 !important;
-        font-size: 16px !important;
-        text-shadow: 1px 1px 2px black;
+        text-shadow: 2px 2px 4px #000000;
     }
     div[data-testid="stMetricValue"] div {
         color: #60a5fa !important; /* PARLAK MAVİ RAKAMLAR */
+        font-weight: 800 !important;
     }
 
-    /* 3. GİRİŞ KUTULARI VE SEÇİM MENÜLERİ (BEYAZLIĞI SİLER) */
-    div[data-baseweb="input"], div[data-baseweb="select"], div[role="listbox"], ul[role="listbox"] {
-        background-color: #262730 !important;
+    /* 3. GİRİŞ VE SEÇİM KUTULARI (BEYAZLIĞI SİLER) */
+    div[data-baseweb="input"], div[data-baseweb="select"], div[role="listbox"] {
+        background-color: #1a1c24 !important;
         border: 1px solid #4b5563 !important;
     }
     input, select, textarea, li {
@@ -50,12 +48,16 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 4. SEKMELER VE BUTONLAR */
-    button[data-baseweb="tab"] p { color: #9ca3af !important; font-weight: bold !important; }
+    /* 4. SIDEBAR VE TABS */
+    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
+    button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; }
     button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
-    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; }
+    
+    div.stButton > button { 
+        width: 100%; border-radius: 8px; font-weight: bold; 
+        background-color: #FF4B4B !important; color: white !important; 
+    }
 
-    /* Genel Konteyner Düzeni */
     .block-container { padding-top: 3rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -78,56 +80,56 @@ if not st.session_state['giris_yapildi']:
         st.markdown("<h1 style='text-align:center; color:white;'>🔒 Giriş</h1>", unsafe_allow_html=True)
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
-        if st.button("Giriş Yap"):
+        if st.button("Sisteme Gir"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
                 st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
                 st.rerun()
-            else: st.error("Giriş başarısız.")
+            else: st.error("Giriş bilgileri hatalı.")
     st.stop()
 
 # ------------------------------------------------
-# 4. VERİ ÇEKME VE TEMİZLEME
+# 4. VERİ YÜKLEME VE TEMİZLİK
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 
 @st.cache_data(ttl=30)
-def veri_getir(url):
+def veri_cek(url):
     return pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
 
 try:
-    df = veri_getir(sheet_url)
-    def koordinat_duzelt(deger):
+    df = veri_cek(sheet_url)
+    def koordinat_temizle(deger):
         try:
             s = re.sub(r'\D', '', str(deger))
             return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
         except: return None
-    df['lat'] = df['lat'].apply(koordinat_duzelt)
-    df['lon'] = df['lon'].apply(koordinat_duzelt)
+    df['lat'] = df['lat'].apply(koordinat_temizle)
+    df['lon'] = df['lon'].apply(koordinat_temizle)
     df = df.dropna(subset=['lat', 'lon'])
     df['Gidildi mi?'] = df.get('Gidildi mi?', 'Hayır').fillna('Hayır')
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
 except Exception:
-    st.error("Veri bağlantısı kurulamadı.")
+    st.error("Veri bağlantısı hatası.")
     st.stop()
 
 # ------------------------------------------------
-# 5. SIDEBAR (FİLTRELER)
+# 5. SIDEBAR
 with st.sidebar:
     st.title(f"👋 {kullanici['isim']}")
     if st.button("🔄 Verileri Yenile"):
         st.cache_data.clear(); st.rerun()
     st.markdown("---")
     renk_modu = st.selectbox("Harita Modu:", ["Analiz (Lead Status)", "Operasyon (Ziyaret)"])
-    secilen_statu = st.multiselect("Statü Filtresi:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
-    secilen_ziyaret = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
-    if st.button("Çıkış Yap"):
+    statu_filtre = st.multiselect("Lead Durumu:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
+    ziyaret_filtre = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
+    if st.button("Güvenli Çıkış"):
         st.session_state['giris_yapildi'] = False; st.rerun()
 
 # ------------------------------------------------
-# 6. DASHBOARD METRİKLER (OKUNABİLİR 💎)
+# 6. DASHBOARD (SAYILAR)
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
@@ -140,14 +142,24 @@ m3.metric("🔥 Hot Lead", hot)
 m4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
-# 7. HARİTA & LİSTE (SEKMELER)
+# 7. HARİTA VE LİSTE
 tab1, tab2 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste"])
 
 # Dinamik Filtreleme
 f_df = df.copy()
-if secilen_ziyaret:
-    pattern = "|".join([x.replace("✅ ", "").replace("❌ ", "").replace("Gidilenler", "Evet").replace("Gidilmeyenler", "Hayır") for x in secilen_ziyaret])
-    f_df = f_df[f_df['Gidildi mi?'].str.contains(pattern, case=False, na=False)]
+# Statü Filtresi
+status_map = {"Hot 🔥": "Hot", "Warm 🟠": "Warm", "Cold ❄️": "Cold"}
+selected_status = [status_map[x] for x in statu_filtre if x in status_map]
+if "Bekliyor ⚪" in statu_filtre:
+    mask = f_df['Lead Status'].str.contains("|".join(selected_status), case=False, na=False) | ~f_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)
+else:
+    mask = f_df['Lead Status'].str.contains("|".join(selected_status), case=False, na=False) if selected_status else pd.Series([False]*len(f_df))
+f_df = f_df[mask]
+
+# Ziyaret Filtresi
+if ziyaret_filtre:
+    z_pattern = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziyaret_filtre])
+    f_df = f_df[f_df['Gidildi mi?'].str.contains(z_pattern, case=False, na=False)]
 
 with tab1:
     if not f_df.empty:
@@ -163,10 +175,24 @@ with tab1:
             renkler.append(col)
         f_df['color'] = renkler
 
-        # ZORLA KARANLIK HARİTA (YÖNETİCİDE BEYAZLAMAZ)
+        # ZORLA SİYAH HARİTA ZEMİNİ (DÜZELTİLDİ)
+        dark_tile = pdk.Layer(
+            "TileLayer",
+            data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
+            id="dark-tile-layer"
+        )
+        scatter = pdk.Layer(
+            "ScatterplotLayer",
+            data=f_df,
+            get_position='[lon, lat]',
+            get_color='color',
+            get_radius=300,
+            pickable=True
+        )
+
         st.pydeck_chart(pdk.Deck(
-            map_style="mapbox://styles/mapbox/dark-v10",
-            layers=[pdk.Layer("ScatterplotLayer", data=f_df, get_position='[lon, lat]', get_color='color', get_radius=350, pickable=True)],
+            map_style=None,
+            layers=[dark_tile, scatter],
             initial_view_state=pdk.ViewState(latitude=f_df['lat'].mean(), longitude=f_df['lon'].mean(), zoom=11),
             tooltip={"text": "{Klinik Adı}\nDurum: {Lead Status}"}
         ))
