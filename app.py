@@ -8,42 +8,58 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V32.0",
+    page_title="Medibulut Saha V33.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS: BEYAZLIKLARA SAVAŞ AÇAN ÖZEL KOD (FORCED DARK) 🛠️
+# 2. CSS: NUCLEAR DARK MODE (BEYAZLIĞA SAVAŞ AÇTIK 🛡️)
 st.markdown("""
 <style>
-    /* 1. TÜM SAYFAYI SİYAHA ZORLA */
-    .stApp {
+    /* 1. TÜM SAYFAYI VE ELEMENTLERİ SİYAHA ZORLA */
+    .stApp, .stAppViewContainer, .stMain {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
     }
     
-    /* 2. GİRİŞ KUTULARI VE WIDGETLAR (BEYAZLIKLARI BURASI SİLİYOR) */
-    div[data-baseweb="input"], div[data-baseweb="select"], div[role="listbox"] {
-        background-color: #1a1c24 !important;
+    [data-testid="stHeader"] { background-color: #0E1117 !important; }
+    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
+
+    /* 2. GİRİŞ KUTULARI (TEXT INPUT & TEXT AREA) - GÖRÜNÜRLÜK GARANTİSİ */
+    div[data-baseweb="input"], div[data-baseweb="base-input"] {
+        background-color: #262730 !important;
         border: 1px solid #4b5563 !important;
     }
-    
-    /* Kutunun içindeki metin alanları */
     input, select, textarea {
-        color: #FFFFFF !important;
+        color: #FFFFFF !important; /* YAZILAN YAZI BEMBEYAZ */
         -webkit-text-fill-color: #FFFFFF !important;
-        background-color: #1a1c24 !important;
+        background-color: transparent !important;
+        caret-color: #FFFFFF !important;
     }
+    
+    /* Placeholder (Kutunun içindeki silik yazı) rengi */
+    ::placeholder { color: #888 !important; }
 
-    /* Dropdown (Açılır Menü) İçindeki Yazılar */
-    div[data-baseweb="popover"] *, div[data-baseweb="menu"] * {
-        background-color: #1a1c24 !important;
+    /* 3. SEÇİM KUTULARI (DROPDOWNS & MULTISELECT) - BEYAZLIĞI SİLEN KISIM */
+    div[data-baseweb="select"] > div, div[role="listbox"] {
+        background-color: #262730 !important;
+        color: #FFFFFF !important;
+        border-color: #4b5563 !important;
+    }
+    /* Açılır Menü Listesi */
+    ul[role="listbox"] li, div[data-baseweb="popover"] * {
+        background-color: #262730 !important;
         color: #FFFFFF !important;
     }
+    /* Seçilen etiketler (Tags) */
+    div[data-baseweb="tag"] {
+        background-color: #0099ff !important;
+        color: white !important;
+    }
 
-    /* 3. METRİK KARTLARI (DASHBOARD KUTULARI) */
+    /* 4. METRİK KARTLARI (DASHBOARD) */
     div[data-testid="stMetric"] {
         background-color: #1f2937 !important;
         border: 1px solid #374151 !important;
@@ -51,15 +67,14 @@ st.markdown("""
         border-radius: 12px !important;
     }
     div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important;
+        color: #FFFFFF !important; /* BAŞLIKLAR NET BEYAZ */
         font-weight: 700 !important;
     }
     div[data-testid="stMetricValue"] div {
-        color: #60a5fa !important;
-        font-weight: 800 !important;
+        color: #60a5fa !important; /* MAVİ RAKAMLAR */
     }
 
-    /* 4. GİRİŞ PANELİ BAŞLIĞI */
+    /* 5. GİRİŞ PANELİ */
     .login-header {
         color: white !important;
         text-align: center;
@@ -68,11 +83,12 @@ st.markdown("""
         margin-bottom: 30px;
         margin-top: 50px;
     }
-
-    /* Sidebar Rengi */
-    [data-testid="stSidebar"] {
-        background-color: #1a1c24 !important;
-    }
+    
+    /* 6. TABLO VE DİĞERLERİ */
+    button[data-baseweb="tab"] p { color: #9ca3af !important; }
+    button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
+    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
+    .block-container { padding-top: 3rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,20 +108,18 @@ if not st.session_state['giris_yapildi']:
     _, c2, _ = st.columns([1,1,1])
     with c2:
         st.markdown('<div class="login-header">🔒 Giriş Paneli</div>', unsafe_allow_html=True)
-        # Kutuların içi artık her tarayıcıda karanlık olacak
-        kadi = st.text_input("Kullanıcı Adı", placeholder="Kullanıcı adınızı girin")
-        sifre = st.text_input("Şifre", type="password", placeholder="Şifrenizi girin")
+        kadi = st.text_input("Kullanıcı Adı")
+        sifre = st.text_input("Şifre", type="password")
         if st.button("Giriş Yap", type="primary"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
                 st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
                 st.rerun()
-            else:
-                st.error("Giriş başarısız.")
+            else: st.error("Giriş başarısız.")
     st.stop()
 
 # ------------------------------------------------
-# 4. VERİ ÇEKME
+# 4. VERİ YÜKLEME
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
@@ -113,27 +127,23 @@ excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 
 @st.cache_data(ttl=60)
 def veri_yukle(url):
-    data = pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
-    return data
+    return pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
 
 try:
     df = veri_yukle(sheet_url)
-    
     def koordinat_duzelt(deger):
         try:
             s = re.sub(r'\D', '', str(deger))
             return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
         except: return None
-
     df['lat'] = df['lat'].apply(koordinat_duzelt)
     df['lon'] = df['lon'].apply(koordinat_duzelt)
     df = df.dropna(subset=['lat', 'lon'])
     df['Gidildi mi?'] = df.get('Gidildi mi?', 'Hayır').fillna('Hayır')
-
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
-except Exception as e:
-    st.error("Veri bağlantısı sırasında bir hata oluştu.")
+except Exception:
+    st.error("Veri bağlantısı hatası.")
     st.stop()
 
 # ------------------------------------------------
@@ -142,20 +152,17 @@ with st.sidebar:
     st.title(f"👋 {kullanici['isim']}")
     st.link_button("📂 Excel Veri Girişi", excel_linki, type="primary")
     if st.button("🔄 Verileri Yenile"):
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
     st.markdown("---")
     renk_modu = st.selectbox("Görünüm Modu:", ["Analiz (Sıcaklık)", "Operasyon (Ziyaret)"])
     secilen_statu = st.multiselect("Lead Durumu", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
     secilen_ziyaret = st.multiselect("Ziyaret Durumu", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
     if st.button("Çıkış Yap"):
-        st.session_state['giris_yapildi'] = False
-        st.rerun()
+        st.session_state['giris_yapildi'] = False; st.rerun()
 
 # ------------------------------------------------
-# 6. DASHBOARD METRİKLER
-toplam = len(df)
-gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
+# 6. DASHBOARD
+toplam, gidilen = len(df), len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
@@ -166,12 +173,11 @@ k3.metric("🔥 Hot Lead", hot)
 k4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
-# 7. HARİTA & LİSTE (TABLAR)
+# 7. HARİTA & LİSTE
 tab_harita, tab_liste = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Rapor"])
 
-# Filtreleme Uygula
+# Filtreleme
 f_df = df.copy()
-# (Burada filtreleme mantığını ekledim ki liste güncellensin)
 if secilen_ziyaret:
     pattern = "|".join([x.replace("✅ ", "").replace("❌ ", "") for x in secilen_ziyaret])
     f_df = f_df[f_df['Gidildi mi?'].str.contains(pattern, case=False, na=False)]
@@ -189,7 +195,6 @@ with tab_harita:
                 else: col = [169,169,169]
             renkler.append(col)
         f_df['color'] = renkler
-
         st.pydeck_chart(pdk.Deck(
             map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
             layers=[pdk.Layer("ScatterplotLayer", data=f_df, get_position='[lon, lat]', get_color='color', get_radius=300, pickable=True)],
@@ -199,5 +204,4 @@ with tab_harita:
     else: st.warning("Filtrelere uygun veri yok.")
 
 with tab_liste:
-    f_df['Rota'] = f_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-    st.dataframe(f_df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'Rota']], column_config={"Rota": st.column_config.LinkColumn("Git")}, use_container_width=True, hide_index=True)
+    st.dataframe(f_df[['Klinik Adı', 'Lead Status', 'Gidildi mi?']], use_container_width=True, hide_index=True)
