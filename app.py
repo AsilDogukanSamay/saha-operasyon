@@ -8,57 +8,65 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V27.0",
+    page_title="Medibulut Saha V27.1",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS TASARIM (Yazı Sığdırma & Sekme Ayarları 🛠️)
+# 2. CSS TASARIM (YAZILARI PARLATMA OPERASYONU 💡)
 st.markdown("""
 <style>
     /* Ana Font ve Boşluklar */
     .block-container {padding-top: 1rem; padding-bottom: 5rem;}
     
-    /* Metrik Kartları (Koyu Mod & Yazı Sığdırma) */
+    /* Metrik Kartları (Koyu Mod - Ultra Net) */
     div[data-testid="stMetric"] {
-        background-color: #262730 !important;
-        border: 1px solid #41444b;
-        padding: 10px;
-        border-radius: 10px;
-        min-height: 120px; /* Kartları eşitlemek için min yükseklik */
+        background-color: #262730 !important; /* Koyu Gri Zemin */
+        border: 1px solid #555 !important;    /* Daha belirgin çerçeve */
+        padding: 15px !important;
+        border-radius: 12px !important;
     }
     
-    /* Başlıklar (Label) */
+    /* Başlıklar (Label) - Kesin Beyaz */
     div[data-testid="stMetricLabel"] p {
-        color: #d1d5db !important;
-        font-size: 14px;
+        color: #ffffff !important; /* BEMBEYAZ */
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        opacity: 1 !important; /* Şeffaflık yok */
     }
 
-    /* Sayılar (Value) */
+    /* Sayılar (Value) - Parlak Mavi/Beyaz */
     div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
-        font-size: 26px;
-        font-weight: bold;
+        color: #0099ff !important; /* Neon Mavi */
+        font-size: 28px !important;
+        font-weight: 800 !important;
     }
 
-    /* Alt Yazı (Delta) - Yazı Sığdırma Ayarı BURADA */
+    /* Alt Yazı (Delta) - Açık Gri ve Okunur */
     div[data-testid="stMetricDelta"] > div {
-        white-space: normal !important; /* Yazıyı alt satıra indir */
-        font-size: 13px !important;
-        line-height: 1.2 !important;
+        color: #e0e0e0 !important; /* Çok açık gri */
+        font-size: 14px !important;
+        white-space: normal !important; /* Alt satıra geçme izni */
     }
     
-    /* Sekme (Tabs) Tasarımı */
-    button[data-baseweb="tab"] {
-        font-size: 18px !important;
-        font-weight: bold !important;
-        background-color: transparent !important;
+    /* Giriş Ekranı Başlığı */
+    .login-header {
+        color: white !important;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        margin-bottom: 20px;
     }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #0099ff !important;
-        border-bottom-color: #0099ff !important;
+    
+    /* Sekme (Tabs) Yazıları */
+    button[data-baseweb="tab"] div {
+        color: #ffffff !important; /* Sekme yazıları beyaz */
+        font-size: 16px !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] div {
+        color: #0099ff !important; /* Seçili sekme mavi */
     }
     
     /* Sidebar */
@@ -86,9 +94,12 @@ if 'giris_yapildi' not in st.session_state:
 if not st.session_state['giris_yapildi']:
     c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.markdown("<h2 style='text-align: center; color: white;'>🔒 Giriş Paneli</h2>", unsafe_allow_html=True)
+        # CSS ile güçlendirilmiş başlık
+        st.markdown('<div class="login-header">🔒 Giriş Paneli</div>', unsafe_allow_html=True)
+        
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
+        
         if st.button("Giriş Yap", type="primary"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
@@ -163,14 +174,14 @@ with st.sidebar:
         st.rerun()
 
 # ------------------------------------------------
-# 6. ANA DASHBOARD (SAYILAR) 📊
+# 6. ANA DASHBOARD (SAYILAR - PARLAK ✨)
 
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
-# Kartlar (CSS ile sığdırma ayarlandı)
+# Kartlar (CSS ile sığdırma ve renkler ayarlandı)
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("🎯 Hedef", toplam, delta="Toplam Klinik")
 k2.metric("✅ Ziyaret", gidilen, delta=f"%{int(gidilen/toplam*100) if toplam>0 else 0} Tamamlandı")
@@ -181,7 +192,6 @@ st.write("")
 
 # ------------------------------------------------
 # 7. SEKMELİ YAPI (HARİTA & LİSTE) 📑
-# İşte burası yeni! İki sekme oluşturuyoruz.
 
 tab_harita, tab_liste = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Rapor"])
 
