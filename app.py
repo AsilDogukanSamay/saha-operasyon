@@ -1,105 +1,223 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
-import re
 import time
-import urllib.parse
+import re
+import random
 
-# 1. SAYFA YAPISI
-st.set_page_config(page_title="Medibulut Saha V44", layout="wide", initial_sidebar_state="expanded")
+# ------------------------------------------------
+# PREMIUM PAGE CONFIG
+# ------------------------------------------------
+st.set_page_config(
+    page_title="Medibulut Premium",
+    page_icon="💎",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# 2. NETLİK VE RENK CSS (YÖNETİCİDE BEYAZLAMAZ)
+# ------------------------------------------------
+# PREMIUM GLASS CSS
+# ------------------------------------------------
 st.markdown("""
 <style>
-    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
-    div[data-testid="stMetricLabel"] p { color: #FFFFFF !important; font-weight: 900 !important; font-size: 18px !important; }
-    div[data-testid="stMetricValue"] div { color: #60a5fa !important; font-weight: 800 !important; }
-    section[data-testid="stSidebar"] * { color: white !important; }
-    .nav-btn { background-color: #28a745; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
-    .excel-btn { background-color: #007bff; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; }
+
+/* BACKGROUND */
+html, body, .stApp {
+    background: linear-gradient(135deg, #0B0F19 0%, #0E1424 100%);
+    color: #F9FAFB;
+}
+
+/* NAVBAR */
+.navbar {
+    background: rgba(17,24,39,0.6);
+    backdrop-filter: blur(15px);
+    padding: 20px 40px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-title {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(90deg,#6366F1,#8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* METRIC GLASS CARD */
+div[data-testid="metric-container"] {
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(15px);
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: 0.3s ease;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-6px);
+    border: 1px solid #6366F1;
+}
+
+/* SIDEBAR */
+[data-testid="stSidebar"] {
+    background: rgba(17,24,39,0.85);
+    backdrop-filter: blur(15px);
+}
+
+/* BUTTON */
+div.stButton > button {
+    background: linear-gradient(90deg,#6366F1,#8B5CF6);
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    height: 45px;
+}
+
+/* INPUT */
+div[data-baseweb="base-input"] {
+    background-color: #1F2937 !important;
+    border-radius: 12px !important;
+    border: 1px solid #374151 !important;
+}
+
+div[data-baseweb="base-input"] input {
+    background-color: #1F2937 !important;
+    color: #F9FAFB !important;
+}
+
+/* DATAFRAME */
+[data-testid="stDataFrame"] {
+    background-color: rgba(17,24,39,0.7);
+    border-radius: 18px;
+    padding: 10px;
+}
+
+.block-container {
+    padding-top: 2rem;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-# 3. GİRİŞ SİSTEMİ
-KULLANICILAR = {"admin": "medibulut123", "dogukan": "1234", "ozan": "1234"}
-if 'giris' not in st.session_state: st.session_state['giris'] = False
+# ------------------------------------------------
+# NAVBAR
+# ------------------------------------------------
+st.markdown("""
+<div class="navbar">
+    <div class="nav-title">💎 Medibulut Premium Dashboard</div>
+    <div>Enterprise SaaS Panel</div>
+</div>
+""", unsafe_allow_html=True)
 
-if not st.session_state['giris']:
-    _, c2, _ = st.columns([1,1,1])
-    with c2:
-        st.title("🔒 Giriş Paneli")
-        kadi = st.text_input("Kullanıcı Adı")
-        sifre = st.text_input("Şifre", type="password")
-        if st.button("Giriş Yap", type="primary"):
-            if kadi in KULLANICILAR and KULLANICILAR[kadi] == sifre:
-                st.session_state['giris'] = True
-                st.session_state['user'] = kadi
-                st.rerun()
-            else: st.error("Hatalı bilgiler.")
-    st.stop()
-
-# 4. VERİ ÇEKME
+# ------------------------------------------------
+# DATA LOAD
+# ------------------------------------------------
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
-excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 
-try:
-    df = pd.read_csv(sheet_url)
-    def k_fix(d):
-        try:
-            s = re.sub(r'\D', '', str(d))
-            return float(s[:2] + "." + s[2:])
-        except: return None
-    df['lat'] = df['lat'].apply(k_fix)
-    df['lon'] = df['lon'].apply(k_fix)
-    df = df.dropna(subset=['lat', 'lon'])
-    if st.session_state['user'] != "admin":
-        df = df[df['Personel'].str.contains(st.session_state['user'], case=False, na=False)]
-except: st.error("Veri hatası."); st.stop()
+@st.cache_data(ttl=30)
+def load_data(url):
+    return pd.read_csv(url)
 
-# 5. SIDEBAR
+df = load_data(sheet_url)
+
+def fix_coord(x):
+    try:
+        s = re.sub(r"\D","",str(x))
+        return float(s[:2]+"."+s[2:]) if len(s)>=4 else None
+    except:
+        return None
+
+df["lat"] = df["lat"].apply(fix_coord)
+df["lon"] = df["lon"].apply(fix_coord)
+df = df.dropna(subset=["lat","lon"])
+
+# ------------------------------------------------
+# SIDEBAR FILTERS
+# ------------------------------------------------
 with st.sidebar:
-    st.title(f"👋 Selam {st.session_state['user'].capitalize()}")
-    st.link_button("📂 Excel'i Aç (Veri Gir)", excel_linki, type="primary")
-    if st.button("🔄 Verileri Güncelle"): st.cache_data.clear(); st.rerun()
-    st.markdown("---")
-    statu_f = st.multiselect("Lead Durumu", ["Hot 🔥", "Warm 🟠", "Cold ❄️"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️"])
-    if st.button("Çıkış"): st.session_state['giris'] = False; st.rerun()
+    st.title("⚙️ Kontrol Paneli")
+    lead_filter = st.multiselect(
+        "Lead Durumu",
+        df["Lead Status"].dropna().unique(),
+        default=df["Lead Status"].dropna().unique()
+    )
+    if st.button("🔄 Yenile"):
+        st.cache_data.clear()
+        st.rerun()
 
-# 6. METRİKLER
-toplam, gidilen = len(df), len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
-hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", na=False)])
-warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", na=False)])
+df = df[df["Lead Status"].isin(lead_filter)]
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("🎯 Hedef", toplam)
-m2.metric("✅ Ziyaret", gidilen)
-m3.metric("🔥 Hot Lead", hot)
-m4.metric("🟠 Warm Lead", warm)
+# ------------------------------------------------
+# KPI SECTION (Animated Feel)
+# ------------------------------------------------
+total = len(df)
+hot = len(df[df["Lead Status"].str.contains("Hot",case=False,na=False)])
+warm = len(df[df["Lead Status"].str.contains("Warm",case=False,na=False)])
+cold = len(df[df["Lead Status"].str.contains("Cold",case=False,na=False)])
 
-# 7. SEKMELER
-t1, t2 = st.tabs(["🗺️ Saha Haritası", "📋 Navigasyon & Rapor"])
+c1,c2,c3,c4 = st.columns(4)
+c1.metric("🎯 Toplam Lead", total)
+c2.metric("🔥 Hot", hot)
+c3.metric("🟠 Warm", warm)
+c4.metric("❄️ Cold", cold)
 
-with t1:
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ------------------------------------------------
+# TABS
+# ------------------------------------------------
+tab1, tab2 = st.tabs(["🗺️ Harita", "📋 Liste"])
+
+with tab1:
+    colors = []
+    for _,row in df.iterrows():
+        s = str(row["Lead Status"]).lower()
+        if "hot" in s:
+            colors.append([255,69,0])
+        elif "warm" in s:
+            colors.append([255,165,0])
+        elif "cold" in s:
+            colors.append([30,144,255])
+        else:
+            colors.append([180,180,180])
+
+    df["color"] = colors
+
+    tile = pdk.Layer(
+        "TileLayer",
+        data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
+        id="dark-base"
+    )
+
+    scatter = pdk.Layer(
+        "ScatterplotLayer",
+        data=df,
+        get_position='[lon, lat]',
+        get_color='color',
+        get_radius=350,
+        pickable=True
+    )
+
     st.pydeck_chart(pdk.Deck(
-        map_style="mapbox://styles/mapbox/dark-v10",
-        layers=[pdk.Layer("ScatterplotLayer", data=df, get_position='[lon, lat]', get_color='[255, 69, 0]', get_radius=300, pickable=True)],
-        initial_view_state=pdk.ViewState(latitude=df['lat'].mean(), longitude=df['lon'].mean(), zoom=11),
-        tooltip={"text": "{Klinik Adı}"}
+        map_style=None,
+        layers=[tile, scatter],
+        initial_view_state=pdk.ViewState(
+            latitude=df["lat"].mean(),
+            longitude=df["lon"].mean(),
+            zoom=11
+        ),
+        tooltip={"text":"{Klinik Adı}\nDurum: {Lead Status}"}
     ))
 
-with t2:
-    # BUTONLAR
-    k, g = urllib.parse.quote(f"Saha Raporu"), urllib.parse.quote(f"Hedef: {toplam}\nZiyaret: {gidilen}\nHot: {hot}")
-    c_m, c_e = st.columns(2)
-    c_m.markdown(f'<a href="mailto:?subject={k}&body={g}" class="nav-btn">📧 Yöneticiye Raporu At</a>', unsafe_allow_html=True)
-    c_e.markdown(f'<a href="{excel_linki}" target="_blank" class="excel-btn">📂 Excel Tablosuna Git</a>', unsafe_allow_html=True)
-    
-    # EMOJİLİ NAVİGASYON TABLOSU
-    df['Navigasyon'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
-    
+with tab2:
     st.dataframe(
-        df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'Navigasyon']],
-        column_config={"Navigasyon": st.column_config.LinkColumn("📍 Yol Tarifi Al", display_text="📍 Navigasyonu Başlat")},
-        use_container_width=True, hide_index=True
+        df[["Klinik Adı","Personel","Lead Status"]],
+        use_container_width=True,
+        hide_index=True
     )
