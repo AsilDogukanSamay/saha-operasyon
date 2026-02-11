@@ -15,65 +15,70 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# 2. CSS: ZORBA KARANLIK MOD (BEYAZLIĞA SON ⚔️)
+# 2. CSS: ZORLA KARANLIK MOD (BEYAZ TEMAYI EZER 🛡️)
 st.markdown("""
 <style>
-    /* ANA ZEMİN SİYAH VE YAZILAR BEYAZ */
-    .stApp, [data-testid="stAppViewContainer"], .stMain {
+    /* 1. TÜM ARKA PLANI VE METİNLERİ SİYAHA SABİTLE */
+    [data-testid="stAppViewContainer"], .stApp, .stMain {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
     }
-    
-    [data-testid="stHeader"] { background-color: #0E1117 !important; }
-    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
 
-    /* METRİK BAŞLIKLARINI PARLAT (HEDEF, ZİYARET VB.) */
-    div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-        font-size: 18px !important;
-        opacity: 1 !important;
-        text-shadow: 1px 1px 3px #000;
-    }
-    div[data-testid="stMetricValue"] div {
-        color: #60a5fa !important;
-        font-weight: 800 !important;
-    }
-
-    /* GİRİŞ KUTULARI (TEXT INPUT) - SENİN KODUNUN GELİŞMİŞ HALİ */
+    /* 2. GİRİŞ KUTULARI - BEYAZ MODDA BİLE SİYAH KALIR */
     div[data-testid="stTextInput"] > div, div[data-baseweb="input"] {
         background-color: #262730 !important;
         border: 2px solid #4b5563 !important;
         border-radius: 8px !important;
     }
+    
+    /* Kutunun içindeki yazıyı ve imleci bimbeyaz yap */
     div[data-testid="stTextInput"] input {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
         caret-color: #FFFFFF !important;
         background-color: transparent !important;
     }
-    
-    /* LABEL (YAZILAR) */
-    label[data-testid="stWidgetLabel"] p, label {
+
+    /* 3. METRİK BAŞLIKLARINI (HEDEF, ZİYARET) PARLAT */
+    div[data-testid="stMetricLabel"] p {
         color: #FFFFFF !important;
-        font-weight: 700 !important;
-        font-size: 16px !important;
+        font-weight: 900 !important;
+        font-size: 18px !important;
         opacity: 1 !important;
     }
-
-    /* SEÇİM KUTULARI VE DROPDOWNLAR */
-    div[data-baseweb="select"] > div {
-        background-color: #262730 !important;
-        color: #FFFFFF !important;
+    div[data-testid="stMetricValue"] div {
+        color: #60a5fa !important;
+        font-weight: 800 !important;
     }
 
-    /* SEKMELER (TABS) */
-    button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; opacity: 1 !important; }
-    button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
+    /* 4. SEÇİM KUTULARI (DROPDOWN) BEYAZLIĞI SİL */
+    div[data-baseweb="select"] > div, div[role="listbox"], ul {
+        background-color: #262730 !important;
+        color: #FFFFFF !important;
+        border-color: #4b5563 !important;
+    }
     
-    /* BUTONLAR */
-    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #FF4B4B; color: white; }
+    /* 5. SIDEBAR (SOL MENÜ) KARART */
+    [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
+        background-color: #1a1c24 !important;
+    }
 
+    /* 6. LABEL VE DİĞER YAZILAR */
+    label, p, span {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+
+    /* 7. SEKMELER (TABS) */
+    button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; }
+    button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
+
+    /* 8. BUTONLAR */
+    div.stButton > button { 
+        width: 100%; border-radius: 8px; font-weight: bold; 
+        background-color: #FF4B4B !important; color: white !important; 
+    }
+    
     .block-container { padding-top: 3rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -93,7 +98,7 @@ if 'giris_yapildi' not in st.session_state:
 if not st.session_state['giris_yapildi']:
     _, c2, _ = st.columns([1,1,1])
     with c2:
-        st.markdown("<h1 style='text-align:center; color:white;'>🔒 Medibulut Giriş</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align:center; color:white;'>🔒 Giriş Paneli</h1>", unsafe_allow_html=True)
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
         if st.button("Sisteme Giriş Yap"):
@@ -105,12 +110,12 @@ if not st.session_state['giris_yapildi']:
     st.stop()
 
 # ------------------------------------------------
-# 4. VERİ ÇEKME VE KOORDİNAT DÜZELTME 🛠️
+# 4. VERİ YÜKLEME 🛠️
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=20)
 def veri_getir(url):
     return pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
 
@@ -131,22 +136,21 @@ except Exception:
     st.error("Veri bağlantısı hatası."); st.stop()
 
 # ------------------------------------------------
-# 5. SIDEBAR (FİLTRELER)
+# 5. SIDEBAR
 with st.sidebar:
     st.title(f"👋 {kullanici['isim']}")
     if st.button("🔄 Verileri Yenile"):
         st.cache_data.clear(); st.rerun()
     st.markdown("---")
-    renk_m = st.selectbox("Harita Modu:", ["Analiz (Statü)", "Operasyon (Ziyaret)"])
-    stat_f = st.multiselect("Statü Filtresi:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
-    ziy_f = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
+    renk_m = st.selectbox("Harita Modu:", ["Analiz", "Operasyon"])
+    stat_f = st.multiselect("Lead:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
+    ziy_f = st.multiselect("Ziyaret:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
     if st.button("Çıkış Yap"):
         st.session_state['giris_yapildi'] = False; st.rerun()
 
 # ------------------------------------------------
-# 6. DASHBOARD (SAYILAR)
-toplam = len(df)
-gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
+# 6. DASHBOARD
+toplam, gidilen = len(df), len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
@@ -160,7 +164,7 @@ m4.metric("🟠 Warm Lead", warm)
 # 7. HARİTA VE LİSTE
 t1, t2 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste"])
 
-# Filtre Uygulama Mantığı
+# Filtreleme
 f_df = df.copy()
 if ziy_f:
     p = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziy_f])
@@ -184,7 +188,7 @@ with t1:
         dark_tile = pdk.Layer(
             "TileLayer",
             data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
-            id="dark-tile-layer"
+            id="forced-dark-layer"
         )
         scatter = pdk.Layer(
             "ScatterplotLayer", data=f_df, get_position='[lon, lat]',
