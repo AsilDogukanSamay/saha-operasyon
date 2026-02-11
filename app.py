@@ -11,7 +11,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V87", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Pro V88", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -68,7 +68,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_data_v87(url, role):
+def load_data_v88(url, role):
     try:
         data = pd.read_csv(url)
         # Sütun isimlerini temizle
@@ -91,7 +91,7 @@ def load_data_v87(url, role):
         data["lat"] = data["lat"].apply(fix_coord)
         data["lon"] = data["lon"].apply(fix_coord)
         
-        # Koordinatı bozuk olanları at ama logla
+        # Koordinatı bozuk olanları at
         data = data.dropna(subset=["lat", "lon"])
         
         # Sütunları doldur
@@ -107,7 +107,7 @@ def load_data_v87(url, role):
     except Exception as e:
         return pd.DataFrame()
 
-df = load_data_v87(CSV_URL, st.session_state.role)
+df = load_data_v88(CSV_URL, st.session_state.role)
 
 # =================================================
 # 5. SIDEBAR
@@ -145,7 +145,7 @@ if not df.empty:
         d_df = d_df.sort_values(by="Mesafe_km")
     else: d_df["Mesafe_km"] = 0
     
-    # 3. RENKLENDİRME (İSTEDİĞİN GİBİ)
+    # 3. RENKLENDİRME (DÜZELTİLDİ)
     def set_color(row):
         # Eğer Ziyaret Modu ise:
         if "Ziyaret" in m_view:
@@ -224,4 +224,21 @@ if not df.empty:
             if not yakin.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
                 sel = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
-                st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True
+                # DÜZELTİLEN SATIR: Parantez hatası giderildi
+                st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
+            else: st.warning("Yakında (500m) klinik yok.")
+        else: st.error("GPS bekleniyor.")
+
+    with t4:
+        if st.session_state.role == "Admin":
+            out = BytesIO()
+            with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
+            st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
+        else: st.info("Bu alan yöneticilere özeldir.")
+
+else:
+    # HATA MESAJI VE ÇÖZÜM ÖNERİLERİ
+    st.error("⚠️ Veri Bulunamadı! Sorunu çözmek için:")
+    st.info("1. Google Sheets'i açın.")
+    st.info("2. 'Personel' sütununda adınızın (Doğukan) yazılı olduğundan emin olun.")
+    st.info("3. 'lat' ve 'lon' sütunlarının dolu olduğundan emin olun (Virgül veya nokta fark etmez, kod ikisini de okur).")
