@@ -8,17 +8,17 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V30.0",
+    page_title="Medibulut Saha V31.0",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS: DEMİR YUMRUK KARANLIK MOD (YÖNETİCİDE BOZULMAZ) 🛠️
+# 2. CSS: ZORLA KARANLIK VE GÖRÜNÜRLÜK GARANTİSİ 🛠️
 st.markdown("""
 <style>
-    /* 1. ANA ARKA PLAN */
+    /* 1. ANA ARKA PLAN - YÖNETİCİDE BEYAZLAMASIN */
     .stApp {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
@@ -27,17 +27,17 @@ st.markdown("""
     [data-testid="stHeader"] { background-color: #0E1117 !important; }
     [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
 
-    /* 2. GİRİŞ KUTULARI (GÖRÜNÜRLÜK GARANTİLİ) */
+    /* 2. GİRİŞ KUTULARI (TEXT INPUT) - GÖRÜNÜRLÜK %100 */
     div[data-baseweb="input"] {
         background-color: #262730 !important;
         border: 1px solid #4b5563 !important;
     }
     input {
-        color: white !important;
-        -webkit-text-fill-color: white !important;
+        color: #FFFFFF !important; /* YAZILAN YAZI BEMBEYAZ */
+        -webkit-text-fill-color: #FFFFFF !important;
         background-color: transparent !important;
+        caret-color: #FFFFFF !important; /* İMLEÇ BEYAZ */
     }
-    div[data-baseweb="input"] fieldset { border: none; }
     
     /* 3. METRİK KARTLARI (KUTUCUKLAR) */
     div[data-testid="stMetric"] {
@@ -47,21 +47,21 @@ st.markdown("""
         border-radius: 12px !important;
     }
     div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important; /* Başlıklar Bembeyaz */
-        font-weight: 600 !important;
+        color: #FFFFFF !important; /* BAŞLIKLAR BEMBEYAZ VE NET */
+        font-weight: 700 !important;
+        opacity: 1 !important;
     }
     div[data-testid="stMetricValue"] div {
-        color: #60a5fa !important; /* Rakamlar Parlak Mavi */
-    }
-    div[data-testid="stMetricDelta"] div {
-        color: #d1d5db !important;
+        color: #60a5fa !important; /* RAKAMLAR PARLAK MAVİ */
+        font-weight: 800 !important;
     }
 
-    /* 4. SEKMELER (TABS) */
+    /* 4. SEKMELER VE BUTONLAR */
     button[data-baseweb="tab"] p { color: #9ca3af !important; }
     button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
+    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
 
-    /* 5. GENEL */
+    /* 5. GİRİŞ EKRANI */
     .login-header {
         color: white !important;
         text-align: center;
@@ -70,7 +70,6 @@ st.markdown("""
         margin-bottom: 30px;
         margin-top: 50px;
     }
-    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; }
     .block-container { padding-top: 2rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -146,10 +145,10 @@ hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("🎯 Hedef", toplam, delta="Toplam Klinik")
-k2.metric("✅ Ziyaret", gidilen, delta=f"%{int(gidilen/toplam*100) if toplam>0 else 0} Tamamlandı")
-k3.metric("🔥 Hot Lead", hot, delta="Yüksek Potansiyel")
-k4.metric("🟠 Warm Lead", warm, delta="Takip Edilmeli")
+k1.metric("🎯 Hedef", toplam)
+k2.metric("✅ Ziyaret", gidilen)
+k3.metric("🔥 Hot Lead", hot)
+k4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
 # 7. HARİTA & LİSTE (TABLO) 📑
@@ -169,7 +168,6 @@ if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtrel
 
 with tab_harita:
     if not filtreli_df.empty:
-        # Renk Belirleme
         renkler = []
         for _, row in filtreli_df.iterrows():
             stat, visit = str(row.get('Lead Status','')).lower(), str(row.get('Gidildi mi?','')).lower()
@@ -182,13 +180,11 @@ with tab_harita:
             renkler.append(col)
         filtreli_df['color'] = renkler
 
-        # ZORLA SİYAH HARİTA ZEMİNİ (TileLayer)
+        # ZORLA SİYAH HARİTA ZEMİNİ
         dark_tile = pdk.Layer(
             "TileLayer",
-            data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
-            id="dark-tile-layer"
+            data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]
         )
-        # NOKTA KATMANI
         scatter = pdk.Layer(
             "ScatterplotLayer",
             data=filtreli_df,
@@ -203,7 +199,7 @@ with tab_harita:
             initial_view_state=pdk.ViewState(latitude=filtreli_df['lat'].mean(), longitude=filtreli_df['lon'].mean(), zoom=11.5),
             tooltip={"text": "{Klinik Adı}\n{Lead Status}"}
         ))
-    else: st.warning("Seçilen filtreye uygun veri yok.")
+    else: st.warning("Veri yok.")
 
 with tab_liste:
     konu = urllib.parse.quote(f"Saha Raporu - {kullanici['isim']}")
