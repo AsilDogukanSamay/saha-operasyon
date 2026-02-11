@@ -107,7 +107,7 @@ if st.session_state.role == "Admin":
     filter_status = "Admin (Tümü)"
 else:
     # Önce Doğukan'ı ara
-    filtered_df = all_df[all_df["Personel"].astype(str).str.contains("dogukan", case=False, na=False)]
+    filtered_df = all_df[all_df["Personel"].astype(str).str.contains("Dogukan", case=False, na=False)]
     
     if not filtered_df.empty:
         df = filtered_df
