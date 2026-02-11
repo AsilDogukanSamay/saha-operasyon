@@ -10,7 +10,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V55", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V56", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -32,7 +32,7 @@ if not st.session_state.login:
     _, col, _ = st.columns([1,1,1])
     with col:
         st.markdown("<h1 style='text-align:center;'>🔑 Medibulut Giriş</h1>", unsafe_allow_html=True)
-        user_input = st.text_input("Kullanıcı Adı")
+        user_input = st.text_input("Kullanıcı")
         pwd_input = st.text_input("Şifre", type="password")
         if st.button("Sisteme Giriş Yap", use_container_width=True):
             if (user_input.lower() in ["admin", "dogukan"]) and pwd_input == "Medibulut.2026!":
@@ -40,7 +40,7 @@ if not st.session_state.login:
                 st.session_state.user = "Doğukan" if user_input.lower() == "dogukan" else "Yönetici"
                 st.session_state.login = True
                 st.rerun()
-            else: st.error("Hatalı bilgiler.")
+            else: st.error("Hatalı kullanıcı adı veya şifre.")
     st.stop()
 
 # =================================================
@@ -59,26 +59,27 @@ EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
 def load_and_fix_data():
-    data = pd.read_csv(CSV_URL)
-    def fix_coords(val):
-        try:
-            s = re.sub(r"\D", "", str(val))
-            return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
-        except: return None
-    data["lat"] = data["lat"].apply(fix_coords)
-    data["lon"] = data["lon"].apply(fix_coords)
-    data = data.dropna(subset=["lat", "lon"])
-    data['Gidildi mi?'] = data.get('Gidildi mi?', 'Hayır').fillna('Hayır')
-    
-    # Personel Filtresi (Doğukan verilerini getirir)
-    if st.session_state.role != "Admin":
-        data = data[data["Personel"].str.contains("Doğukan", case=False, na=False)]
-    return data
+    try:
+        data = pd.read_csv(CSV_URL)
+        def fix_coords(val):
+            try:
+                s = re.sub(r"\D", "", str(val))
+                return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
+            except: return None
+        data["lat"] = data["lat"].apply(fix_coords)
+        data["lon"] = data["lon"].apply(fix_coords)
+        data = data.dropna(subset=["lat", "lon"])
+        data['Gidildi mi?'] = data.get('Gidildi mi?', 'Hayır').fillna('Hayır')
+        if st.session_state.role != "Admin":
+            data = data[data["Personel"].str.contains("Doğukan", case=False, na=False)]
+        return data
+    except:
+        return pd.DataFrame()
 
 df = load_and_fix_data()
 
 # =================================================
-# 5. SOL MENÜ
+# 5. SOL MENÜ (SIDEBAR)
 # =================================================
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
@@ -92,24 +93,24 @@ with st.sidebar:
     if current_lat:
         st.success("📡 Canlı Konum Aktif")
     else:
-        st.warning("📡 Konum Bekleniyor...")
+        st.warning("📡 Konum Erişimi Bekleniyor...")
 
     st.markdown("---")
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear(); st.rerun()
-    st.link_button("📂 Ana Excel Tablosu", EXCEL_URL, use_container_width=True)
+    st.link_button("📂 Ana Excel Tablosu", excel_url=EXCEL_URL, use_container_width=True)
     
     if st.button("🚪 Güvenli Çıkış", type="primary", use_container_width=True):
         st.session_state.login = False; st.rerun()
 
 # =================================================
-# 6. DASHBOARD & HARİTA
+# 6. DASHBOARD & ANALİZ
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 
 total = len(df)
-hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
-gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"])
+hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)]) if total > 0 else 0
+gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"]) if total > 0 else 0
 
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("🔥 SICAK (HOT)", hot)
@@ -120,52 +121,52 @@ m4.metric("📈 PERFORMANS", f"%{int(gidilen/total*100) if total>0 else 0}")
 tab_map, tab_list, tab_admin = st.tabs(["🗺️ Operasyon Haritası", "📋 Navigasyon Listesi", "⚙️ Yönetim Paneli"])
 
 with tab_map:
-    # Kliniklerin Rota Linki (Tooltip için)
-    df["rota_url"] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
+    if total > 0:
+        # Hatalı olan değişken ismini (color_map) buraya sabitledim
+        color_map = {"Hot": [239, 68, 68], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
+        
+        if map_view == "Lead Durumu":
+            df["color"] = df["Lead Status"].apply(lambda x: color_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
+        else:
+            df["color"] = df["Gidildi mi?"].apply(lambda x: [16, 185, 129] if str(x).lower() == "evet" else [239, 68, 68])
 
-    # Renk Ayarları
-    if map_view == "Lead Durumu":
-        c_map = {"Hot": [239, 68, 68], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
-        df["color"] = df["Lead Status"].apply(lambda x: c_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
-    else:
-        df["color"] = df["Gidildi mi?"].apply(lambda x: [16, 185, 129] if str(x).lower() == "evet" else [239, 68, 68])
+        # KATMANLAR
+        layers = [
+            pdk.Layer("TileLayer", data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]),
+            pdk.Layer(
+                "ScatterplotLayer", data=df, get_position='[lon, lat]', 
+                get_color='color', get_radius=100, pickable=True
+            )
+        ]
+        
+        # Canlı Konum Katmanı
+        if current_lat and current_lon:
+            user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon, 'etiket': '📍 SİZİN KONUMUNUZ'}])
+            layers.append(pdk.Layer(
+                "ScatterplotLayer", data=user_loc_df, get_position='[lon, lat]',
+                get_color=[0, 255, 255], get_radius=150, pickable=True,
+                filled=True, stroked=True, line_width_min_pixels=3, get_line_color=[255, 255, 255]
+            ))
 
-    # KATMANLAR (Küçültülmüş Boyutlar)
-    layers = [
-        pdk.Layer("TileLayer", data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]),
-        pdk.Layer(
-            "ScatterplotLayer", data=df, get_position='[lon, lat]', 
-            get_color='color', get_radius=100, pickable=True # Boyut 100'e çekildi
-        )
-    ]
-    
-    # Canlı Konum Katmanı (Farklı Renk & Etiket)
-    if current_lat and current_lon:
-        user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon, 'etiket': '📍 SİZİN KONUMUNUZ'}])
-        layers.append(pdk.Layer(
-            "ScatterplotLayer", data=user_loc_df, get_position='[lon, lat]',
-            get_color=[0, 255, 255, 230], get_radius=150, pickable=True, # Neon Turkuaz
-            filled=True, stroked=True, line_width_min_pixels=3, get_line_color=[255, 255, 255]
+        # Harita Görünümü
+        initial_lat = current_lat if current_lat else df["lat"].mean()
+        initial_lon = current_lon if current_lon else df["lon"].mean()
+
+        st.pydeck_chart(pdk.Deck(
+            map_style=None, layers=layers,
+            initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=13, pitch=40),
+            tooltip={
+                "html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}<br/>{etiket}",
+                "style": {"backgroundColor": "#161B22", "color": "white"}
+            }
         ))
-
-    # Harita Görünümü
-    initial_lat = current_lat if current_lat else df["lat"].mean() if len(df)>0 else 39.0
-    initial_lon = current_lon if current_lon else df["lon"].mean() if len(df)>0 else 35.0
-
-    st.pydeck_chart(pdk.Deck(
-        map_style=None, layers=layers,
-        initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=13, pitch=40),
-        tooltip={
-            "html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}<br/>Ziyaret: {Gidildi mi?}<br/><br/>{etiket}",
-            "style": {"backgroundColor": "#161B22", "color": "white"}
-        }
-    ))
-    st.caption("💎 **Neon Turkuaz:** Sizin Konumunuz | 🔴 **Kırmızı/Turuncu:** Klinikler")
+    else:
+        st.warning("Görüntülenecek veri bulunamadı.")
 
 with tab_list:
     df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
     st.dataframe(df[["Klinik Adı", "Lead Status", "Personel", "Gidildi mi?", "Git"]], 
-                 column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="NAVİGASYONU BAŞLAT")},
+                 column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="📍 Navigasyonu Başlat")},
                  use_container_width=True, hide_index=True)
 
 with tab_admin:
@@ -173,3 +174,5 @@ with tab_admin:
         output = BytesIO()
         df.to_excel(output, index=False)
         st.download_button(label="📊 Listeyi Excel İndir", data=output.getvalue(), file_name="saha_rapor.xlsx")
+    else:
+        st.warning("Yönetici yetkisi gereklidir.")
