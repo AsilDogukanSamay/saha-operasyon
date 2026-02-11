@@ -6,12 +6,13 @@ import time
 import math
 import unicodedata
 from io import BytesIO
+from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. PREMIUM CONFIG
+# 1. PREMIUM CONFIG & STİL
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V99", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V100", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -90,16 +91,19 @@ def calculate_score(row):
     return points
 
 # =================================================
-# 4. VERİ MOTORU (HATA ÖNLEYİCİLİ)
+# 4. VERİ MOTORU (CANLI URL YAPISI)
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-@st.cache_data(ttl=0)
-def load_data_v99(url):
+# TTL=0 : Önbellek tutma, her seferinde yeni çek
+@st.cache_data(ttl=0) 
+def load_data_v100(sheet_id):
     try:
-        data = pd.read_csv(url)
+        # URL'i fonksiyonun içinde oluşturuyoruz ki her saniye değişsin (Cache Busting)
+        live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
+        
+        data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
         
         # 1. KOORDİNAT FIX
@@ -107,26 +111,26 @@ def load_data_v99(url):
         data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
-        # 2. KOLON GARANTİSİ (Seni kurtaran kısım burası!)
+        # 2. KOLON GARANTİSİ
         required_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]
         for col in required_cols:
             if col not in data.columns:
-                data[col] = "Belirtilmedi" # Kolon yoksa yarat ve içini boş doldur
+                data[col] = "Belirtilmedi" 
         
         data["Personel_Clean"] = data["Personel"].apply(normalize_text)
         data["Skor"] = data.apply(calculate_score, axis=1)
             
         return data
     except Exception as e:
-        st.error(f"Kritik Veri Hatası: {e}")
+        st.error(f"Veri Çekme Hatası: {e}")
         return pd.DataFrame()
 
-all_df = load_data_v99(CSV_URL)
+all_df = load_data_v100(SHEET_ID)
 
 # FİLTRELEME
 if st.session_state.role == "Admin":
     df = all_df
-    debug_msg = "Admin Modu"
+    debug_msg = "Yönetici Modu"
 else:
     current_user_clean = normalize_text(st.session_state.user)
     filtered_df = all_df[all_df["Personel_Clean"] == current_user_clean]
@@ -145,6 +149,10 @@ with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     
+    # SON GÜNCELLEME SAATİ (Güven verici özellik)
+    now = datetime.now().strftime("%H:%M:%S")
+    st.caption(f"🕒 Son Güncelleme: {now}")
+    
     if "⚠️" in debug_msg:
         st.warning(debug_msg)
     else:
@@ -156,9 +164,9 @@ with st.sidebar:
     
     st.divider()
     if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
-        st.cache_data.clear()
-        st.toast("Yenileniyor...", icon="🔄")
-        time.sleep(0.5)
+        st.cache_data.clear() # Tüm hafızayı sil
+        st.toast("Google Sheets'e Bağlanılıyor...", icon="⏳")
+        time.sleep(1) # Kullanıcıya işlem yapıldığını hissettir
         st.rerun()
         
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
@@ -173,7 +181,6 @@ st.title("🚀 Medibulut Saha Enterprise")
 if not df.empty:
     d_df = df.copy()
     if s_plan:
-        # HATA BURADAYDI, ŞİMDİ GÜVENLİ:
         d_df = d_df[d_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
         
     if c_lat and c_lon:
@@ -258,4 +265,4 @@ if not df.empty:
         else: st.info("Yetkisiz alan.")
 
 else:
-    st.error("⚠️ Veri bekleniyor... (Eğer 'Bugünün Planı' sütunu yoksa kod otomatik oluşturacak, merak etme!)")
+    st.error("⚠️ Veri bekleniyor... (Excel'e yeni veri girdiysen Google'ın işlemesi için 1-2 dakika bekle)")
