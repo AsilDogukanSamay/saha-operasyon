@@ -2,6 +2,6 @@ streamlit
 pandas
 pydeck
 plotly
+openpyxl
 scikit-learn
 numpy
-PyJWT
