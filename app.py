@@ -6,32 +6,66 @@ import time
 import urllib.parse
 
 # ------------------------------------------------
-# 1. Sayfa Ayarları (Geniş Mod & Temiz Görünüm)
+# 1. SAYFA AYARLARI (MODERN & GENİŞ)
 st.set_page_config(
-    page_title="Medibulut Saha V24.0",
+    page_title="Medibulut Saha | V25.0",
     page_icon="💎",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# CSS: Gereksiz boşlukları al, butonları güzelleştir
+# ------------------------------------------------
+# 2. MODERN CSS TASARIMI (SİHİRLİ DOKUNUŞ ✨)
 st.markdown("""
 <style>
-#MainMenu {display:none;}
-header {display:none;}
-footer {display:none;}
-.block-container {padding-top: 1rem; padding-bottom: 5rem;}
-/* Sidebar Butonları */
-div[data-testid="stSidebar"] button {
-    width: 100%;
-    border-radius: 8px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+    /* Genel Font ve Arkaplan */
+    .block-container {padding-top: 1rem; padding-bottom: 5rem;}
+    
+    /* Metrik Kartları (Kutucuklar) */
+    div[data-testid="stMetric"] {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: scale(1.02);
+        border-color: #0099ff;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 24px;
+        color: #0099ff;
+        font-weight: 700;
+    }
+    
+    /* Sidebar Güzelleştirme */
+    section[data-testid="stSidebar"] {
+        background-color: #f1f3f6;
+    }
+    div[data-testid="stSidebar"] button {
+        width: 100%;
+        background-color: white;
+        border: 1px solid #ddd;
+        color: #333;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: 0.3s;
+    }
+    div[data-testid="stSidebar"] button:hover {
+        border-color: #0099ff;
+        color: #0099ff;
+    }
+    
+    /* Tablo Başlıkları */
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 2. GİRİŞ SİSTEMİ 🔐
+# 3. GİRİŞ SİSTEMİ 🔐
 KULLANICILAR = {
     "admin": {"sifre": "medibulut123", "rol": "Admin", "isim": "Yönetici"},
     "dogukan": {"sifre": "1234", "rol": "Personel", "isim": "Doğukan"},
@@ -43,41 +77,40 @@ if 'giris_yapildi' not in st.session_state:
     st.session_state['aktif_kullanici'] = None
 
 if not st.session_state['giris_yapildi']:
-    c1, c2, c3 = st.columns([1,2,1])
+    c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.title("🔒 Giriş")
-        kadi = st.text_input("Kullanıcı")
+        st.markdown("<h2 style='text-align: center;'>🔒 Medibulut Giriş</h2>", unsafe_allow_html=True)
+        st.info("Devam etmek için giriş yapınız.")
+        kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
+        
         if st.button("Giriş Yap", type="primary"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
                 st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
                 st.rerun()
             else:
-                st.error("Hatalı!")
+                st.error("Kullanıcı adı veya şifre hatalı.")
     st.stop()
 
 # ------------------------------------------------
-# 3. VERİ HAZIRLIK & TEMİZLİK 🛠️
+# 4. VERİ YÜKLEME & TEMİZLİK (HATA ÖNLEYİCİLER AKTİF 🛡️)
 kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 
 try:
-    # Google'ı kandırmak için User-Agent ekledik
+    # Google Robot Korumasını Geç (User-Agent)
     df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
     
-    # --- 🛠️ HATA DÜZELTİCİ (40.1.553 Sorunu İçin) ---
+    # Koordinat Temizleyici (Çift Nokta Hatası Çözümü)
     def koordinat_duzelt(deger):
         try:
-            # Sadece rakamları al (Noktayı virgülü sil) -> "401553"
             s = str(deger)
-            sadece_rakam = re.sub(r'\D', '', s)
-            
+            sadece_rakam = re.sub(r'\D', '', s) # Sadece rakamları al
             if len(sadece_rakam) < 4: return None
-            
-            # İlk 2 rakamdan sonra TEK nokta koy -> "40.1553"
+            # İlk 2 rakamdan sonra nokta koy (Örn: 401553 -> 40.1553)
             yeni = sadece_rakam[:2] + "." + sadece_rakam[2:]
             return float(yeni)
         except:
@@ -85,167 +118,178 @@ try:
 
     df['lat'] = df['lat'].apply(koordinat_duzelt)
     df['lon'] = df['lon'].apply(koordinat_duzelt)
+    df = df.dropna(subset=['lat', 'lon']) # Bozuk olanları at
     
-    # Bozuk satırları sil
-    df = df.dropna(subset=['lat', 'lon'])
-    
-    # Diğer verileri düzenle
+    # Boş verileri doldur
     df['Gidildi mi?'] = df.get('Gidildi mi?', 'Hayır').fillna('Hayır')
     
+    # Telefon Formatla
     def tel_format(t):
         s = re.sub(r'\D','',str(t).split('.')[0])
         return f"0 ({s[1:4]}) {s[4:7]} {s[7:9]} {s[9:]}" if len(s)==11 else t
     if 'İletişim' in df.columns: df['İletişim'] = df['İletişim'].apply(tel_format)
 
-    # Rol Filtresi (Admin değilse sadece kendini görsün)
+    # Personel Filtresi (Yönetici değilse sadece kendini gör)
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
 
 except Exception as e:
-    st.error(f"Veri Hatası: {e}")
+    st.error(f"⚠️ Veri Bağlantı Hatası: {e}")
     st.stop()
 
 # ------------------------------------------------
-# 4. SOL MENÜ (SIDEBAR) - KONTROL MERKEZİ 🕹️
+# 5. SOL MENÜ (KONTROL MERKEZİ) 🎛️
 with st.sidebar:
-    st.title(f"👋 {kullanici['isim']}")
-    st.caption(f"Yetki: {kullanici['rol']}")
-    st.markdown("---")
+    st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=50)
+    st.title(f"Merhaba, {kullanici['isim']}")
+    st.caption(f"Rol: {kullanici['rol']} | V25.0")
     
-    # 1. İşlem Butonları
-    st.markdown("### ⚡ İşlemler")
-    st.link_button("📂 Excel'i Aç (Veri Gir)", excel_linki, type="primary")
-    
+    st.markdown("### ⚡ Hızlı İşlemler")
+    st.link_button("📂 Excel Veri Girişi", excel_linki, type="primary")
     if st.button("🔄 Verileri Yenile"):
         st.cache_data.clear()
         st.rerun()
-
+    
     st.markdown("---")
+    st.markdown("### 🎯 Harita Filtreleri")
     
-    # 2. Harita Ayarları (Filtreler Burada!)
-    st.markdown("### 🗺️ Harita Filtreleri")
+    # Modern Seçim Kutuları
+    renk_modu = st.pills("Görünüm Modu:", ["Analiz (Sıcaklık)", "Operasyon (Ziyaret)"], default="Analiz (Sıcaklık)")
     
-    renk_modu = st.selectbox(
-        "🎨 Renk Modu",
-        ["Analiz (Sıcak/Soğuk)", "Operasyon (Gidildi/Gidilmedi)"]
-    )
-
-    st.markdown("**🔍 Gösterilecekler:**")
-    # Varsayılan olarak hepsi seçili gelsin
-    secilen_statu = st.multiselect(
-        "Lead Durumu",
-        ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"],
-        default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"]
-    )
+    st.markdown("**Filtreler:**")
+    secilen_statu = st.multiselect("Lead Durumu", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
+    secilen_ziyaret = st.multiselect("Ziyaret Durumu", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
     
-    secilen_ziyaret = st.multiselect(
-        "Ziyaret Durumu",
-        ["✅ Gidilenler", "❌ Gidilmeyenler"],
-        default=["✅ Gidilenler", "❌ Gidilmeyenler"]
-    )
-
     st.markdown("---")
     if st.button("Çıkış Yap"):
         st.session_state['giris_yapildi'] = False
         st.rerun()
 
 # ------------------------------------------------
-# 5. ANA EKRAN (DASHBOARD) 🖥️
+# 6. ANA DASHBOARD (METRİKLER) 📊
 
-# İstatistikler (En Üstte)
+# İstatistik Hesapla
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
 warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("🎯 Toplam Hedef", toplam)
-m2.metric("✅ Ziyaret Edilen", gidilen)
-m3.metric("🔥 Hot Lead", hot)
-m4.metric("🟠 Warm Lead", warm)
+# Kart Tasarımı
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("🎯 Toplam Hedef", toplam, delta="Klinik")
+k2.metric("✅ Ziyaret Edilen", gidilen, delta=f"%{int(gidilen/toplam*100) if toplam>0 else 0} Tamamlandı")
+k3.metric("🔥 Hot Lead", hot, delta="Yüksek Potansiyel", delta_color="normal")
+k4.metric("🟠 Warm Lead", warm, delta="Takip Edilmeli", delta_color="off")
 
 st.write("") # Boşluk
 
-# --- FİLTRELEME MANTIĞI ---
+# ------------------------------------------------
+# 7. MODERN HARİTA (3D & FİLTRELİ) 🌍
+
+# Filtreleme Mantığı
 filtreli_df = df.copy()
 
-# A. Statü Filtresi
+# Statü Filtresi
 status_map = {"Hot 🔥": "Hot", "Warm 🟠": "Warm", "Cold ❄️": "Cold"}
 selected_codes = [status_map[x] for x in secilen_statu if x in status_map]
 
 if "Bekliyor ⚪" in secilen_statu:
     mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False) | ~filtreli_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)
 else:
-    if selected_codes:
-        mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False)
-    else:
-        mask = pd.Series([False]*len(filtreli_df)) # Hiçbir şey seçilmediyse boş
-
+    mask = filtreli_df['Lead Status'].str.contains("|".join(selected_codes), case=False, na=False) if selected_codes else pd.Series([False]*len(filtreli_df))
 filtreli_df = filtreli_df[mask]
 
-# B. Ziyaret Filtresi
+# Ziyaret Filtresi
 if "✅ Gidilenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] != 'Evet']
 if "❌ Gidilmeyenler" not in secilen_ziyaret: filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
 
-# --- HARİTA ÇİZİMİ ---
+# Renklendirme
 renkler = []
 for _, row in filtreli_df.iterrows():
     stat = str(row.get('Lead Status','')).lower()
     visit = str(row.get('Gidildi mi?','')).lower()
     
-    col = [128, 128, 128] # Default
+    col = [200, 200, 200] # Gri
     if "Operasyon" in renk_modu:
-        col = [0, 200, 0] if "evet" in visit else [200, 0, 0]
+        col = [39, 174, 96] if "evet" in visit else [192, 57, 43] # Modern Yeşil / Kırmızı
     else:
-        if "hot" in stat: col = [255, 0, 0]
-        elif "warm" in stat: col = [255, 165, 0]
-        elif "cold" in stat: col = [0, 0, 255]
-        else: col = [0, 200, 0] # Yeşil (Diğer/Bekleyen)
+        if "hot" in stat: col = [231, 76, 60]       # Kırmızı
+        elif "warm" in stat: col = [243, 156, 18]   # Turuncu
+        elif "cold" in stat: col = [52, 152, 219]   # Mavi
+        else: col = [149, 165, 166]                 # Gri
     renkler.append(col)
 
 filtreli_df['color'] = renkler
 
+# Harita Render (3D Görünüm)
 if not filtreli_df.empty:
-    tooltip = "{Klinik Adı}\n{Lead Status}\n{Yetkili Kişi}\n👤 {Personel}"
+    st.subheader("🗺️ Saha Operasyon Haritası")
+    
+    tooltip = {
+        "html": "<b>{Klinik Adı}</b><br/>Status: {Lead Status}<br/>Yetkili: {Yetkili Kişi}<br/>👤 {Personel}",
+        "style": {"backgroundColor": "white", "color": "black", "fontSize": "12px", "padding": "10px", "borderRadius": "5px", "border": "1px solid #ddd"}
+    }
     
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=filtreli_df,
         get_position='[lon, lat]',
         get_color='color',
-        get_radius=200,
-        pickable=True
+        get_radius=250,
+        pickable=True,
+        stroked=True,
+        filled=True,
+        line_width_min_pixels=1,
+        get_line_color=[0, 0, 0, 100] # Siyah kenarlık
     )
-    view = pdk.ViewState(latitude=filtreli_df['lat'].mean(), longitude=filtreli_df['lon'].mean(), zoom=12)
-    st.pydeck_chart(pdk.Deck(map_style=None, layers=[layer], initial_view_state=view, tooltip={"text": tooltip}))
     
-    # Sade Lejant
+    # 3D Bakış Açısı (Pitch)
+    view = pdk.ViewState(
+        latitude=filtreli_df['lat'].mean(),
+        longitude=filtreli_df['lon'].mean(),
+        zoom=11.5,
+        pitch=45  # 3D Eğim
+    )
+    
+    st.pydeck_chart(pdk.Deck(
+        map_style="mapbox://styles/mapbox/light-v10", # Açık renk modern tema
+        layers=[layer],
+        initial_view_state=view,
+        tooltip=tooltip
+    ))
+    
+    # Renk Lejantı (Bilgi Çubuğu)
     if "Operasyon" in renk_modu:
-        st.info("ℹ️ **Operasyon:** 🟢 Gidildi | 🔴 Gidilmedi")
+        st.caption("🟢 **Yeşil:** Ziyaret Edildi | 🔴 **Kırmızı:** Ziyaret Bekliyor")
     else:
-        st.info("ℹ️ **Analiz:** 🔥 Hot (Sıcak) | 🟠 Warm (Ilık) | 🔵 Cold (Soğuk) | 🟢 Diğer")
+        st.caption("🔴 **Hot:** Sıcak Satış | 🟠 **Warm:** Takip | 🔵 **Cold:** Soğuk | ⚪ **Gri:** Diğer")
+
 else:
-    st.warning("⚠️ Sol menüden seçim yapınız, gösterilecek veri kalmadı.")
+    st.warning("Seçilen filtrelere uygun veri bulunamadı. Lütfen sol menüden filtreleri kontrol edin.")
 
 # ------------------------------------------------
-# 6. ALT LİSTE VE MAİL
-with st.expander("📋 Detaylı Liste & Raporlama"):
-    c_mail, c_tablo = st.columns([1, 4])
-    
+# 8. RAPORLAMA VE LİSTE (TABLO) 📋
+st.write("")
+with st.expander("📂 Detaylı Müşteri Listesi & Raporlama", expanded=False):
     # Mail Butonu
     konu = f"Saha Raporu - {kullanici['isim']}"
     govde = f"Rapor Sahibi: {kullanici['isim']}\n\n✅ Ziyaret: {gidilen}/{toplam}\n🔥 Hot: {hot}\n🟠 Warm: {warm}"
     mail_link = f"mailto:?subject={urllib.parse.quote(konu)}&body={urllib.parse.quote(govde)}"
     
-    with c_mail:
-        st.markdown(f'<br><a href="{mail_link}" target="_blank"><button style="background-color:#4CAF50;color:white;border:none;padding:10px;border-radius:5px;width:100%;font-weight:bold;">📧 Rapor Gönder</button></a>', unsafe_allow_html=True)
+    col_btn, col_space = st.columns([1, 5])
+    col_btn.markdown(f'<a href="{mail_link}" target="_blank"><button style="background-color:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">📧 Raporu Maille</button></a>', unsafe_allow_html=True)
 
-    # Tablo
+    # Şık Tablo
     filtreli_df['Rota'] = filtreli_df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
-    cols = ['Klinik Adı', 'Personel', 'İlçe', 'Lead Status', 'Gidildi mi?', 'Rota']
+    
+    gosterilecek_kolonlar = ['Klinik Adı', 'Personel', 'İlçe', 'Lead Status', 'Gidildi mi?', 'İletişim', 'Rota']
     st.dataframe(
-        filtreli_df[[c for c in cols if c in df.columns]],
-        column_config={"Rota": st.column_config.LinkColumn("Rota", display_text="📍 Git")},
+        filtreli_df[[c for c in gosterilecek_kolonlar if c in df.columns]],
+        column_config={
+            "Rota": st.column_config.LinkColumn("Rota", display_text="📍 Konuma Git"),
+            "Lead Status": st.column_config.TextColumn("Durum", help="Müşteri Potansiyeli"),
+            "Gidildi mi?": st.column_config.TextColumn("Ziyaret", width="small")
+        },
         use_container_width=True,
         hide_index=True
     )
