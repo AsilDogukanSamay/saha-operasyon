@@ -10,7 +10,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V57", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V59", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -58,7 +58,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_and_fix_data(url, role, user_name):
+def load_and_fix_data(url, role):
     try:
         data = pd.read_csv(url)
         def fix_coords(val):
@@ -69,102 +69,107 @@ def load_and_fix_data(url, role, user_name):
         data["lat"] = data["lat"].apply(fix_coords)
         data["lon"] = data["lon"].apply(fix_coords)
         data = data.dropna(subset=["lat", "lon"])
+        
+        # Kolon Kontrolleri
         data['Gidildi mi?'] = data.get('Gidildi mi?', 'Hayır').fillna('Hayır')
+        data['Bugünün Planı'] = data.get('Bugünün Planı', 'Hayır').fillna('Hayır')
+        
         if role != "Admin":
             data = data[data["Personel"].str.contains("Doğukan", case=False, na=False)]
         return data
     except:
         return pd.DataFrame()
 
-df = load_and_fix_data(CSV_URL, st.session_state.role, st.session_state.user)
+df = load_and_fix_data(CSV_URL, st.session_state.role)
 
 # =================================================
-# 5. SOL MENÜ (SIDEBAR)
+# 5. SOL MENÜ
 # =================================================
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
     st.markdown(f"### 👤 {st.session_state.user}")
-    st.caption(f"🛡️ Yetki: {st.session_state.role}")
     st.markdown("---")
     
-    st.markdown("🗺️ **Harita Modu**")
-    map_view = st.radio("Renklendirme:", ["Lead Durumu", "Ziyaret Durumu"])
+    st.markdown("🗓️ **Operasyon Filtresi**")
+    show_only_plan = st.checkbox("Sadece Bugünün Planını Göster", value=False)
     
-    if current_lat:
-        st.success("📡 Canlı Konum Aktif")
-    else:
-        st.warning("📡 Konum Bekleniyor...")
-
+    st.markdown("🗺️ **Harita Modu**")
+    map_view = st.radio("Görünüm:", ["Lead Durumu", "Ziyaret Durumu"])
+    
     st.markdown("---")
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear(); st.rerun()
-    # HATA BURADA DÜZELTİLDİ: 'excel_url' yerine 'url' kullanıldı
     st.link_button("📂 Ana Excel Tablosu", url=EXCEL_URL, use_container_width=True)
     
     if st.button("🚪 Güvenli Çıkış", type="primary", use_container_width=True):
         st.session_state.login = False; st.rerun()
 
+# Filtre Uygulama
+display_df = df[df['Bugünün Planı'].str.lower() == 'evet'] if show_only_plan else df
+
 # =================================================
-# 6. DASHBOARD & TABLAR
+# 6. DASHBOARD
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 
 total = len(df)
-hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)]) if total > 0 else 0
-gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"]) if total > 0 else 0
+today_count = len(df[df['Bugünün Planı'].str.lower() == 'evet'])
+gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"])
 
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("🔥 SICAK (HOT)", hot)
+m1.metric("📅 BUGÜNÜN PLANI", today_count)
 m2.metric("✅ ZİYARET EDİLEN", gidilen)
 m3.metric("🎯 TOPLAM HEDEF", total)
 m4.metric("📈 PERFORMANS", f"%{int(gidilen/total*100) if total>0 else 0}")
 
-tab_map, tab_list, tab_admin = st.tabs(["🗺️ Operasyon Haritası", "📋 Navigasyon Listesi", "⚙️ Yönetim Paneli"])
+tab_map, tab_list, tab_admin = st.tabs(["🗺️ Operasyon Haritası", "📋 Günlük Navigasyon", "⚙️ Yönetim Paneli"])
 
 with tab_map:
-    if total > 0:
+    if len(display_df) > 0:
         color_map = {"Hot": [239, 68, 68], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
         if map_view == "Lead Durumu":
-            df["color"] = df["Lead Status"].apply(lambda x: color_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
+            display_df["color"] = display_df["Lead Status"].apply(lambda x: color_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
         else:
-            df["color"] = df["Gidildi mi?"].apply(lambda x: [16, 185, 129] if str(x).lower() == "evet" else [239, 68, 68])
+            display_df["color"] = display_df["Gidildi mi?"].apply(lambda x: [16, 185, 129] if str(x).lower() == "evet" else [239, 68, 68])
 
-        # KATMANLAR
         layers = [
             pdk.Layer("TileLayer", data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]),
-            pdk.Layer("ScatterplotLayer", data=df, get_position='[lon, lat]', get_color='color', get_radius=100, pickable=True)
+            pdk.Layer("ScatterplotLayer", data=display_df, get_position='[lon, lat]', get_color='color', get_radius=100, pickable=True)
         ]
         
-        # CANLI KONUM (TURKUAZ)
         if current_lat and current_lon:
             user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon, 'label': '📍 SİZİN KONUMUNUZ'}])
             layers.append(pdk.Layer(
                 "ScatterplotLayer", data=user_loc_df, get_position='[lon, lat]',
-                get_color=[0, 255, 255], get_radius=150, pickable=True,
-                filled=True, stroked=True, line_width_min_pixels=3, get_line_color=[255, 255, 255]
+                get_color=[0, 255, 255], get_radius=150, pickable=True, filled=True, stroked=True, line_width_min_pixels=3, get_line_color=[255, 255, 255]
             ))
-
-        initial_lat = current_lat if current_lat else df["lat"].mean()
-        initial_lon = current_lon if current_lon else df["lon"].mean()
 
         st.pydeck_chart(pdk.Deck(
             map_style=None, layers=layers,
-            initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=13, pitch=40),
-            tooltip={"html": "<b>{Klinik Adı}</b><br/>{label}", "style": {"backgroundColor": "#161B22", "color": "white"}}
+            initial_view_state=pdk.ViewState(latitude=current_lat if current_lat else display_df["lat"].mean(), longitude=current_lon if current_lon else display_df["lon"].mean(), zoom=13),
+            tooltip={"html": "<b>{Klinik Adı}</b><br/>Plan: {Bugünün Planı}<br/>{label}"}
         ))
     else:
-        st.warning("⚠️ Veri bulunamadı. Lütfen Excel dosyasını kontrol edin.")
+        st.info("Filtreye uygun klinik bulunamadı.")
 
 with tab_list:
-    df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-    st.dataframe(df[["Klinik Adı", "Lead Status", "Personel", "Gidildi mi?", "Git"]], 
-                 column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="📍 Navigasyonu Başlat")},
-                 use_container_width=True, hide_index=True)
+    # 📧 MAIL BUTONU GERİ GELDİ 📧
+    k, g = urllib.parse.quote("Saha Durum Raporu"), urllib.parse.quote(f"Merhaba,\n\nBugünün Planı: {today_count}\nZiyaret Edilen: {gidilen}\nToplam Hedef: {total}")
+    st.markdown(f'<a href="mailto:?subject={k}&body={g}" style="background:#10B981; color:white; padding:12px 25px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-block; width:100%; text-align:center; margin-bottom:20px;">📧 Yöneticiye Rapor Gönder</a>', unsafe_allow_html=True)
+    
+    st.subheader("📋 Planlı Rotalar")
+    plan_only = df[df['Bugünün Planı'].str.lower() == 'evet']
+    if len(plan_only) > 0:
+        plan_only["Git"] = plan_only.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
+        st.dataframe(plan_only[["Klinik Adı", "Lead Status", "Gidildi mi?", "Git"]], 
+                     column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="📍 Navigasyonu Başlat")},
+                     use_container_width=True, hide_index=True)
+    else:
+        st.write("Şu an için aktif bir rota planı gözükmüyor.")
 
 with tab_admin:
     if st.session_state.role == "Admin":
+        st.success("Yönetici Yetkisi: Açık")
         output = BytesIO()
         df.to_excel(output, index=False)
-        st.download_button(label="📊 Listeyi Excel İndir", data=output.getvalue(), file_name="saha_rapor.xlsx")
-    else:
-        st.warning("Yönetici yetkisi gereklidir.")
+        st.download_button(label="📊 Tüm Verileri Excel İndir", data=output.getvalue(), file_name="saha_admin_rapor.xlsx")
