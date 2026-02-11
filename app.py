@@ -9,16 +9,17 @@ from io import BytesIO
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. PREMIUM CONFIG
+# 1. PREMIUM CONFIG & STİL
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V88", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha Enterprise", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.05); }
-    div[data-testid="stMetric"] { background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 10px; }
-    .stButton > button { border-radius: 8px; font-weight: bold; }
+    div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 15px; }
+    .stButton > button { border-radius: 8px; font-weight: bold; transition: all 0.3s ease; }
+    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
     /* Lejant */
     .legend-box { display: flex; align-items: center; margin-right: 15px; font-size: 14px; font-weight: bold; }
     .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
@@ -26,17 +27,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =================================================
-# 2. GİRİŞ
+# 2. GİRİŞ SİSTEMİ
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
     c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.markdown("<br><h1 style='text-align:center;'>🔑 Giriş</h1>", unsafe_allow_html=True)
+        st.markdown("<br><br><h1 style='text-align:center;'>🔑 Giriş</h1>", unsafe_allow_html=True)
         u = st.text_input("Kullanıcı")
         p = st.text_input("Şifre", type="password")
-        if st.button("Giriş Yap", use_container_width=True):
+        if st.button("🚀 Giriş Yap", use_container_width=True):
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role = "Admin" if u.lower() == "admin" else "Personel"
                 st.session_state.user = "Doğukan" if u.lower() == "dogukan" else "Yönetici"
@@ -61,64 +62,66 @@ def haversine(lat1, lon1, lat2, lon2):
     except: return 0
 
 # =================================================
-# 4. VERİ MOTORU (ZIRHLI VERSİYON)
+# 4. VERİ MOTORU (KOORDİNAT TAMİRCİSİ)
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_data_v88(url, role):
+def load_data_v89(url, role):
     try:
         data = pd.read_csv(url)
-        # Sütun isimlerini temizle
         data.columns = [c.strip() for c in data.columns]
         
-        # KOORDİNAT DÜZELTİCİ (EN ÖNEMLİ KISIM)
-        def fix_coord(val):
+        # 🛠️ GELİŞMİŞ KOORDİNAT DÜZELTİCİ (401.553 -> 40.1553 yapar)
+        def fix_coord_smart(val):
             try:
-                # Önce string yap, virgülü nokta ile değiştir
-                s = str(val).replace(',', '.')
-                # Sayı ve nokta harici her şeyi sil
-                s = re.sub(r"[^\d.]", "", s)
+                # 1. İçindeki her şeyi temizle, sadece rakam kalsın (401.553 -> "401553")
+                s = re.sub(r"\D", "", str(val))
                 if not s: return None
-                # Eğer 391234 gibi gelirse (noktasız), araya nokta koy
-                if len(s) > 4 and "." not in s: 
-                    return float(s[:2] + "." + s[2:])
+                
+                # 2. Türkiye Koordinatları Genelde 2 basamaklıdır (36-42 Lat, 26-45 Lon)
+                # Bu yüzden ilk 2 rakamdan sonra zorla nokta koyuyoruz.
+                if len(s) >= 4:
+                    new_val = float(s[:2] + "." + s[2:])
+                    # Enlem 90'dan büyük, Boylam 180'den büyük olamaz. Kontrol edelim:
+                    if new_val > 180: return None 
+                    return new_val
+                
                 return float(s)
             except: return None
 
-        data["lat"] = data["lat"].apply(fix_coord)
-        data["lon"] = data["lon"].apply(fix_coord)
+        data["lat"] = data["lat"].apply(fix_coord_smart)
+        data["lon"] = data["lon"].apply(fix_coord_smart)
         
-        # Koordinatı bozuk olanları at
+        # Bozukları at
         data = data.dropna(subset=["lat", "lon"])
         
         # Sütunları doldur
         for col in ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]:
             if col not in data.columns: data[col] = "Belirtilmedi"
             
-        # DOĞUKAN FİLTRESİ (ESNEK)
+        # DOĞUKAN FİLTRESİ
         if role != "Admin":
-            # 'ogukan' içeren her şeyi al (Büyük/küçük harf fark etmez)
             data = data[data["Personel"].astype(str).str.contains("ogukan", case=False, na=False)]
             
         return data
     except Exception as e:
         return pd.DataFrame()
 
-df = load_data_v88(CSV_URL, st.session_state.role)
+df = load_data_v89(CSV_URL, st.session_state.role)
 
 # =================================================
 # 5. SIDEBAR
 # =================================================
 with st.sidebar:
-    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
+    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=160)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.divider()
     
     # MOD SEÇİMİ
-    m_view = st.radio("Harita Modu:", ["Ziyaret Durumu (Yeşil/Kırmızı)", "Lead Durumu (Hot/Warm)"])
+    m_view = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Durumu"])
     s_plan = st.toggle("📅 Sadece Bugünün Planı")
     
     st.divider()
@@ -145,24 +148,19 @@ if not df.empty:
         d_df = d_df.sort_values(by="Mesafe_km")
     else: d_df["Mesafe_km"] = 0
     
-    # 3. RENKLENDİRME (DÜZELTİLDİ)
+    # 3. RENKLENDİRME
     def set_color(row):
-        # Eğer Ziyaret Modu ise:
         if "Ziyaret" in m_view:
             status = str(row["Gidildi mi?"]).lower()
-            # Evet, Closed, Tamam, Ok -> YEŞİL
             if any(x in status for x in ["evet", "closed", "tamam", "ok"]):
-                return [0, 200, 0] 
-            # Değilse -> KIRMIZI
-            return [200, 0, 0]
-        
-        # Eğer Lead Modu ise:
+                return [0, 200, 0] # YEŞİL
+            return [200, 0, 0] # KIRMIZI
         else:
             status = str(row["Lead Status"]).lower()
-            if "hot" in status: return [239, 68, 68]     # KIRMIZI
-            if "warm" in status: return [245, 158, 11]    # TURUNCU
-            if "cold" in status: return [59, 130, 246]    # MAVİ
-            return [128, 128, 128] # GRİ
+            if "hot" in status: return [239, 68, 68]
+            if "warm" in status: return [245, 158, 11]
+            if "cold" in status: return [59, 130, 246]
+            return [128, 128, 128]
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
@@ -185,38 +183,20 @@ if not df.empty:
     with t1:
         # LEJANT
         if "Ziyaret" in m_view:
-            st.markdown("""
-            <div style="display:flex; margin-bottom:10px;">
-                <div class="legend-box"><div class="legend-dot" style="background:#00C800;"></div>Gidildi (Yeşil)</div>
-                <div class="legend-box"><div class="legend-dot" style="background:#C80000;"></div>Gidilmedi (Kırmızı)</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div class="legend-box"><div class="legend-dot" style="background:#00C800;"></div>Gidildi</div><div class="legend-box"><div class="legend-dot" style="background:#C80000;"></div>Gidilmedi</div></div>""", unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div style="display:flex; margin-bottom:10px;">
-                <div class="legend-box"><div class="legend-dot" style="background:#EF4444;"></div>Hot (Sıcak)</div>
-                <div class="legend-box"><div class="legend-dot" style="background:#F59E0B;"></div>Warm (Ilık)</div>
-                <div class="legend-box"><div class="legend-dot" style="background:#3B82F6;"></div>Cold (Soğuk)</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div class="legend-box"><div class="legend-dot" style="background:#EF4444;"></div>Hot</div><div class="legend-box"><div class="legend-dot" style="background:#F59E0B;"></div>Warm</div><div class="legend-box"><div class="legend-dot" style="background:#3B82F6;"></div>Cold</div></div>""", unsafe_allow_html=True)
 
         layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=200, pickable=True)]
-        
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=300, pickable=False))
 
-        st.pydeck_chart(pdk.Deck(
-            layers=layers,
-            initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11),
-            tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}<br/>Ziyaret: {Gidildi mi?}"}
-        ))
+        st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Lead: {Lead Status}<br/>Durum: {Gidildi mi?}"}))
         
     with t2:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], 
-                     column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")},
-                     use_container_width=True, hide_index=True)
+        st.dataframe(d_df[["Klinik Adı", "Lead Status", "Gidildi mi?", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
         
     with t3:
         if c_lat:
@@ -224,7 +204,6 @@ if not df.empty:
             if not yakin.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
                 sel = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
-                # DÜZELTİLEN SATIR: Parantez hatası giderildi
                 st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
@@ -237,8 +216,5 @@ if not df.empty:
         else: st.info("Bu alan yöneticilere özeldir.")
 
 else:
-    # HATA MESAJI VE ÇÖZÜM ÖNERİLERİ
-    st.error("⚠️ Veri Bulunamadı! Sorunu çözmek için:")
-    st.info("1. Google Sheets'i açın.")
-    st.info("2. 'Personel' sütununda adınızın (Doğukan) yazılı olduğundan emin olun.")
-    st.info("3. 'lat' ve 'lon' sütunlarının dolu olduğundan emin olun (Virgül veya nokta fark etmez, kod ikisini de okur).")
+    st.error("⚠️ Veriler yüklenemedi. Sorun Excel'deki '401.553' gibi yanlış koordinat formatlarından kaynaklanıyordu, ancak bu kod onları otomatik düzeltmeye çalıştı.")
+    st.warning("Eğer hala bu hatayı görüyorsan; Google Sheets'te 'lat' ve 'lon' sütunlarını 'Sayı' formatına çevirip noktaların yerini kontrol et (40.1553 olmalı).")
