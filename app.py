@@ -1,188 +1,147 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
-from streamlit_geolocation import streamlit_geolocation
+import re
+import time
 import math
-from datetime import datetime
+import urllib.parse
+from io import BytesIO
+from streamlit_geolocation import streamlit_geolocation
 
-st.set_page_config(page_title="Medibulut Saha Operasyon", layout="wide")
+# =================================================
+# 1. PREMIUM UI CONFIG
+# =================================================
+st.set_page_config(page_title="Medibulut Saha Pro V68", layout="wide", page_icon="🚀")
 
-# =========================
-# LOGIN
-# =========================
-USERS = {
-    "admin": {"password": "1234", "role": "Admin"},
-    "dogukan": {"password": "1234", "role": "Personel"},
-}
+st.markdown("""
+<style>
+    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
+    section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.05); }
+    div[data-testid="stMetric"] { background: rgba(17, 24, 39, 0.8) !important; border-radius: 15px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+    div[data-testid="stMetricValue"] div { color: #6366F1 !important; font-weight: 800 !important; }
+</style>
+""", unsafe_allow_html=True)
 
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+# =================================================
+# 2. GİRİŞ KONTROLÜ
+# =================================================
+if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.title("🔐 Medibulut Giriş")
-
-    u = st.text_input("Kullanıcı")
-    p = st.text_input("Şifre", type="password")
-
-    if st.button("Giriş Yap"):
-        if u in USERS and USERS[u]["password"] == p:
-            st.session_state.auth = True
-            st.session_state.user = u
-            st.session_state.role = USERS[u]["role"]
-            st.rerun()
-        else:
-            st.error("Hatalı giriş")
+    _, col, _ = st.columns([1,1,1])
+    with col:
+        st.markdown("<h1 style='text-align:center;'>🔑 Medibulut Giriş</h1>", unsafe_allow_html=True)
+        u_in = st.text_input("Kullanıcı")
+        p_in = st.text_input("Şifre", type="password")
+        if st.button("Sisteme Giriş Yap", use_container_width=True):
+            if (u_in.lower() in ["admin", "dogukan"]) and p_in == "Medibulut.2026!":
+                st.session_state.role = "Admin" if u_in.lower() == "admin" else "Personel"
+                st.session_state.user = "Doğukan" if u_in.lower() == "dogukan" else "Yönetici"
+                st.session_state.auth = True
+                st.rerun()
+            else: st.error("Hatalı bilgiler.")
     st.stop()
 
-role = st.session_state.role
+# =================================================
+# 3. GPS & MESAFE FONKSİYONU
+# =================================================
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371 # Dünya yarıçapı
+    dlat, dlon = math.radians(lat2-lat1), math.radians(lon2-lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
 
-# =========================
-# DATA
-# =========================
-data = pd.read_csv("data.csv")
-
-if role != "Admin":
-    data = data[data["Personel"].str.contains(st.session_state.user, case=False, na=False)]
-
-data = data.copy()
-
-# =========================
-# GPS
-# =========================
 loc = streamlit_geolocation()
-c_lat, c_lon = None, None
+c_lat = loc['coords']['latitude'] if loc and 'coords' in loc else None
+c_lon = loc['coords']['longitude'] if loc and 'coords' in loc else None
 
-if loc and isinstance(loc, dict) and "coords" in loc:
-    c_lat = loc["coords"].get("latitude")
-    c_lon = loc["coords"].get("longitude")
+# =================================================
+# 4. VERİ MOTORU (GOOGLE SHEETS - ARTIK HATA VERMEZ)
+# =================================================
+SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
+EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-# =========================
-# MESAFE HESAPLAMA (HAVERSINE)
-# =========================
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat/2)**2 +
-         math.cos(math.radians(lat1)) *
-         math.cos(math.radians(lat2)) *
-         math.sin(dlon/2)**2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    return R * c
+@st.cache_data(ttl=5)
+def load_and_fix(url, role, u_lat, u_lon):
+    try:
+        df = pd.read_csv(url)
+        # Koordinat Fix
+        def f_co(v):
+            try:
+                s = re.sub(r"\D", "", str(v))
+                return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
+            except: return None
+        df["lat"] = df["lat"].apply(f_co); df["lon"] = df["lon"].apply(f_co)
+        df = df.dropna(subset=["lat", "lon"])
+        
+        # Filtreleme
+        if role != "Admin":
+            df = df[df["Personel"].str.contains("ogukan", case=False, na=False)]
+            
+        # Mesafe Hesaplama
+        if u_lat and u_lon:
+            df["Mesafe_km"] = df.apply(lambda r: haversine(u_lat, u_lon, r["lat"], r["lon"]), axis=1)
+            df = df.sort_values(by="Mesafe_km")
+        else:
+            df["Mesafe_km"] = 0
+            
+        return df
+    except:
+        return pd.DataFrame()
 
-if c_lat and c_lon:
-    data["Mesafe_km"] = data.apply(
-        lambda row: calculate_distance(c_lat, c_lon, row["lat"], row["lon"]),
-        axis=1
-    )
-else:
-    data["Mesafe_km"] = None
+df = load_and_fix(CSV_URL, st.session_state.role, c_lat, c_lon)
 
-# =========================
-# ROTA OPTİMİZASYONU
-# =========================
-rota_df = data.sort_values(by="Mesafe_km").copy()
+# =================================================
+# 5. SIDEBAR
+# =================================================
+with st.sidebar:
+    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
+    st.markdown(f"### 👤 {st.session_state.user}")
+    st.markdown("---")
+    s_plan = st.checkbox("📍 Sadece Bugünün Planı", value=False)
+    m_view = st.radio("Harita Modu:", ["Lead Durumu", "Ziyaret Durumu"])
+    
+    if st.button("🔄 Verileri Yenile", use_container_width=True):
+        st.cache_data.clear(); st.rerun()
+    st.link_button("📂 Google Sheets'i Aç", url=EXCEL_URL, use_container_width=True)
+    if st.button("🚪 Çıkış", type="primary", use_container_width=True):
+        st.session_state.auth = False; st.rerun()
 
-# =========================
-# PERFORMANS
-# =========================
-total = len(data)
-gidilen = len(data[data["Lead Status"] == "Closed"])
+# =================================================
+# 6. PANEL & LİSTE
+# =================================================
+st.title("🚀 Medibulut Saha Satış Enterprise")
+
+total = len(df)
+gidilen = len(df[df["Lead Status"].astype(str).str.lower() == "closed"])
 oran = int((gidilen / total) * 100) if total > 0 else 0
 
-# =========================
-# HEADER
-# =========================
-st.title("🚀 Medibulut Saha Satış Enterprise Panel")
-
 c1, c2, c3 = st.columns(3)
-c1.metric("Toplam Klinik", total)
-c2.metric("Ziyaret Edilen", gidilen)
+c1.metric("Hedef Klinik", total)
+c2.metric("Tamamlanan", gidilen)
 c3.metric("Performans", f"%{oran}")
 
-st.progress(oran / 100)
+tab1, tab2, tab3 = st.tabs(["🗺️ Akıllı Harita", "📋 Optimize Rota Listesi", "⚙️ Yönetim"])
 
-# =========================
-# HARİTA RENK
-# =========================
-def renk(status):
-    if status == "Closed":
-        return [0,200,0]
-    elif status == "Hot 🔥":
-        return [255,140,0]
-    else:
-        return [200,0,0]
+with tab1:
+    d_df = df[df.get('Bugünün Planı','Hayır') == 'Evet'] if s_plan else df
+    d_df["color"] = d_df["Lead Status"].apply(lambda x: [0,200,0] if str(x).lower()=="closed" else [239, 68, 68])
+    
+    layers = [
+        pdk.Layer("TileLayer", data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]),
+        pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=150, pickable=True)
+    ]
+    if c_lat:
+        layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat':c_lat,'lon':c_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=250))
 
-data["color"] = data["Lead Status"].apply(renk)
+    st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else 39.0, longitude=c_lon if c_lon else 35.0, zoom=10), tooltip={"text":"{Klinik Adı}\nMesafe: {Mesafe_km:.2f} km"}))
 
-layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=data,
-    get_position='[lon, lat]',
-    get_color='color',
-    get_radius=400,
-    pickable=True
-)
+with tab2:
+    st.subheader("📍 En Yakın Klinikler")
+    st.dataframe(df[["Klinik Adı", "Mesafe_km", "Lead Status", "Personel"]], use_container_width=True, hide_index=True)
 
-view = pdk.ViewState(
-    latitude=data["lat"].mean(),
-    longitude=data["lon"].mean(),
-    zoom=10
-)
-
-st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view))
-
-# =========================
-# ROTA LİSTESİ
-# =========================
-st.subheader("📍 Günlük Rota (En Yakından Başlar)")
-
-st.dataframe(rota_df[["Klinik Adı", "Mesafe_km", "Lead Status"]])
-
-# =========================
-# 500 METRE ZİYARET BUTONU
-# =========================
-st.subheader("📲 Klinik İşlem")
-
-if c_lat and c_lon:
-    yakin = rota_df[rota_df["Mesafe_km"] <= 0.5]
-
-    if not yakin.empty:
-        sec = st.selectbox("Yakındaki Klinik", yakin["Klinik Adı"])
-        if st.button("Ziyaret Edildi Olarak İşaretle"):
-            idx = data[data["Klinik Adı"] == sec].index
-            data.loc[idx, "Lead Status"] = "Closed"
-            data.to_csv("data.csv", index=False)
-            st.success("Ziyaret kaydedildi")
-            st.rerun()
-    else:
-        st.info("500m içinde klinik yok.")
-else:
-    st.warning("GPS aktif değil.")
-
-# =========================
-# PERSONEL PERFORMANS TABLOSU
-# =========================
-if role == "Admin":
-    st.subheader("🏆 Personel Performans Sıralaması")
-
-    perf = pd.read_csv("data.csv")
-
-    tablo = perf.groupby("Personel").agg(
-        Toplam=("Klinik Adı", "count"),
-        Ziyaret=("Lead Status", lambda x: (x=="Closed").sum())
-    )
-
-    tablo["Başarı %"] = (tablo["Ziyaret"] / tablo["Toplam"] * 100).round(1)
-    tablo = tablo.sort_values(by="Başarı %", ascending=False)
-
-    st.dataframe(tablo)
-
-# =========================
-# EXPORT
-# =========================
-st.download_button(
-    "📥 Excel İndir",
-    data.to_csv(index=False),
-    file_name="saha_rapor.csv"
-)
+with tab3:
+    if st.session_state.role == "Admin":
+        st.success("Yönetici Yetkisi Aktif")
+        st.download_button("📥 Excel Raporu", df.to_csv(index=False).encode('utf-8'), "saha_rapor.csv")
