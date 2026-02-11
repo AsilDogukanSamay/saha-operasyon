@@ -5,125 +5,71 @@ import re
 import time
 import urllib.parse
 
-# ------------------------------------------------
-# 1. SAYFA AYARLARI
-st.set_page_config(
-    page_title="Medibulut Saha Paneli",
-    page_icon="💎",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# 1. SAYFA YAPISI
+st.set_page_config(page_title="Medibulut Saha V44", layout="wide", initial_sidebar_state="expanded")
 
-# ------------------------------------------------
-# 2. CSS: ZORLA KARANLIK & OKUNABİLİR YAZILAR
+# 2. NETLİK VE RENK CSS (YÖNETİCİDE BEYAZLAMAZ)
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
-    
-    /* Metrik Başlıkları Parlatma */
-    div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        font-size: 16px !important;
-        opacity: 1 !important;
-    }
-    
-    /* Giriş Kutuları */
-    div[data-testid="stTextInput"] > div { background-color: #262730 !important; border: 1px solid #4b5563 !important; }
-    div[data-testid="stTextInput"] input { color: white !important; -webkit-text-fill-color: white !important; }
-
-    /* Sidebar Yazıları Beyaz */
+    div[data-testid="stMetricLabel"] p { color: #FFFFFF !important; font-weight: 900 !important; font-size: 18px !important; }
+    div[data-testid="stMetricValue"] div { color: #60a5fa !important; font-weight: 800 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
-
-    /* Rapor Butonu Özel Stil */
-    .report-btn {
-        background-color: #28a745;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: bold;
-        display: inline-block;
-        margin-bottom: 20px;
-    }
+    .nav-btn { background-color: #28a745; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
+    .excel-btn { background-color: #007bff; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; }
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------
 # 3. GİRİŞ SİSTEMİ
-KULLANICILAR = {
-    "admin": {"sifre": "medibulut123", "rol": "Admin", "isim": "Yönetici"},
-    "dogukan": {"sifre": "1234", "rol": "Personel", "isim": "Doğukan"},
-    "ozan": {"sifre": "1234", "rol": "Personel", "isim": "Ozan"}
-}
+KULLANICILAR = {"admin": "medibulut123", "dogukan": "1234", "ozan": "1234"}
+if 'giris' not in st.session_state: st.session_state['giris'] = False
 
-if 'giris_yapildi' not in st.session_state:
-    st.session_state['giris_yapildi'] = False
-    st.session_state['aktif_kullanici'] = None
-
-if not st.session_state['giris_yapildi']:
+if not st.session_state['giris']:
     _, c2, _ = st.columns([1,1,1])
     with c2:
-        st.markdown("<h2 style='text-align:center;'>🔒 Giriş Paneli</h2>", unsafe_allow_html=True)
+        st.title("🔒 Giriş Paneli")
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
         if st.button("Giriş Yap", type="primary"):
-            if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
-                st.session_state['giris_yapildi'] = True
-                st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
+            if kadi in KULLANICILAR and KULLANICILAR[kadi] == sifre:
+                st.session_state['giris'] = True
+                st.session_state['user'] = kadi
                 st.rerun()
-            else: st.error("Hatalı giriş.")
+            else: st.error("Hatalı bilgiler.")
     st.stop()
 
-# ------------------------------------------------
-# 4. VERİ YÜKLEME & LİNKLER
-kullanici = st.session_state['aktif_kullanici']
+# 4. VERİ ÇEKME
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 excel_linki = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
 
 try:
-    df = pd.read_csv(sheet_url, storage_options={'User-Agent': 'Mozilla/5.0'})
-    def koordinat_duzelt(deger):
+    df = pd.read_csv(sheet_url)
+    def k_fix(d):
         try:
-            s = re.sub(r'\D', '', str(deger))
+            s = re.sub(r'\D', '', str(d))
             return float(s[:2] + "." + s[2:])
         except: return None
-    df['lat'] = df['lat'].apply(koordinat_duzelt)
-    df['lon'] = df['lon'].apply(koordinat_duzelt)
+    df['lat'] = df['lat'].apply(k_fix)
+    df['lon'] = df['lon'].apply(k_fix)
     df = df.dropna(subset=['lat', 'lon'])
-    df['Gidildi mi?'] = df.get('Gidildi mi?', 'Hayır').fillna('Hayır')
-    if kullanici['rol'] != "Admin":
-        df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
-except Exception as e:
-    st.error("Veri bağlantısı hatası."); st.stop()
+    if st.session_state['user'] != "admin":
+        df = df[df['Personel'].str.contains(st.session_state['user'], case=False, na=False)]
+except: st.error("Veri hatası."); st.stop()
 
-# ------------------------------------------------
-# 5. SIDEBAR (KONTROL MERKEZİ)
+# 5. SIDEBAR
 with st.sidebar:
-    st.title(f"👋 {kullanici['isim']}")
-    st.caption(f"Rol: {kullanici['rol']}")
-    
-    # EXCEL BUTONU (Sidebar)
-    st.link_button("📂 Excel Tablosuna Git", excel_linki, type="primary")
-    
-    if st.button("🔄 Verileri Yenile"):
-        st.cache_data.clear(); st.rerun()
-    
+    st.title(f"👋 Selam {st.session_state['user'].capitalize()}")
+    st.link_button("📂 Excel'i Aç (Veri Gir)", excel_linki, type="primary")
+    if st.button("🔄 Verileri Güncelle"): st.cache_data.clear(); st.rerun()
     st.markdown("---")
-    renk_m = st.selectbox("Harita Modu:", ["Analiz (Statü)", "Operasyon (Ziyaret)"])
-    stat_f = st.multiselect("Statü Filtresi:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
-    ziy_f = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
-    
-    if st.button("Güvenli Çıkış"):
-        st.session_state['giris_yapildi'] = False; st.rerun()
+    statu_f = st.multiselect("Lead Durumu", ["Hot 🔥", "Warm 🟠", "Cold ❄️"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️"])
+    if st.button("Çıkış"): st.session_state['giris'] = False; st.rerun()
 
-# ------------------------------------------------
-# 6. DASHBOARD (SAYILAR)
-toplam = len(df)
-gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
-hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
-warm = len(df[df['Lead Status'].str.contains("Warm", case=False, na=False)])
+# 6. METRİKLER
+toplam, gidilen = len(df), len(df[df['Gidildi mi?'].astype(str).str.lower() == 'evet'])
+hot = len(df[df['Lead Status'].astype(str).str.contains("Hot", na=False)])
+warm = len(df[df['Lead Status'].astype(str).str.contains("Warm", na=False)])
 
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("🎯 Hedef", toplam)
@@ -131,52 +77,29 @@ m2.metric("✅ Ziyaret", gidilen)
 m3.metric("🔥 Hot Lead", hot)
 m4.metric("🟠 Warm Lead", warm)
 
-# ------------------------------------------------
-# 7. SEKMELER (HARİTA & LİSTE)
-tab1, tab2 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste & Raporlama"])
+# 7. SEKMELER
+t1, t2 = st.tabs(["🗺️ Saha Haritası", "📋 Navigasyon & Rapor"])
 
-# Filtreleri Uygula
-f_df = df.copy()
-if ziy_f:
-    p = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziy_f])
-    f_df = f_df[f_df['Gidildi mi?'].str.contains(p, case=False, na=False)]
+with t1:
+    st.pydeck_chart(pdk.Deck(
+        map_style="mapbox://styles/mapbox/dark-v10",
+        layers=[pdk.Layer("ScatterplotLayer", data=df, get_position='[lon, lat]', get_color='[255, 69, 0]', get_radius=300, pickable=True)],
+        initial_view_state=pdk.ViewState(latitude=df['lat'].mean(), longitude=df['lon'].mean(), zoom=11),
+        tooltip={"text": "{Klinik Adı}"}
+    ))
 
-with tab1:
-    if not f_df.empty:
-        renkler = []
-        for _, row in f_df.iterrows():
-            s, v = str(row.get('Lead Status','')).lower(), str(row.get('Gidildi mi?','')).lower()
-            if "Operasyon" in renk_m: col = [0,255,127] if "evet" in v else [255,69,0]
-            else:
-                if "hot" in s: col = [255,69,0]
-                elif "warm" in s: col = [255,165,0]
-                elif "cold" in s: col = [30,144,255]
-                else: col = [169,169,169]
-            renkler.append(col)
-        f_df['color'] = renkler
-        st.pydeck_chart(pdk.Deck(
-            map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-            layers=[pdk.Layer("ScatterplotLayer", data=f_df, get_position='[lon, lat]', get_color='color', get_radius=300, pickable=True)],
-            initial_view_state=pdk.ViewState(latitude=f_df['lat'].mean(), longitude=f_df['lon'].mean(), zoom=11),
-            tooltip={"text": "{Klinik Adı}\nDurum: {Lead Status}"}
-        ))
-    else: st.warning("Veri bulunamadı.")
-
-with tab2:
-    # MAIL RAPORLAMA BUTONU
-    konu = urllib.parse.quote(f"Saha Raporu - {kullanici['isim']}")
-    govde = urllib.parse.quote(f"Merhaba Yönetici,\n\n{kullanici['isim']} tarafından güncel saha raporu:\n\n🎯 Toplam Hedef: {toplam}\n✅ Yapılan Ziyaret: {gidilen}\n🔥 Hot Lead Sayısı: {hot}\n🟠 Warm Lead Sayısı: {warm}\n\nİyi çalışmalar.")
-    mail_link = f"mailto:?subject={konu}&body={govde}"
+with t2:
+    # BUTONLAR
+    k, g = urllib.parse.quote(f"Saha Raporu"), urllib.parse.quote(f"Hedef: {toplam}\nZiyaret: {gidilen}\nHot: {hot}")
+    c_m, c_e = st.columns(2)
+    c_m.markdown(f'<a href="mailto:?subject={k}&body={g}" class="nav-btn">📧 Yöneticiye Raporu At</a>', unsafe_allow_html=True)
+    c_e.markdown(f'<a href="{excel_linki}" target="_blank" class="excel-btn">📂 Excel Tablosuna Git</a>', unsafe_allow_html=True)
     
-    col_mail, col_excel = st.columns([1, 1])
-    with col_mail:
-        st.markdown(f'<a href="{mail_link}" class="report-btn">📧 Yöneticiye Rapor Gönder</a>', unsafe_allow_html=True)
-    with col_excel:
-        st.markdown(f'<a href="{excel_linki}" target="_blank" style="background-color:#007bff; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:bold; display:inline-block;">📂 Veri Girişi (Excel)</a>', unsafe_allow_html=True)
+    # EMOJİLİ NAVİGASYON TABLOSU
+    df['Navigasyon'] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
     
-    st.markdown("---")
-    
-    f_df['Rota'] = f_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-    st.dataframe(f_df[['Klinik Adı', 'Personel', 'Lead Status', 'Gidildi mi?', 'Rota']], 
-                 column_config={"Rota": st.column_config.LinkColumn("Git")}, 
-                 use_container_width=True, hide_index=True)
+    st.dataframe(
+        df[['Klinik Adı', 'Lead Status', 'Gidildi mi?', 'Navigasyon']],
+        column_config={"Navigasyon": st.column_config.LinkColumn("📍 Yol Tarifi Al", display_text="📍 Navigasyonu Başlat")},
+        use_container_width=True, hide_index=True
+    )
