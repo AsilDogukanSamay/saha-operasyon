@@ -9,35 +9,38 @@ from io import BytesIO
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V49", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V50", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
-    /* ANA ZEMİN SİYAH */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     
-    /* INPUT KUTULARI (YÖNETİCİDE BEYAZLAMAZ) */
+    /* SIDEBAR ÖZEL TASARIM */
+    section[data-testid="stSidebar"] {
+        background-color: #161B22 !important;
+        border-right: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* Giriş Kutuları */
     div[data-testid="stTextInput"] > div, div[data-testid="stTextArea"] > div {
         background-color: #1f2937 !important;
         border: 1px solid #374151 !important;
     }
-    input, textarea { color: white !important; -webkit-text-fill-color: white !important; }
+    input, textarea { color: white !important; }
     
-    /* METRİK KARTLARI */
+    /* Metrikler */
     div[data-testid="stMetric"] {
         background: rgba(17, 24, 39, 0.8) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 15px !important;
-        padding: 15px !important;
     }
     div[data-testid="stMetricLabel"] p { color: #9ca3af !important; font-weight: bold !important; }
     div[data-testid="stMetricValue"] div { color: #6366F1 !important; font-weight: 800 !important; }
 
-    /* BUTONLAR */
+    /* Butonlar */
     .stButton > button {
-        background: linear-gradient(90deg, #6366F1, #8B5CF6) !important;
-        border: none !important; color: white !important; border-radius: 10px !important;
-        font-weight: bold !important; height: 45px;
+        border-radius: 10px !important;
+        font-weight: bold !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -53,17 +56,17 @@ if not st.session_state.login:
         st.markdown("<h1 style='text-align:center;'>🔑 Medibulut Giriş</h1>", unsafe_allow_html=True)
         user = st.text_input("Kullanıcı")
         pwd = st.text_input("Şifre", type="password")
-        if st.button("Giriş Yap", use_container_width=True):
+        if st.button("Sisteme Giriş Yap", use_container_width=True):
             if (user == "admin" or user == "dogukan") and pwd == "1234":
                 st.session_state.role = "Admin" if user == "admin" else "Personel"
                 st.session_state.user = user.capitalize()
                 st.session_state.login = True
                 st.rerun()
-            else: st.error("Hatalı kullanıcı adı veya şifre.")
+            else: st.error("Hatalı bilgiler.")
     st.stop()
 
 # =================================================
-# 3. VERİ MOTORU (GOOGLE SHEETS)
+# 3. VERİ MOTORU
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&t={time.time()}"
@@ -87,13 +90,46 @@ def load_and_clean():
 df = load_and_clean()
 
 # =================================================
-# 4. DASHBOARD HEADER & KPI
+# 4. YENİ NESİL SOL MENÜ (SIDEBAR) ⚙️
+# =================================================
+with st.sidebar:
+    # Logo ve Hoşgeldin
+    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
+    st.markdown(f"### 👤 {st.session_state.user}")
+    st.caption(f"🛡️ Yetki Seviyesi: {st.session_state.role}")
+    
+    st.markdown("---")
+    
+    # Hızlı Aksiyonlar
+    st.markdown("🚀 **Hızlı Aksiyonlar**")
+    if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
+        st.cache_data.clear(); st.rerun()
+    
+    st.link_button("📂 Ana Excel Tablosu", EXCEL_URL, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Sistem Bilgisi
+    st.markdown("📊 **Sistem Durumu**")
+    st.info(f"📍 Toplam Kayıt: {len(df)}\n📅 Son Güncelleme: {time.strftime('%H:%M:%S')}")
+    
+    st.markdown("---")
+    
+    # Destek Hattı (Örnek)
+    with st.expander("🛠️ Destek & Yardım"):
+        st.write("Sorun bildirmek için teknik ekiple iletişime geçin.")
+        st.caption("destek@medibulut.com")
+    
+    st.markdown("---")
+    if st.button("🚪 Güvenli Çıkış Yap", type="primary", use_container_width=True):
+        st.session_state.login = False; st.rerun()
+
+# =================================================
+# 5. ANA PANEL
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
-st.caption(f"Hoş geldin, {st.session_state.user} | Yetki: {st.session_state.role}")
 
-total = len(df)
-hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
+total, hot = len(df), len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
 gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"])
 
 m1, m2, m3, m4 = st.columns(4)
@@ -102,16 +138,11 @@ m2.metric("✅ ZİYARET EDİLEN", gidilen)
 m3.metric("🎯 TOPLAM HEDEF", total)
 m4.metric("📈 PERFORMANS", f"%{int(gidilen/total*100) if total>0 else 0}")
 
-# =================================================
-# 5. ANA PANEL (SEKMELER)
-# =================================================
 tab_map, tab_list, tab_admin = st.tabs(["🗺️ Operasyon Haritası", "📋 Navigasyon Listesi", "⚙️ Yönetim Paneli"])
 
 with tab_map:
-    # Renkler: Kırmızı, Turuncu, Mavi
     color_map = {"Hot": [239, 68, 68], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
     df["color"] = df["Lead Status"].apply(lambda x: color_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
-    
     st.pydeck_chart(pdk.Deck(
         map_style=None,
         layers=[
@@ -123,46 +154,18 @@ with tab_map:
     ))
 
 with tab_list:
-    # Raporlama ve Navigasyon
     k, g = urllib.parse.quote("Saha Raporu"), urllib.parse.quote(f"Ziyaret: {gidilen}/{total}\nSıcak: {hot}")
-    col_mail, col_edit = st.columns(2)
-    with col_mail:
-        st.markdown(f'<a href="mailto:?subject={k}&body={g}" style="background:#10B981; color:white; padding:12px 20px; border-radius:10px; text-decoration:none; font-weight:bold; display:inline-block; width:100%; text-align:center;">📧 Yöneticiye Rapor Gönder</a>', unsafe_allow_html=True)
-    with col_edit:
-        st.link_button("📂 Veri Girişi (Google Sheets)", EXCEL_URL, use_container_width=True)
-
+    st.markdown(f'<a href="mailto:?subject={k}&body={g}" style="background:#10B981; color:white; padding:12px 20px; border-radius:10px; text-decoration:none; font-weight:bold; display:inline-block; width:100%; text-align:center;">📧 Yöneticiye Anlık Rapor Gönder</a>', unsafe_allow_html=True)
     st.markdown("---")
-    
-    # Navigasyon linki oluşturma (📍)
     df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-    
-    st.dataframe(
-        df[["Klinik Adı", "Lead Status", "Personel", "Gidildi mi?", "Git"]],
-        column_config={
-            "Git": st.column_config.LinkColumn("📍 ROTA", display_text="NAVİGASYONU BAŞLAT"),
-        },
-        use_container_width=True, hide_index=True
-    )
+    st.dataframe(df[["Klinik Adı", "Lead Status", "Personel", "Gidildi mi?", "Git"]], 
+                 column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="NAVİGASYONU BAŞLAT")},
+                 use_container_width=True, hide_index=True)
 
 with tab_admin:
     if st.session_state.role == "Admin":
         st.subheader("📤 Veri Dışa Aktar")
         output = BytesIO()
-        # openpyxl yüklü olduğundan emin ol (requirements.txt)
         df.to_excel(output, index=False)
-        st.download_button(label="📊 Mevcut Listeyi Excel İndir", data=output.getvalue(), file_name="saha_rapor.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        
-        if st.button("🔄 Verileri Yenile (Buluttan Çek)"):
-            st.cache_data.clear(); st.rerun()
-    else:
-        st.warning("Bu bölüme sadece yöneticiler erişebilir.")
-
-# =================================================
-# 6. SIDEBAR
-# =================================================
-with st.sidebar:
-    # HATA BURADA DÜZELTİLDİ: URL temizlendi
-    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=200)
-    st.markdown("---")
-    if st.button("🚪 Güvenli Çıkış", use_container_width=True):
-        st.session_state.login = False; st.rerun()
+        st.download_button(label="📊 Listeyi Excel Olarak İndir", data=output.getvalue(), file_name="saha_rapor.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    else: st.warning("Bu bölüme sadece yöneticiler erişebilir.")
