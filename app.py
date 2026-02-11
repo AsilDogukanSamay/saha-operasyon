@@ -8,56 +8,60 @@ import urllib.parse
 # ------------------------------------------------
 # 1. SAYFA AYARLARI
 st.set_page_config(
-    page_title="Medibulut Saha V35.0",
+    page_title="Medibulut Saha Paneli",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ------------------------------------------------
-# 2. CSS: AYDINLIK MODA KARŞI TAM KORUMA 🛡️
+# 2. CSS: ZORBA KARANLIK MOD (YÖNETİCİDE BEYAZLIKLARI SİLER ⚔️)
 st.markdown("""
 <style>
-    /* 1. ANA ARKA PLAN */
-    .stApp {
+    /* 1. ANA ZEMİN - ASLA BEYAZLAMAZ */
+    .stApp, [data-testid="stAppViewContainer"] {
         background-color: #0E1117 !important;
         color: #FFFFFF !important;
     }
     
-    /* 2. METRİKLERİ PARLAT (HEDEF, ZİYARET, LEAD) */
+    /* 2. GİRİŞ KUTULARI (TEXT INPUT) - OKUNABİLİRLİK %100 */
+    div[data-baseweb="input"] {
+        background-color: #1a1c24 !important; /* Koyu gri zemin */
+        border: 2px solid #4b5563 !important; /* Belirgin çerçeve */
+    }
+    input {
+        color: #FFFFFF !important; /* YAZILAN YAZI BEMBEYAZ */
+        -webkit-text-fill-color: #FFFFFF !important;
+        background-color: transparent !important;
+        caret-color: #FFFFFF !important;
+        font-weight: bold !important;
+    }
+    label { color: #FFFFFF !important; font-weight: bold !important; }
+
+    /* 3. METRİK BAŞLIKLARI (HEDEF, ZİYARET VB.) - SÖNÜKLÜĞÜ BİTİRDİK */
     div[data-testid="stMetricLabel"] p {
-        color: #FFFFFF !important; /* ULTRA BEYAZ */
+        color: #FFFFFF !important; /* ULTRA PARLAK BEYAZ */
         font-weight: 900 !important;
         font-size: 18px !important;
         opacity: 1 !important;
-        text-shadow: 2px 2px 4px #000000;
+        text-shadow: 1px 1px 2px #000;
     }
     div[data-testid="stMetricValue"] div {
         color: #60a5fa !important; /* PARLAK MAVİ RAKAMLAR */
         font-weight: 800 !important;
     }
 
-    /* 3. GİRİŞ VE SEÇİM KUTULARI (BEYAZLIĞI SİLER) */
-    div[data-baseweb="input"], div[data-baseweb="select"], div[role="listbox"] {
-        background-color: #1a1c24 !important;
-        border: 1px solid #4b5563 !important;
-    }
-    input, select, textarea, li {
+    /* 4. SIDEBAR VE SEÇİM KUTULARI */
+    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
+    div[data-baseweb="select"] > div {
+        background-color: #262730 !important;
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        background-color: transparent !important;
     }
 
-    /* 4. SIDEBAR VE TABS */
-    [data-testid="stSidebar"] { background-color: #1a1c24 !important; }
+    /* 5. SEKMELER (TABS) */
     button[data-baseweb="tab"] p { color: #FFFFFF !important; font-weight: bold !important; }
     button[data-baseweb="tab"][aria-selected="true"] p { color: #60a5fa !important; }
     
-    div.stButton > button { 
-        width: 100%; border-radius: 8px; font-weight: bold; 
-        background-color: #FF4B4B !important; color: white !important; 
-    }
-
     .block-container { padding-top: 3rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -78,9 +82,10 @@ if not st.session_state['giris_yapildi']:
     _, c2, _ = st.columns([1,1,1])
     with c2:
         st.markdown("<h1 style='text-align:center; color:white;'>🔒 Giriş</h1>", unsafe_allow_html=True)
+        # Kutuların içi artık her tarayıcıda karanlık ve yazı beyaz olacak
         kadi = st.text_input("Kullanıcı Adı")
         sifre = st.text_input("Şifre", type="password")
-        if st.button("Sisteme Gir"):
+        if st.button("Sisteme Giriş Yap", type="primary"):
             if kadi in KULLANICILAR and KULLANICILAR[kadi]["sifre"] == sifre:
                 st.session_state['giris_yapildi'] = True
                 st.session_state['aktif_kullanici'] = KULLANICILAR[kadi]
@@ -94,7 +99,7 @@ kullanici = st.session_state['aktif_kullanici']
 sheet_id = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&t={time.time()}"
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=20)
 def veri_cek(url):
     return pd.read_csv(url, storage_options={'User-Agent': 'Mozilla/5.0'})
 
@@ -112,8 +117,7 @@ try:
     if kullanici['rol'] != "Admin":
         df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
 except Exception:
-    st.error("Veri bağlantısı hatası.")
-    st.stop()
+    st.error("Veri bağlantısı hatası."); st.stop()
 
 # ------------------------------------------------
 # 5. SIDEBAR
@@ -122,14 +126,14 @@ with st.sidebar:
     if st.button("🔄 Verileri Yenile"):
         st.cache_data.clear(); st.rerun()
     st.markdown("---")
-    renk_modu = st.selectbox("Harita Modu:", ["Analiz (Lead Status)", "Operasyon (Ziyaret)"])
-    statu_filtre = st.multiselect("Lead Durumu:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
+    renk_modu = st.selectbox("Harita Modu:", ["Analiz (Statü)", "Operasyon (Ziyaret)"])
+    statu_filtre = st.multiselect("Statü Filtresi:", ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"], default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"])
     ziyaret_filtre = st.multiselect("Ziyaret Filtresi:", ["✅ Gidilenler", "❌ Gidilmeyenler"], default=["✅ Gidilenler", "❌ Gidilmeyenler"])
     if st.button("Güvenli Çıkış"):
         st.session_state['giris_yapildi'] = False; st.rerun()
 
 # ------------------------------------------------
-# 6. DASHBOARD (SAYILAR)
+# 6. DASHBOARD (PARLAK SAYILAR 💎)
 toplam = len(df)
 gidilen = len(df[df['Gidildi mi?'].str.lower() == 'evet'])
 hot = len(df[df['Lead Status'].str.contains("Hot", case=False, na=False)])
@@ -142,21 +146,11 @@ m3.metric("🔥 Hot Lead", hot)
 m4.metric("🟠 Warm Lead", warm)
 
 # ------------------------------------------------
-# 7. HARİTA VE LİSTE
+# 7. HARİTA VE LİSTE (DARK THEME FIXED)
 tab1, tab2 = st.tabs(["🗺️ Saha Haritası", "📋 Detaylı Liste"])
 
 # Dinamik Filtreleme
 f_df = df.copy()
-# Statü Filtresi
-status_map = {"Hot 🔥": "Hot", "Warm 🟠": "Warm", "Cold ❄️": "Cold"}
-selected_status = [status_map[x] for x in statu_filtre if x in status_map]
-if "Bekliyor ⚪" in statu_filtre:
-    mask = f_df['Lead Status'].str.contains("|".join(selected_status), case=False, na=False) | ~f_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)
-else:
-    mask = f_df['Lead Status'].str.contains("|".join(selected_status), case=False, na=False) if selected_status else pd.Series([False]*len(f_df))
-f_df = f_df[mask]
-
-# Ziyaret Filtresi
 if ziyaret_filtre:
     z_pattern = "|".join([x.replace("✅ Gidilenler", "Evet").replace("❌ Gidilmeyenler", "Hayır") for x in ziyaret_filtre])
     f_df = f_df[f_df['Gidildi mi?'].str.contains(z_pattern, case=False, na=False)]
@@ -175,7 +169,8 @@ with tab1:
             renkler.append(col)
         f_df['color'] = renkler
 
-        # ZORLA SİYAH HARİTA ZEMİNİ (DÜZELTİLDİ)
+        # ZORLA SİYAH HARİTA ZEMİNİ (TILELAYER YÖNTEMİ)
+        # Bu yöntem Mapbox API'sine ihtiyaç duymaz ve tüm tarayıcılarda SİYAH açılır.
         dark_tile = pdk.Layer(
             "TileLayer",
             data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
@@ -191,7 +186,7 @@ with tab1:
         )
 
         st.pydeck_chart(pdk.Deck(
-            map_style=None,
+            map_style=None, # Varsayılan beyaz haritayı tamamen kapattık
             layers=[dark_tile, scatter],
             initial_view_state=pdk.ViewState(latitude=f_df['lat'].mean(), longitude=f_df['lon'].mean(), zoom=11),
             tooltip={"text": "{Klinik Adı}\nDurum: {Lead Status}"}
