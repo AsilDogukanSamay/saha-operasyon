@@ -8,8 +8,8 @@ import urllib.parse
 # ------------------------------------------------
 # 1. Sayfa Ayarları
 st.set_page_config(
-    page_title="Medibulut Saha Operasyon Uygulaması ",
-    page_icon="🗺️",
+    page_title="Medibulut Saha Operasyon Uygulaması",
+    page_icon="🌍",
     layout="wide"
 )
 
@@ -24,6 +24,11 @@ div.stButton > button:first-child {
     color: white;
     border-radius: 8px;
     font-weight: bold;
+}
+/* Filtre kutularını güzelleştir */
+div[data-baseweb="select"] > div {
+    background-color: #f0f2f6;
+    border-radius: 8px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -76,10 +81,9 @@ with c1:
 
 with c2:
     st.write("") 
-    st.write("") 
     st.markdown(f'''
         <a href="{excel_linki}" target="_blank">
-            <button style="background-color: #FF5722; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold;">
+            <button style="background-color: #FF5722; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold;">
                 📂 Excel'i Aç (Veri Gir)
             </button>
         </a>
@@ -127,7 +131,7 @@ try:
     if 'Gidildi mi?' not in df.columns:
         df['Gidildi mi?'] = "Hayır"
     
-    # Kişiye Özel Filtre (Yönetici değilse sadece kendi verisi)
+    # Kişiye Özel Veri Güvenliği
     if kullanici['rol'] != "Admin":
         if 'Personel' in df.columns:
             df = df[df['Personel'].str.contains(kullanici['isim'], case=False, na=False)]
@@ -159,57 +163,63 @@ try:
     st.markdown("---")
 
     # ------------------------------------------------
-    # 6. GELİŞMİŞ HARİTA FİLTRESİ 🔍
+    # 6. GELİŞMİŞ FİLTRELEME PANELİ (HARİTA ÜSTÜ) 🕵️‍♂️
     
-    c_mod, c_filtre = st.columns([1, 2])
+    st.subheader("🔍 Harita Filtreleme")
     
-    with c_mod:
-        harita_modu = st.radio(
-            "Görünüm Modu:",
-            ["🔴/🟢 Operasyon", "🔥/❄️ Analiz"],
-            horizontal=False
+    f1, f2, f3 = st.columns(3)
+    
+    # Filtre 1: Statü (Hot/Warm/Cold)
+    with f1:
+        secilen_statu = st.multiselect(
+            "Lead Durumu (Çoklu Seçim)",
+            ["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"],
+            default=["Hot 🔥", "Warm 🟠", "Cold ❄️", "Bekliyor ⚪"]
         )
+
+    # Filtre 2: Ziyaret Durumu
+    with f2:
+        secilen_ziyaret = st.multiselect(
+            "Ziyaret Yapıldı mı?",
+            ["Evet", "Hayır"],
+            default=["Evet", "Hayır"]
+        )
+        
+    # Filtre 3: Renklendirme Modu
+    with f3:
+        renk_modu = st.radio(
+            "Harita Renkleri Neye Göre Olsun?",
+            ["Satış Potansiyeli (Hot/Warm/Cold)", "Operasyon (Gidildi/Gidilmedi)"]
+        )
+
+    # --- FİLTRELEME MANTIĞI ---
+    filtreli_df = df.copy()
+
+    # 1. Lead Status Filtresi
+    status_filter_list = []
+    if "Hot 🔥" in secilen_statu: status_filter_list.append("Hot")
+    if "Warm 🟠" in secilen_statu: status_filter_list.append("Warm")
+    if "Cold ❄️" in secilen_statu: status_filter_list.append("Cold")
     
-    # MODA GÖRE FİLTRE SEÇENEKLERİ
-    filtreli_df = df.copy() # Orijinal veriyi bozmayalım
-
-    with c_filtre:
-        if "Operasyon" in harita_modu:
-            # Operasyon Modu Filtresi
-            secim = st.multiselect(
-                "Haritada Gösterilecekleri Seçin:",
-                ["Ziyaret Edilenler (Yeşil)", "Gidilmeyenler (Kırmızı)"],
-                default=["Ziyaret Edilenler (Yeşil)", "Gidilmeyenler (Kırmızı)"]
-            )
-            
-            # Filtreleme Mantığı
-            if "Ziyaret Edilenler (Yeşil)" not in secim:
-                filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] != 'Evet']
-            if "Gidilmeyenler (Kırmızı)" not in secim:
-                filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'] == 'Evet']
-
+    # Eğer "Bekliyor" seçildiyse, içinde Hot/Warm/Cold geçmeyenleri de dahil et
+    if "Bekliyor ⚪" in secilen_statu:
+        filtreli_df = filtreli_df[
+            filtreli_df['Lead Status'].str.contains("|".join(status_filter_list), case=False, na=False) | 
+            ~filtreli_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)
+        ]
+    else:
+        if status_filter_list:
+             filtreli_df = filtreli_df[filtreli_df['Lead Status'].str.contains("|".join(status_filter_list), case=False, na=False)]
         else:
-            # Analiz Modu Filtresi
-            secim = st.multiselect(
-                "Haritada Gösterilecekleri Seçin:",
-                ["Hot (Sıcak) 🔥", "Warm (Ilık) 🟠", "Cold (Soğuk) ❄️", "Bekliyor ⚪"],
-                default=["Hot (Sıcak) 🔥", "Warm (Ilık) 🟠", "Cold (Soğuk) ❄️", "Bekliyor ⚪"]
-            )
-            
-            # Filtreleme Mantığı (Lead Status'a göre)
-            temp_df = pd.DataFrame()
-            if "Hot (Sıcak) 🔥" in secim:
-                temp_df = pd.concat([temp_df, filtreli_df[filtreli_df['Lead Status'].str.contains("Hot", case=False, na=False)]])
-            if "Warm (Ilık) 🟠" in secim:
-                temp_df = pd.concat([temp_df, filtreli_df[filtreli_df['Lead Status'].str.contains("Warm", case=False, na=False)]])
-            if "Cold (Soğuk) ❄️" in secim:
-                temp_df = pd.concat([temp_df, filtreli_df[filtreli_df['Lead Status'].str.contains("Cold", case=False, na=False)]])
-            if "Bekliyor ⚪" in secim:
-                # Hot, Warm, Cold OLMAYANLAR Bekliyor demektir
-                bekleyenler = filtreli_df[~filtreli_df['Lead Status'].str.contains("Hot|Warm|Cold", case=False, na=False)]
-                temp_df = pd.concat([temp_df, bekleyenler])
-            
-            filtreli_df = temp_df.drop_duplicates()
+             filtreli_df = filtreli_df[0:0] # Hiçbir şey seçilmediyse boş liste
+
+    # 2. Ziyaret Filtresi
+    if secilen_ziyaret:
+        # Excel'deki "Evet" / "Hayır" ile eşleştiriyoruz (Case insensitive)
+        pattern = "|".join([x.lower() for x in secilen_ziyaret])
+        filtreli_df = filtreli_df[filtreli_df['Gidildi mi?'].str.lower().str.contains(pattern, na=False)]
+    else:
+        filtreli_df = filtreli_df[0:0]
 
     # ------------------------------------------------
     # 7. HARİTA RENDER VE RENKLER 🎨
@@ -221,15 +231,17 @@ try:
         
         renk = [128, 128, 128] # Varsayılan Gri
 
-        if "Operasyon" in harita_modu:
+        if "Operasyon" in renk_modu:
+            # Operasyon Modu: Gidildiyse Yeşil, Gidilmediyse Kırmızı
             if "evet" in gidildi: renk = [0, 200, 0] # Yeşil
             else: renk = [200, 0, 0] # Kırmızı
         else:
-            if "hayır" in gidildi: renk = [128, 128, 128] # Gri
+            # Satış Modu: Hot=Kırmızı, Warm=Turuncu, Cold=Mavi
+            if "hayır" in gidildi: renk = [128, 128, 128] # Gidilmediyse gri kalsın (veya renkli olsun istersen değiştiririz)
             elif "hot" in status: renk = [255, 0, 0] # Kırmızı
             elif "warm" in status: renk = [255, 165, 0] # Turuncu
             elif "cold" in status: renk = [0, 0, 255] # Mavi
-            else: renk = [0, 200, 0] # Yeşil (Diğer)
+            else: renk = [0, 200, 0] # Yeşil
         
         renk_listesi.append(renk)
 
@@ -261,33 +273,25 @@ try:
             tooltip={"text": tooltip_html}
         ))
     else:
-        st.warning("⚠️ Seçilen filtreye uygun kayıt bulunamadı.")
+        st.warning("⚠️ Seçilen filtrelere uygun müşteri bulunamadı.")
 
-    # 🎨 RENK REHBERİ (LEJANT) - İŞTE BURASI YENİ EKLENDİ
-    st.markdown("""
-    <div style="background-color:#f0f2f6; padding:15px; border-radius:10px; margin-top:10px;">
-        <h5 style="margin:0;">🎨 Renklerin Anlamı</h5>
-        <hr style="margin:5px 0;">
-    """, unsafe_allow_html=True)
+    # 🎨 RENK REHBERİ (LEJANT) - DİNAMİK
+    st.info("ℹ️ **Renk Rehberi:**")
+    c_l1, c_l2, c_l3, c_l4 = st.columns(4)
+    
+    if "Operasyon" in renk_modu:
+        c_l1.markdown("🟢 **Yeşil:** Ziyaret Edildi")
+        c_l2.markdown("🔴 **Kırmızı:** Ziyaret Bekliyor")
+    else:
+        c_l1.markdown("🔥 **Kırmızı:** Hot (Sıcak)")
+        c_l2.markdown("🟠 **Turuncu:** Warm (Ilık)")
+        c_l3.markdown("🔵 **Mavi:** Cold (Soğuk)")
+        c_l4.markdown("⚪ **Gri:** Henüz Gidilmedi")
 
-    c_lejant1, c_lejant2 = st.columns(2)
-    with c_lejant1:
-        st.markdown("**Operasyon Modu:**")
-        st.markdown("🟢 **Yeşil:** Ziyaret Tamamlandı")
-        st.markdown("🔴 **Kırmızı:** Ziyaret Edilmedi")
-    with c_lejant2:
-        st.markdown("**Analiz Modu:**")
-        st.markdown("🔥 **Kırmızı:** Hot Lead (Sıcak Satış)")
-        st.markdown("🟠 **Turuncu:** Warm Lead (Ilık - Takip)")
-        st.markdown("🔵 **Mavi:** Cold Lead (İlgisiz)")
-        st.markdown("⚪ **Gri:** Henüz Gidilmedi / Belirsiz")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-    
     # ------------------------------------------------
-    # 8. LİSTE GÖRÜNÜMÜ
+    # 8. LİSTE GÖRÜNÜMÜ (Expander İçinde)
     st.write("")
-    with st.expander("📋 Detaylı Listeyi Göster", expanded=False):
+    with st.expander("📋 Filtrelenmiş Listeyi Göster (Tıkla Aç)", expanded=False):
         filtreli_df['Rota'] = filtreli_df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
         cols = ['Klinik Adı', 'Personel', 'İlçe', 'Yetkili Kişi', 'İletişim', 'Gidildi mi?', 'Lead Status', 'Rota']
         mevcut = [c for c in cols if c in filtreli_df.columns]
