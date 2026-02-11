@@ -57,7 +57,7 @@ if not st.session_state.login:
         user = st.text_input("Kullanıcı")
         pwd = st.text_input("Şifre", type="password")
         if st.button("Sisteme Giriş Yap", use_container_width=True):
-            if (user == "admin" or user == "dogukan") and pwd == "1234":
+            if (user == "admin" or user == "dogukan") and pwd == "Medibulut.2026!":
                 st.session_state.role = "Admin" if user == "admin" else "Personel"
                 st.session_state.user = user.capitalize()
                 st.session_state.login = True
