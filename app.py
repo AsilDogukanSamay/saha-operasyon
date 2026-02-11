@@ -101,7 +101,7 @@ EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 def load_data_v100(sheet_id):
     try:
         # URL'i fonksiyonun içinde oluşturuyoruz ki her saniye değişsin (Cache Busting)
-        live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
+        live_url = f"https://docs.google.com/spreadsheets/d/e/2PACX-1vRqzvYa-W6W7Isp4_FT_aKJOvnHP7wwp1qBptuH_gBflgYnP93jLTM2llc8tUTN_VZUK84O37oh0_u0/pub?gid=0&single=true&output=csv"
         
         data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
