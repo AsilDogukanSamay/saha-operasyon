@@ -10,7 +10,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V55", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V56", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -40,14 +40,13 @@ if not st.session_state.login:
                 st.session_state.user = "Doğukan" if user_input.lower() == "dogukan" else "Yönetici"
                 st.session_state.login = True
                 st.rerun()
-            else: st.error("Hatalı kullanıcı adı veya şifre.")
+            else: st.error("Hatalı bilgiler.")
     st.stop()
 
 # =================================================
 # 3. CANLI KONUM ALMA (GPS) 📡
 # =================================================
 loc = get_geolocation()
-# Hata kontrolü: loc verisinin yapısını güvenli okuyoruz
 current_lat = loc['coords']['latitude'] if loc and 'coords' in loc else None
 current_lon = loc['coords']['longitude'] if loc and 'coords' in loc else None
 
@@ -60,21 +59,28 @@ EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
 def load_data(role):
-    data = pd.read_csv(CSV_URL)
-    def fix_coords(val):
-        try:
-            s = re.sub(r"\D", "", str(val))
-            return float(s[:2] + "." + s[2:]) if len(s) >= 4 else None
-        except: return None
-    data["lat"] = data["lat"].apply(fix_coords)
-    data["lon"] = data["lon"].apply(f_co := fix_coords) # Tekrar tanımlama hatası riskine karşı
-    data = data.dropna(subset=["lat", "lon"])
-    data['Gidildi mi?'] = data.get('Gidildi mi?', 'Hayır').fillna('Hayır')
-    
-    if role != "Admin":
-        # Doğukan ismini hem Türkçe karakterli hem karaktersiz kontrol ediyoruz
-        data = data[data["Personel"].str.contains("ogukan", case=False, na=False)]
-    return data
+    try:
+        data = pd.read_csv(CSV_URL)
+        def fix_coords(val):
+            try:
+                s = re.sub(r"[^\d.]", "", str(val))
+                if len(s) >= 4: return float(s[:2] + "." + s[2:])
+                return None
+            except: return None
+        data["lat"] = data["lat"].apply(fix_coords)
+        data["lon"] = data["lon"].apply(fix_coords)
+        data = data.dropna(subset=["lat", "lon"])
+        
+        # Sütun Kontrolü
+        if 'Gidildi mi?' not in data.columns: data['Gidildi mi?'] = 'Hayır'
+        data['Gidildi mi?'] = data['Gidildi mi?'].fillna('Hayır')
+        
+        if role != "Admin":
+            # KRİTİK DÜZELTME: Türkçe karakter ve boşluklara karşı esnek filtre
+            data = data[data["Personel"].str.contains("ogukan", case=False, na=False)]
+        return data
+    except:
+        return pd.DataFrame()
 
 df = load_data(st.session_state.role)
 
@@ -85,7 +91,6 @@ with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"🛡️ Yetki: {st.session_state.role}")
-    
     st.markdown("---")
     st.markdown("🗺️ **Harita Modu**")
     map_view = st.radio("Seçim:", ["Lead Durumu", "Ziyaret Durumu"])
@@ -98,8 +103,6 @@ with st.sidebar:
     st.markdown("---")
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear(); st.rerun()
-    
-    # HATA BURADAYDI: Parametre adını 'url' olarak düzelttik
     st.link_button("📂 Ana Excel Tablosu", url=EXCEL_URL, use_container_width=True)
     
     if st.button("🚪 Güvenli Çıkış", type="primary", use_container_width=True):
@@ -110,7 +113,6 @@ with st.sidebar:
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 
-# Veri kontrolü
 if not df.empty:
     total = len(df)
     hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
@@ -140,32 +142,31 @@ if not df.empty:
             user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon}])
             layers.append(pdk.Layer(
                 "ScatterplotLayer", data=user_loc_df, get_position='[lon, lat]',
-                get_color=[0, 255, 255], get_radius=300, pickable=True,
-                filled=True, stroked=True, line_width_min_pixels=2, get_line_color=[255, 255, 255]
+                get_color=[0, 255, 255], get_radius=300, pickable=True, filled=True
             ))
 
+        # Harita odak noktasını belirle
         initial_lat = current_lat if current_lat else df["lat"].mean()
         initial_lon = current_lon if current_lon else df["lon"].mean()
 
         st.pydeck_chart(pdk.Deck(
             map_style=None, layers=layers,
-            initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=13, pitch=40),
-            tooltip={"text": "{Klinik Adı}\nZiyaret: {Gidildi mi?}"}
+            initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=12, pitch=40),
+            tooltip={"text": "{Klinik Adı}"}
         ))
-        if current_lat: st.caption("🔵 Parlak Turkuaz Nokta: **Sizin Anlık Konumunuz**")
 
     with tab_list:
         df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(df[["Klinik Adı", "Lead Status", "Personel", "Gidildi mi?", "Git"]], 
-                     column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="NAVİGASYONU BAŞLAT")},
+                     column_config={"Git": st.column_config.LinkColumn("📍 ROTA", display_text="BAŞLAT")},
                      use_container_width=True, hide_index=True)
 
     with tab_admin:
         if st.session_state.role == "Admin":
             output = BytesIO()
             df.to_excel(output, index=False)
-            st.download_button(label="📊 Raporu Excel Olarak İndir", data=output.getvalue(), file_name="medibulut_saha_raporu.xlsx")
+            st.download_button(label="📊 Raporu İndir", data=output.getvalue(), file_name="saha_rapor.xlsx")
         else:
-            st.warning("Bu alan sadece yönetici erişimine açıktır.")
+            st.warning("Yetki: Personel. Yönetim paneli kısıtlıdır.")
 else:
-    st.warning("⚠️ Veriler yüklenemedi. Lütfen Excel dosyasını ve internet bağlantınızı kontrol edin.")
+    st.error("⚠️ Veriler yüklenemedi. Lütfen Google Sheets'teki 'Personel' sütununda 'Doğukan' isminin olduğundan emin olun.")
