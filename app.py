@@ -177,7 +177,7 @@ with tab_admin:
 # 6. SIDEBAR
 # =================================================
 with st.sidebar:
-    st.image("https://www.medibulut.com/assets/images/logo.png", width=200) # Varsa logo linki
+    st.image("https:/https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=200) # Varsa logo linki
     st.markdown("---")
     if st.button("🚪 Güvenli Çıkış"):
         st.session_state.login = False; st.rerun()
