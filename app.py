@@ -5,12 +5,12 @@ import re
 import time
 import urllib.parse
 from io import BytesIO
-from streamlit_js_eval import get_geolocation # Konum için ekledik
+from streamlit_js_eval import get_geolocation
 
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V54", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V55", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -32,7 +32,7 @@ if not st.session_state.login:
     _, col, _ = st.columns([1,1,1])
     with col:
         st.markdown("<h1 style='text-align:center;'>🔑 Medibulut Giriş</h1>", unsafe_allow_html=True)
-        user_input = st.text_input("Kullanıcı")
+        user_input = st.text_input("Kullanıcı Adı")
         pwd_input = st.text_input("Şifre", type="password")
         if st.button("Sisteme Giriş Yap", use_container_width=True):
             if (user_input.lower() in ["admin", "dogukan"]) and pwd_input == "Medibulut.2026!":
@@ -58,7 +58,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=5)
-def load_data():
+def load_and_fix_data():
     data = pd.read_csv(CSV_URL)
     def fix_coords(val):
         try:
@@ -69,11 +69,13 @@ def load_data():
     data["lon"] = data["lon"].apply(fix_coords)
     data = data.dropna(subset=["lat", "lon"])
     data['Gidildi mi?'] = data.get('Gidildi mi?', 'Hayır').fillna('Hayır')
+    
+    # Personel Filtresi (Doğukan verilerini getirir)
     if st.session_state.role != "Admin":
         data = data[data["Personel"].str.contains("Doğukan", case=False, na=False)]
     return data
 
-df = load_data()
+df = load_and_fix_data()
 
 # =================================================
 # 5. SOL MENÜ
@@ -82,10 +84,10 @@ with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=180)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"🛡️ Rol: {st.session_state.role}")
-    
     st.markdown("---")
+    
     st.markdown("🗺️ **Harita Modu**")
-    map_view = st.radio("Seçim:", ["Lead Durumu", "Ziyaret Durumu"])
+    map_view = st.radio("Renklendirme:", ["Lead Durumu", "Ziyaret Durumu"])
     
     if current_lat:
         st.success("📡 Canlı Konum Aktif")
@@ -105,7 +107,8 @@ with st.sidebar:
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
 
-total, hot = len(df), len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
+total = len(df)
+hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", na=False)])
 gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"])
 
 m1, m2, m3, m4 = st.columns(4)
@@ -117,25 +120,32 @@ m4.metric("📈 PERFORMANS", f"%{int(gidilen/total*100) if total>0 else 0}")
 tab_map, tab_list, tab_admin = st.tabs(["🗺️ Operasyon Haritası", "📋 Navigasyon Listesi", "⚙️ Yönetim Paneli"])
 
 with tab_map:
+    # Kliniklerin Rota Linki (Tooltip için)
+    df["rota_url"] = df.apply(lambda x: f"https://www.google.com/maps/dir/?api=1&destination={x['lat']},{x['lon']}", axis=1)
+
     # Renk Ayarları
     if map_view == "Lead Durumu":
         c_map = {"Hot": [239, 68, 68], "Warm": [245, 158, 11], "Cold": [59, 130, 246]}
-        df["color"] = df["Lead Status"].apply(lambda x: c_map.get(next((k for k in c_map if k in str(x)), "Cold"), [107, 114, 128]))
+        df["color"] = df["Lead Status"].apply(lambda x: c_map.get(next((k for k in color_map if k in str(x)), "Cold"), [107, 114, 128]))
     else:
         df["color"] = df["Gidildi mi?"].apply(lambda x: [16, 185, 129] if str(x).lower() == "evet" else [239, 68, 68])
 
-    # CANLI KONUM KATMANI (Mavi Nokta)
+    # KATMANLAR (Küçültülmüş Boyutlar)
     layers = [
         pdk.Layer("TileLayer", data=["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"]),
-        pdk.Layer("ScatterplotLayer", data=df, get_position='[lon, lat]', get_color='color', get_radius=300, pickable=True)
+        pdk.Layer(
+            "ScatterplotLayer", data=df, get_position='[lon, lat]', 
+            get_color='color', get_radius=100, pickable=True # Boyut 100'e çekildi
+        )
     ]
     
+    # Canlı Konum Katmanı (Farklı Renk & Etiket)
     if current_lat and current_lon:
-        user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon}])
+        user_loc_df = pd.DataFrame([{'lat': current_lat, 'lon': current_lon, 'etiket': '📍 SİZİN KONUMUNUZ'}])
         layers.append(pdk.Layer(
             "ScatterplotLayer", data=user_loc_df, get_position='[lon, lat]',
-            get_color=[0, 153, 255], get_radius=400, pickable=True,
-            filled=True, stroked=True, line_width_min_pixels=2, get_line_color=[255, 255, 255]
+            get_color=[0, 255, 255, 230], get_radius=150, pickable=True, # Neon Turkuaz
+            filled=True, stroked=True, line_width_min_pixels=3, get_line_color=[255, 255, 255]
         ))
 
     # Harita Görünümü
@@ -144,10 +154,13 @@ with tab_map:
 
     st.pydeck_chart(pdk.Deck(
         map_style=None, layers=layers,
-        initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=12, pitch=40),
-        tooltip={"text": "{Klinik Adı}\nZiyaret: {Gidildi mi?}"}
+        initial_view_state=pdk.ViewState(latitude=initial_lat, longitude=initial_lon, zoom=13, pitch=40),
+        tooltip={
+            "html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}<br/>Ziyaret: {Gidildi mi?}<br/><br/>{etiket}",
+            "style": {"backgroundColor": "#161B22", "color": "white"}
+        }
     ))
-    if current_lat: st.caption("🔵 Parlak Mavi Nokta: **Sizin Konumunuz**")
+    st.caption("💎 **Neon Turkuaz:** Sizin Konumunuz | 🔴 **Kırmızı/Turuncu:** Klinikler")
 
 with tab_list:
     df["Git"] = df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
