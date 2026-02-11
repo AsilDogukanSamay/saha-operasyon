@@ -4,13 +4,13 @@ import pydeck as pdk
 import re
 import time
 import urllib.parse
-from io import BytesIO
+from io import BytesIO # Excel verisini bellekte tutmak için
 from streamlit_js_eval import get_geolocation
 
 # =================================================
 # 1. PREMIUM PRO CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha Pro V65", layout="wide", page_icon="📍")
+st.set_page_config(page_title="Medibulut Saha Pro V66", layout="wide", page_icon="📍")
 
 st.markdown("""
 <style>
@@ -67,12 +67,9 @@ def load_data(url, role):
             except: return None
         data["lat"] = data["lat"].apply(f_co); data["lon"] = data["lon"].apply(f_co)
         data = data.dropna(subset=["lat", "lon"])
-        
         for c in ['Gidildi mi?', 'Bugünün Planı', 'Lead Status', 'Personel']:
             if c not in data.columns: data[c] = 'Hayır' if 'Gidildi' in c or 'Plan' in c else 'Bekliyor'
-            
         if role != "Admin":
-            # Doğukan için güvenli isim filtresi
             data = data[data["Personel"].str.contains("ogukan", case=False, na=False)]
         return data
     except: return pd.DataFrame()
@@ -98,7 +95,6 @@ with st.sidebar:
 # 5. DİNAMİK METRİKLER (KPI)
 # =================================================
 st.title(f"📍 Medibulut Saha Takip")
-
 total = len(df)
 gidilen = len(df[df["Gidildi mi?"].astype(str).str.lower() == "evet"])
 performans = int(gidilen/total*100) if total > 0 else 0
@@ -120,7 +116,6 @@ tab1, tab2, tab3 = st.tabs(["🗺️ Saha Haritası", "📋 Navigasyon & Rapor",
 with tab1:
     d_df = df[df['Bugünün Planı'].str.lower() == 'evet'] if s_plan else df
     if not d_df.empty:
-        # RENK MANTIĞI VE LEJANT
         if m_view == "Lead Durumu":
             d_df["color"] = d_df["Lead Status"].apply(lambda x: [239, 68, 68] if "Hot" in str(x) else ([245, 158, 11] if "Warm" in str(x) else [59, 130, 246]))
             st.markdown("""<div style='display:flex; margin-bottom:10px;'>
@@ -143,8 +138,7 @@ with tab1:
             layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat':c_lat,'lon':c_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=150))
         
         st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=12), tooltip={"text":"{Klinik Adı}"}))
-    else:
-        st.info("Gösterilecek klinik verisi bulunamadı.")
+    else: st.info("Gösterilecek klinik verisi bulunamadı.")
 
 with tab2:
     sub = urllib.parse.quote(f"Saha Raporu - {st.session_state.user}")
@@ -159,7 +153,27 @@ with tab2:
 
 with tab3:
     if st.session_state.role == "Admin":
-        st.success("✅ Yönetici Paneli Aktif. Tüm verileri aşağıdan indirebilirsiniz.")
-        st.download_button("📊 Excel Çıktısı Al", data=df.to_csv(index=False).encode('utf-8'), file_name="medibulut_saha.csv")
+        st.success("✅ Yönetici Paneli Aktif. Raporu gerçek Excel formatında indirebilirsiniz.")
+        
+        # EXCEL DÜZENLEME KISMI BURADA 🚀
+        def to_excel(df):
+            output = BytesIO()
+            # xlsxwriter motoruyla daha yakışıklı bir çıktı alıyoruz
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Saha Operasyon')
+                # Sütun genişliklerini otomatik ayarla
+                worksheet = writer.sheets['Saha Operasyon']
+                for i, col in enumerate(df.columns):
+                    column_len = max(df[col].astype(str).str.len().max(), len(col)) + 2
+                    worksheet.set_column(i, i, column_len)
+            return output.getvalue()
+
+        excel_data = to_excel(df)
+        st.download_button(
+            label="📊 Gerçek Excel Dosyası Olarak İndir (.xlsx)",
+            data=excel_data,
+            file_name=f"medibulut_saha_rapor_{time.strftime('%d_%m_%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
     else:
         st.warning("⚠️ Bu alan sadece yöneticiler içindir. Sizin yetkiniz: Personel.")
