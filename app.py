@@ -127,28 +127,29 @@ if not st.session_state.auth:
                     <a href="{url_dental}" target="_blank">
                         <div class="product-card">
                             <div class="icon-box"><img src="{dental_logo}"></div>
-                            <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
+                            <div class="card-text"><h4>Dentalbulut</h4><p>Diş Hekimi Hasta Takip ve Klinik Yönetim Programı</p></div>
                         </div>
                     </a>
 
                     <a href="{url_medi}" target="_blank">
                         <div class="product-card">
                             <div class="icon-box"><img src="{medi_logo}"></div>
-                            <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
+                            <div class="card-text"><h4>Medibulut</h4><p>Tele-Sağlık Platformu</p></div>
                         </div>
                     </a>
 
                     <a href="{url_diyet}" target="_blank">
                         <div class="product-card">
                             <div class="icon-box"><img src="{diyet_logo}"></div>
-                            <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
+                            <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyenler için Danışan Takip Programı</p></div>
                         </div>
                     </a>
 
                     <a href="{url_kys}" target="_blank">
                         <div class="product-card">
                             <div class="icon-box"><img src="{kys_logo}"></div>
-                            <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
+                            <div class="card-text"><h4>Medibulut KYS</h4><p>Klinik Yönetimi Sistemi
+                            </p></div>
                         </div>
                     </a>
 
