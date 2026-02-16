@@ -10,126 +10,223 @@ from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. PREMIUM CONFIG & TASARIM (CSS BÜYÜSÜ)
+# 1. PREMIUM ENTERPRISE CONFIG & CSS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V102", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V103", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
-    /* Genel Arkaplan */
+    /* 1. GENEL ARKAPLAN VE YAPILANDIRMA */
     .stApp { background-color: #FFFFFF !important; color: #1F2937 !important; }
     
-    /* Sidebar Tasarımı */
-    section[data-testid="stSidebar"] { background-color: #111827 !important; }
+    /* Sidebar (Koyu Tema) */
+    section[data-testid="stSidebar"] { background-color: #111827 !important; border-right: 1px solid #374151; }
     section[data-testid="stSidebar"] * { color: #F3F4F6 !important; }
+    
+    /* Üst boşlukları al */
+    .block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
 
-    /* Üstteki boşluğu kaldır */
-    .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-
-    /* Giriş Butonu Tasarımı (Dentalbulut Moru) */
-    div.stButton > button {
-        background-color: #4338ca !important; 
-        color: white !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 1rem !important;
-        font-weight: 600 !important;
-        border: none !important;
-        width: 100% !important;
-        transition: all 0.3s ease;
-    }
-    div.stButton > button:hover {
-        background-color: #3730a3 !important;
-        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
-    }
-
+    /* 2. GİRİŞ FORMU TASARIMI (SOL TARAF) */
     /* Input Alanları */
     div[data-testid="stTextInput"] input {
         border-radius: 8px !important;
         border: 1px solid #E5E7EB !important;
-        padding: 10px !important;
+        padding: 12px !important;
         color: #1F2937 !important;
         background-color: #F9FAFB !important;
+        font-size: 16px !important;
     }
-    div[data-testid="stTextInput"] label {
-        color: #374151 !important;
-        font-weight: 500 !important;
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+    }
+    
+    /* Giriş Butonu (Kurumsal Mavi) */
+    div.stButton > button {
+        background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.8rem 1rem !important;
+        font-weight: 600 !important;
+        border: none !important;
+        width: 100% !important;
+        font-size: 16px !important;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
     }
 
-    /* Sağ Taraf (Mavi Alan) Simülasyonu */
+    /* 3. SAĞ TARAF (ÜRÜN PORTFÖYÜ) TASARIMI */
     .right-panel {
-        background-color: #4338ca;
-        color: white;
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
         padding: 3rem;
-        border-radius: 20px;
-        height: 100%;
+        border-radius: 24px;
+        height: 85vh; /* Ekranı kaplasın */
         display: flex;
         flex-direction: column;
         justify-content: center;
+        position: relative;
+        overflow: hidden;
     }
-    .right-panel h1 { color: white !important; font-size: 2.5rem !important; font-weight: 800; }
-    .right-panel p { color: #E0E7FF !important; font-size: 1.1rem; line-height: 1.6; }
     
-    /* Login Başlığı */
-    .login-header { font-size: 2rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; }
-    .login-sub { color: #6B7280; margin-bottom: 2rem; }
+    /* Arkaplan Deseni (Hafif) */
+    .right-panel::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        z-index: 0;
+    }
+
+    .brand-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+        margin-top: 2rem;
+    }
+
+    .brand-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 16px;
+        color: white;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .brand-card:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-5px);
+    }
+
+    .icon-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 18px;
+    }
+
+    /* Marka Renkleri */
+    .bg-dental { background-color: #4F46E5; color: white; } /* Dental Moru */
+    .bg-diyet { background-color: #10B981; color: white; }  /* Diyet Yeşili */
+    .bg-medi { background-color: #3B82F6; color: white; }   /* Medi Mavisi */
+    .bg-nabiz { background-color: #EF4444; color: white; }  /* e-Nabız Kırmızısı */
+
+    /* Metin Stilleri */
+    .brand-text h4 { margin: 0; font-size: 1rem; color: white !important; font-weight: 700; }
+    .brand-text p { margin: 0; font-size: 0.8rem; color: #E0E7FF !important; opacity: 0.8; }
+    
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero-subtitle {
+        color: #BFDBFE;
+        font-size: 1.1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Sol Taraf Başlıklar */
+    .form-title { font-size: 28px; font-weight: 800; color: #111827; margin-bottom: 5px; }
+    .form-desc { color: #6B7280; margin-bottom: 30px; font-size: 15px; }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =================================================
-# 2. GİRİŞ SİSTEMİ (YENİ TASARIM)
+# 2. GİRİŞ SİSTEMİ (ENTERPRISE TASARIM)
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    # Ekranı ikiye bölüyoruz: Sol (Form) - Sağ (Branding)
-    col1, col2 = st.columns([1, 1.2], gap="large")
+    col1, col2 = st.columns([1, 1.3], gap="large")
 
     with col1:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Biraz aşağı itelim
-        st.markdown('<div class="login-header">Giriş Yap</div>', unsafe_allow_html=True)
-        st.markdown('<div class="login-sub">Sisteme kayıt olduğunuz kullanıcı adı ve parola ile giriş yapabilirsiniz.</div>', unsafe_allow_html=True)
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        # Logo yerine şık bir metin veya logonuzu buraya koyabilirsiniz
+        st.markdown('<div style="color:#2563EB; font-weight:900; font-size:24px; margin-bottom:20px;">medibulut<span style="color:#111827;">saha</span></div>', unsafe_allow_html=True)
         
-        u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
-        p = st.text_input("Parola", type="password", placeholder="••••••")
+        st.markdown('<div class="form-title">Personel Girişi</div>', unsafe_allow_html=True)
+        st.markdown('<div class="form-desc">Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.</div>', unsafe_allow_html=True)
+        
+        u = st.text_input("Kullanıcı Adı", placeholder="Kurumsal kullanıcı adınız")
+        p = st.text_input("Parola", type="password", placeholder="••••••••")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("Giriş Yap", use_container_width=True):
+        if st.button("Sisteme Giriş Yap", use_container_width=True):
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role = "Admin" if u.lower() == "admin" else "Personel"
                 st.session_state.user = "Doğukan" if u.lower() == "dogukan" else "Yönetici"
                 st.session_state.auth = True
-                st.toast("Giriş Başarılı!", icon="🚀")
+                st.toast("Giriş Başarılı! Hoş geldin.", icon="🚀")
                 time.sleep(0.5)
                 st.rerun()
-            else: st.error("Hatalı kullanıcı adı veya şifre.")
-
-        st.markdown("""
-            <div style="text-align: center; margin-top: 1rem; color: #6B7280; font-size: 0.9rem;">
-                veya <a href="#" style="color: #4338ca; text-decoration: none; font-weight: 600;">Hemen Kayıt Ol</a>
-            </div>
-        """, unsafe_allow_html=True)
+            else: st.error("❌ Yetkisiz erişim denemesi.")
+            
+        st.markdown('<div style="margin-top:20px; font-size:12px; color:#9CA3AF; text-align:center;">© 2026 Medibulut Yazılım A.Ş. <br> Bu panel sadece şirket içi kullanım içindir.</div>', unsafe_allow_html=True)
 
     with col2:
-        # Sağ taraftaki Mavi Alan
+        # SAĞ TARAF: ÜRÜN EKOSİSTEMİ
         st.markdown("""
         <div class="right-panel">
-            <h3 style="color:white; margin:0;">dentalbulut <span style="background:white; color:#4338ca; padding:2px 6px; border-radius:4px; font-size:12px;">e-Nabız</span></h3>
-            <br>
-            <h1>Dentalbulut Saha Operasyon</h1>
-            <p>
-                Dentalbulut Saha, randevu takibi, hasta bilgileri ve takibi, gelir-gider takibi,
-                raporlama süreçlerini otomatikleştiren saha personelinin en büyük yardımcısıdır.
-            </p>
-            <br>
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="display:flex;">
-                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; margin-right:-10px;">D</span>
-                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; margin-right:-10px;">A</span>
-                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;">+</span>
+            <div class="hero-title">Tek Platform,<br>Tüm Operasyon.</div>
+            <div class="hero-subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi. Tüm ürünler tek ekranda.</div>
+            
+            <div class="brand-grid">
+                <div class="brand-card">
+                    <div class="icon-circle bg-dental">D</div>
+                    <div class="brand-text">
+                        <h4>Dentalbulut</h4>
+                        <p>Klinik Yönetimi</p>
+                    </div>
                 </div>
-                <p style="margin:0; font-size:0.9rem; font-weight:600;">2000'den Fazla Klinik Tarafından Tercih Ediliyor</p>
+
+                <div class="brand-card">
+                    <div class="icon-circle bg-medi">M</div>
+                    <div class="brand-text">
+                        <h4>Medibulut</h4>
+                        <p>Genel Sağlık</p>
+                    </div>
+                </div>
+
+                <div class="brand-card">
+                    <div class="icon-circle bg-diyet">Dy</div>
+                    <div class="brand-text">
+                        <h4>Diyetbulut</h4>
+                        <p>Diyetisyen Sistemi</p>
+                    </div>
+                </div>
+
+                <div class="brand-card">
+                    <div class="icon-circle bg-nabiz">e</div>
+                    <div class="brand-text">
+                        <h4>e-Nabız</h4>
+                        <p>Entegrasyon</p>
+                    </div>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -182,7 +279,7 @@ SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
-def load_data_v102(sheet_id):
+def load_data_v103(sheet_id):
     try:
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
@@ -204,12 +301,17 @@ def load_data_v102(sheet_id):
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v102(SHEET_ID)
+all_df = load_data_v103(SHEET_ID)
 
-# FİLTRELEME (Giriş yaptıktan sonra çalışır)
-# Not: Giriş ekranında beyaz arkaplan kullandık, 
-# uygulama içine girince Dark Mode'a dönmek istersen CSS'i buraya dinamik eklemek gerekir.
-# Şimdilik giriş ekranı beyaz, içerisi koyu devam ediyor.
+# FİLTRELEME & CSS RESET (Giriş sonrası koyu moda dönüş)
+st.markdown("""
+<style>
+    /* Giriş sonrası ana uygulamayı tekrar koyu moda zorla */
+    .stApp { background-color: #0E1117 !important; color: white !important; }
+    div[data-testid="stMetric"] { background: rgba(255,255,255,0.05) !important; color: white !important; }
+    section[data-testid="stSidebar"] { background-color: #161B22 !important; }
+</style>
+""", unsafe_allow_html=True)
 
 if st.session_state.role == "Admin":
     df = all_df
@@ -224,13 +326,6 @@ else:
     else:
         df = all_df
         debug_msg = f"⚠️ Eşleşme Bekleniyor (Tümü Gösteriliyor)"
-
-# Giriş sonrası arkaplanı tekrar koyu yapmak için küçük bir hack
-st.markdown("""
-<style>
-    .stApp { background-color: #0E1117 !important; color: white !important; }
-</style>
-""", unsafe_allow_html=True)
 
 # =================================================
 # 5. SIDEBAR
@@ -254,7 +349,7 @@ with st.sidebar:
     st.divider()
     if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
         st.cache_data.clear()
-        st.toast("Google Sheets'e Bağlanılıyor...", icon="⏳")
+        st.toast("Veriler Güncelleniyor...", icon="⏳")
         time.sleep(1)
         st.rerun()
         
