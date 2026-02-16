@@ -14,7 +14,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V121", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V122", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
@@ -68,13 +68,11 @@ if not st.session_state.auth:
         st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
-        # -------------------------------------------------------------
-        # BURASI HTML KISMI - LOGO LINKLERINI BURADAN DEGISTIR KANKA
-        # -------------------------------------------------------------
-        dental_logo = "https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png"  # <-- DENTAL LINK
-        medi_logo   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"    # <-- MEDI LINK
-        diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"   # <-- DIYET LINK
-        kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"                               # <-- KYS/E-NABIZ LINK
+        # LOGO LINKLERI
+        dental_logo = "https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png"
+        medi_logo   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
+        diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"
+        kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"
 
         html_design = f"""
         <!DOCTYPE html>
@@ -99,9 +97,7 @@ if not st.session_state.auth:
                 width: 50px; height: 50px; border-radius: 12px; background-color: white;
                 display: flex; align-items: center; justify-content: center; padding: 5px;
             }}
-            /* LOGOLARIN KUTUYA SIĞMASI İÇİN */
             .icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
-            
             .card-text h4 {{ margin: 0; font-size: 14px; font-weight: 700; color:white; }}
             .card-text p {{ margin: 0; font-size: 11px; color: #DBEAFE; }}
         </style>
@@ -111,27 +107,10 @@ if not st.session_state.auth:
                 <h1 style="margin:0; font-size:36px; font-weight:800;">Tek Platform,<br>Bütün Operasyon.</h1>
                 <div style="color:#BFDBFE; margin-top:10px;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 <div class="grid-container">
-                    
-                    <div class="product-card">
-                        <div class="icon-box"><img src="{dental_logo}"></div>
-                        <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="icon-box"><img src="{medi_logo}"></div>
-                        <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="icon-box"><img src="{diyet_logo}"></div>
-                        <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="icon-box"><img src="{kys_logo}"></div>
-                        <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
-                    </div>
-
+                    <div class="product-card"><div class="icon-box"><img src="{dental_logo}"></div><div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="{medi_logo}"></div><div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="{diyet_logo}"></div><div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="{kys_logo}"></div><div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div>
                 </div>
             </div>
         </body>
@@ -151,7 +130,7 @@ st.markdown("""
     /* GENEL ARKAPLAN: SİYAH/KOYU */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     
-    /* SIDEBAR: KOYU GRİ/MAVİ */
+    /* SIDEBAR */
     section[data-testid="stSidebar"] { 
         background-color: #161B22 !important; 
         border-right: 1px solid rgba(255,255,255,0.1); 
@@ -168,7 +147,7 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
     div[data-testid="stMetricLabel"] { color: #A0AEC0 !important; }
 
-    /* TABLOLAR: KOYU */
+    /* TABLOLAR */
     div[data-testid="stDataFrame"] { 
         background-color: #161B22 !important; 
         border: 1px solid rgba(255,255,255,0.1); 
@@ -310,7 +289,7 @@ if not df.empty:
     else: d_df["Mesafe_km"] = 0
     
     # ----------------------------------------------------
-    # 🔥 RENK MOTORU (İSTEDİĞİN GİBİ AYARLANDI)
+    # 🔥 RENK MOTORU
     # ----------------------------------------------------
     def set_color(row):
         # 1. ZİYARET MODU (SADECE YEŞİL VE KIRMIZI)
@@ -322,10 +301,10 @@ if not df.empty:
         
         # 2. LEAD MODU (RENKLİ)
         status_lead = str(row["Lead Status"]).lower()
-        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI (Sıcak)
-        if "warm" in status_lead: return [245, 158, 11] # TURUNCU (Ilık)
-        if "cold" in status_lead: return [59, 130, 246] # MAVİ (Soğuk)
-        return [156, 163, 175] # GRİ (Tanımsız)
+        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI
+        if "warm" in status_lead: return [245, 158, 11] # TURUNCU
+        if "cold" in status_lead: return [59, 130, 246] # MAVİ
+        return [156, 163, 175] # GRİ
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
@@ -358,10 +337,22 @@ if not df.empty:
         else:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot (Sıcak)</div><div style="color:#F59E0B; margin-right:10px;">● Warm (Ilık)</div><div style="color:#3B82F6;">● Cold (Soğuk)</div></div>""", unsafe_allow_html=True)
 
-        layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=200, pickable=True)]
+        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ 🔥
+        layers = [
+            pdk.Layer(
+                "ScatterplotLayer", 
+                data=d_df, 
+                get_position='[lon, lat]', 
+                get_color='color', 
+                get_radius=30,          # Çap 200m -> 30m düşürüldü
+                radius_min_pixels=5,    # En küçük 5 piksel
+                radius_max_pixels=25,   # En büyük 25 piksel (Ekranı kaplamaz)
+                pickable=True
+            )
+        ]
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
-            layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=350, pickable=False))
+            layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=50, radius_min_pixels=8, pickable=False))
 
         st.pydeck_chart(pdk.Deck(
             map_style=pdk.map_styles.CARTO_DARK, 
