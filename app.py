@@ -15,25 +15,22 @@ from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # ==============================================================================
-# 1. SİSTEM KONFİGÜRASYONU VE SABİTLER
+# 1. GLOBAL KONFİGÜRASYON VE VARLIK YÖNETİMİ
 # ==============================================================================
 
-# Kurumsal Sosyal Medya ve Dosya Bağlantıları
+# Kurumsal bağlantılar ve dosya yolları
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
-LOCAL_LOGO_FILE = "logo.png" 
-SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
+LOCAL_LOGO_PATH = "SahaBulut.jpg" # KANKA: Dosya adının birebir bu olduğundan emin ol
 
 # Sayfa Yapılandırması (Try-Except ile Hata Toleransı)
 try:
     st.set_page_config(
-        page_title="Medibulut Saha Operasyon Yönetimi v148",
+        page_title="Medibulut Saha Operasyon Yönetimi",
         layout="wide",
-        page_icon=LOCAL_LOGO_FILE if os.path.exists(LOCAL_LOGO_FILE) else "☁️",
+        page_icon=LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "☁️",
         initial_sidebar_state="expanded"
     )
 except Exception as e:
-    # Eğer ikon dosyası bulunamazsa standart ikonla aç
     st.set_page_config(
         page_title="Medibulut Saha Operasyon Yönetimi",
         layout="wide",
@@ -56,14 +53,13 @@ def get_img_as_base64(file_path):
         return None
 
 # Logoyu Hazırla (Yerel veya Bulut Yedekli)
-local_logo_data = get_img_as_base64(LOCAL_LOGO_FILE)
+local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 
 if local_logo_data:
-    APP_LOGO_HTML = f"data:image/png;base64,{local_logo_data}"
-    PAGE_ICON_PATH = LOCAL_LOGO_FILE
+    APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}"
 else:
+    # Yedek Logo (İnternet)
     APP_LOGO_HTML = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
-    PAGE_ICON_PATH = "☁️"
 
 # --- OTURUM (SESSION STATE) YÖNETİMİ ---
 if "notes" not in st.session_state:
@@ -79,13 +75,13 @@ if "user" not in st.session_state:
     st.session_state.user = None
 
 # ==============================================================================
-# 2. GİRİŞ EKRANI TASARIMI (MODERN & KURUMSAL)
+# 2. KURUMSAL GİRİŞ EKRANI (FULL TASARIM)
 # ==============================================================================
 if not st.session_state.auth:
-    # --- CSS STİLLERİ (GİRİŞ EKRANI) ---
+    # --- GİRİŞ EKRANI CSS ---
     st.markdown("""
     <style>
-        /* Ana Arka Planı Beyaz Yap */
+        /* Ana Arka Plan Ayarları */
         .stApp { 
             background-color: #FFFFFF !important; 
         }
@@ -98,7 +94,7 @@ if not st.session_state.auth:
         /* Metin Giriş Alanları (Label) */
         div[data-testid="stTextInput"] label { 
             color: #111827 !important; 
-            font-weight: 700 !important; 
+            font-weight: 800 !important; 
             font-family: 'Inter', sans-serif;
             font-size: 14px !important;
             margin-bottom: 8px !important;
@@ -120,7 +116,7 @@ if not st.session_state.auth:
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
         }
         
-        /* Giriş Butonu */
+        /* Giriş Butonu Kurumsal Tasarımı */
         div.stButton > button { 
             background: linear-gradient(to right, #2563EB, #1D4ED8) !important; 
             color: white !important; 
@@ -129,7 +125,7 @@ if not st.session_state.auth:
             max-width: 350px;
             padding: 14px !important; 
             border-radius: 10px; 
-            font-weight: 700; 
+            font-weight: 800; 
             font-size: 16px;
             margin-top: 25px;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
@@ -141,17 +137,16 @@ if not st.session_state.auth:
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
         }
         
-        /* Alt Bilgi (Footer) */
+        /* Footer ve İmza */
         .login-footer-wrapper {
             text-align: center;
             margin-top: 60px;
-            font-size: 13px;
+            font-size: 14px;
             color: #6B7280;
             font-family: 'Inter', sans-serif;
             border-top: 1px solid #F3F4F6;
             padding-top: 25px;
-            width: 100%;
-            max-width: 300px;
+            width: 280px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -159,26 +154,25 @@ if not st.session_state.auth:
         .login-footer-wrapper a { 
             color: #2563EB; 
             text-decoration: none; 
-            font-weight: 700; 
+            font-weight: 800; 
         }
 
-        /* Mobil Cihaz Uyumluluğu */
-        @media (max-width: 900px) {
-            .desktop-right-panel { 
+        /* Mobil Uyum */
+        @media (max-width: 768px) {
+            .desktop-showcase-panel { 
                 display: none !important; 
             }
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # İki Kolonlu Yapı (Sol: Form, Sağ: Tanıtım Kartları)
-    col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
+    col_ui_left, col_ui_right = st.columns([1, 1.2], gap="large")
 
-    # --- SOL PANEL: KİMLİK DOĞRULAMA ---
-    with col_left_form:
+    # --- SOL PANEL: GİRİŞ FORMU ---
+    with col_ui_left:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         
-        # Logo ve Marka İsmi Alanı
+        # LOGO ALANI
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 40px; flex-wrap: nowrap;">
             <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
@@ -189,7 +183,6 @@ if not st.session_state.auth:
         </div>
         """, unsafe_allow_html=True)
         
-        # Karşılama Metni
         st.markdown("""
         <h2 style='color:#111827; font-weight:800; font-size:28px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>
         <p style='color:#6B7280; font-size:15px; margin-bottom:30px; line-height:1.5;'>
@@ -197,16 +190,16 @@ if not st.session_state.auth:
         </p>
         """, unsafe_allow_html=True)
         
-        # Giriş Formu
-        username_input = st.text_input("Kullanıcı Adı", placeholder="Kullanıcı adınızı giriniz (Örn: dogukan)")
-        password_input = st.text_input("Parola", type="password", placeholder="••••••••")
+        # FORM
+        auth_u = st.text_input("Kullanıcı Adı", placeholder="Kullanıcı adınızı giriniz (Örn: dogukan)")
+        auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
         st.markdown("<div style='display:flex; justify-content:flex-start;'>", unsafe_allow_html=True)
         if st.button("Güvenli Giriş Yap"):
             # Basit Kimlik Doğrulama Kontrolü
-            if (username_input.lower() in ["admin", "dogukan"]) and password_input == "Medibulut.2026!":
+            if (auth_u.lower() in ["admin", "dogukan"]) and auth_p == "Medibulut.2026!":
                 # Rol Atama
-                if username_input.lower() == "admin":
+                if auth_u.lower() == "admin":
                     st.session_state.role = "Yönetici"
                     st.session_state.user = "Yönetici"
                 else:
@@ -217,10 +210,10 @@ if not st.session_state.auth:
                 st.session_state.auth = True
                 st.rerun()
             else:
-                st.error("Giriş başarısız. Lütfen bilgilerinizi kontrol edin.")
+                st.error("Giriş bilgileri doğrulanamadı. Lütfen tekrar deneyin.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # İmza ve Alt Bilgi
+        # FOOTER
         st.markdown(f"""
         <div class="login-footer-wrapper">
             Designed & Developed by <br> 
@@ -229,138 +222,97 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
 
     # --- SAĞ PANEL: ÜRÜN KARTLARI (HTML/CSS) ---
-    with col_right_showcase:
-        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
+    with col_ui_right:
+        st.markdown('<div class="desktop-showcase-panel">', unsafe_allow_html=True)
         
-        # Kartlar İçin Logo URL'leri
-        img_dental = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        img_medi   = APP_LOGO_HTML 
-        img_diyet  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
-        img_kys    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
+        dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
+        diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
+        kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
         
-        showcase_html_content = f"""
+        showcase_html = f"""
         <html>
         <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-            body {{ margin: 0; font-family: 'Inter', sans-serif; background: transparent; }}
-            
-            .hero-card-container {{
-                background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-                border-radius: 32px;
-                padding: 60px 50px;
-                color: white;
-                height: 720px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.3);
-                position: relative;
-                overflow: hidden;
+            body {{ margin:0; font-family:'Inter', sans-serif; }}
+            .hero-panel {{ 
+                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
+                border-radius: 45px; padding: 60px; color: white; height: 620px; 
+                display: flex; flex-direction: column; justify-content: center;
+                box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.4);
             }}
-            
-            /* Arka plan dekoratif daireler */
-            .hero-card-container::before {{
-                content: ''; position: absolute; top: -100px; right: -100px;
-                width: 300px; height: 300px; background: rgba(255,255,255,0.1);
-                border-radius: 50%; z-index: 0;
-            }}
-            
-            .content-wrapper {{ position: relative; z-index: 1; }}
-            
-            .hero-title {{ font-size: 48px; font-weight: 800; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px; }}
-            .hero-subtitle {{ font-size: 18px; color: #DBEAFE; margin-bottom: 50px; opacity: 0.95; line-height: 1.5; }}
-            
-            .products-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
-            
-            .product-item-card {{
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 20px;
-                padding: 20px;
-                display: flex; align-items: center; gap: 15px;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            .panel-title {{ font-size: 52px; font-weight: 800; margin: 0; line-height: 1.1; letter-spacing: -2px; }}
+            .panel-subtitle {{ font-size: 20px; margin-top: 20px; color: #DBEAFE; opacity: 0.9; }}
+            .product-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 50px; }}
+            .product-card {{ 
+                background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(15px); 
+                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; 
+                padding: 25px; display: flex; align-items: center; gap: 15px; 
+                transition: transform 0.3s ease;
                 cursor: pointer;
-                text-decoration: none; color: white;
-                backdrop-filter: blur(10px);
             }}
-            
-            .product-item-card:hover {{ 
-                transform: translateY(-5px); 
-                background: rgba(255, 255, 255, 0.2); 
-                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            }}
-            
-            .card-icon-box {{ 
-                width: 48px; height: 48px; 
-                background: white; 
-                border-radius: 12px; 
-                display: flex; align-items: center; justify-content: center; 
-                padding: 5px; 
-                flex-shrink: 0;
-            }}
-            
-            .card-icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
-            
-            .card-text h4 {{ margin: 0; font-size: 15px; font-weight: 700; color: white; }}
-            .card-text p {{ margin: 3px 0 0 0; font-size: 12px; color: #BFDBFE; font-weight: 500; }}
+            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.2); }}
+            .icon-wrapper {{ width: 50px; height: 50px; border-radius: 12px; background: white; padding: 7px; display: flex; align-items: center; justify-content: center; }}
+            .icon-wrapper img {{ width: 100%; height: 100%; object-fit: contain; }}
+            a {{ text-decoration: none; color: inherit; }}
         </style>
         </head>
         <body>
-            <div class="hero-card-container">
-                <div class="content-wrapper">
-                    <div class="hero-title">Tek Platform,<br>Bütün Operasyon.</div>
-                    <div class="hero-subtitle">Saha ekibi için geliştirilmiş, yapay zeka destekli merkezi yönetim sistemi.</div>
-                    
-                    <div class="products-grid">
-                        <a href="https://www.dentalbulut.com" target="_blank" class="product-item-card">
-                            <div class="card-icon-box"><img src="{img_dental}"></div>
-                            <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
-                        </a>
-                        <a href="https://www.medibulut.com" target="_blank" class="product-item-card">
-                            <div class="card-icon-box"><img src="{img_medi}"></div>
-                            <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
-                        </a>
-                        <a href="https://www.diyetbulut.com" target="_blank" class="product-item-card">
-                            <div class="card-icon-box"><img src="{img_diyet}"></div>
-                            <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
-                        </a>
-                        <a href="https://kys.medibulut.com" target="_blank" class="product-item-card">
-                            <div class="card-icon-box"><img src="{img_kys}"></div>
-                            <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
-                        </a>
-                    </div>
+            <div class="hero-panel">
+                <div class="panel-title">Tek Platform,<br>Bütün Operasyon.</div>
+                <div class="panel-subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
+                <div class="product-grid">
+                    <a href="https://www.dentalbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-wrapper"><img src="{dental_img}"></div>
+                            <div><h4 style="margin:0;">Dentalbulut</h4></div>
+                        </div>
+                    </a>
+                    <a href="https://www.medibulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-wrapper"><img src="{APP_LOGO_HTML}"></div>
+                            <div><h4 style="margin:0;">Medibulut</h4></div>
+                        </div>
+                    </a>
+                    <a href="https://www.diyetbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-wrapper"><img src="{diyet_img}"></div>
+                            <div><h4 style="margin:0;">Diyetbulut</h4></div>
+                        </div>
+                    </a>
+                    <a href="https://kys.medibulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-wrapper"><img src="{kys_img}"></div>
+                            <div><h4 style="margin:0;">Medibulut KYS</h4></div>
+                        </div>
+                    </a>
                 </div>
             </div>
         </body>
         </html>
         """
-        components.html(showcase_html_content, height=740)
+        components.html(showcase_html, height=660)
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Giriş ekranında dur, dashboard'u gösterme
     st.stop()
 
 # ==============================================================================
-# 3. OPERASYONEL DASHBOARD (KOYU TEMA)
+# 3. DASHBOARD (KOYU TEMA & OPERASYONEL PANEL)
 # ==============================================================================
-
-# --- DASHBOARD CSS ---
 st.markdown("""
 <style>
-    /* Genel Dashboard Teması */
+    /* Ana Tema Yapılandırması */
     .stApp { 
         background-color: #0E1117 !important; 
         color: #FFFFFF !important; 
     }
     
-    /* Sidebar Arka Planı */
+    /* Yan Menü Tasarımı */
     section[data-testid="stSidebar"] { 
         background-color: #161B22 !important; 
         border-right: 1px solid rgba(255,255,255,0.1); 
     }
     
-    /* Header Container */
+    /* Header Düzeni */
     .header-master-wrapper { 
         display: flex; 
         align-items: center; 
@@ -862,4 +814,4 @@ if not view_df.empty:
     """, unsafe_allow_html=True)
 
 else:
-    st.warning("Veriler yükleniyor veya gösterilecek kayıt bulunamadı. Lütfen bekleyiniz...")
+    st.warning("Sistem verilerine şu an erişilemiyor. Lütfen ağ bağlantınızı veya kaynak dosya erişim yetkilerini kontrol ediniz.")
