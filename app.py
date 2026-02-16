@@ -15,15 +15,15 @@ from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. CONFIG & YEREL LOGO İŞLEME
+# 1. CONFIG & ASSETS (TAM KONTROL)
 # =================================================
-LOCAL_LOGO_PATH = "logo.png" 
+LOCAL_LOGO_PATH = "logo.png" # Eğer ismin farklıysa burayı değiştir kanka
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 
 try:
-    st.set_page_config(page_title="Medibulut Saha V145", layout="wide", page_icon=LOCAL_LOGO_PATH)
+    st.set_page_config(page_title="Medibulut Saha V146", layout="wide", page_icon=LOCAL_LOGO_PATH)
 except:
-    st.set_page_config(page_title="Medibulut Saha V145", layout="wide", page_icon="☁️")
+    st.set_page_config(page_title="Medibulut Saha V146", layout="wide", page_icon="☁️")
 
 def get_img_as_base64(file):
     try:
@@ -41,7 +41,7 @@ if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA)
+# 2. GİRİŞ EKRANI (FULL DESIGN)
 # =================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -53,7 +53,9 @@ if not st.session_state.auth:
         div.stButton > button { background: #2563EB !important; color: white !important; border: none !important; width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold; }
         h1, h2, h3, p { color: black !important; }
         .signature { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-family: 'Arial', sans-serif; font-size: 12px; color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 10px; width: 80%; margin: 0 auto; }
-        .signature a { text-decoration: none; color: #94A3B8; font-weight: bold; }
+        .signature a { text-decoration: none; color: #94A3B8; transition: 0.3s; }
+        .signature a:hover { color: #2563EB; }
+        .signature span { color: #2563EB; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -67,32 +69,34 @@ if not st.session_state.auth:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("### Personel Girişi")
-        u = st.text_input("Kullanıcı Adı", placeholder="dogukan")
+        u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password")
         if st.button("Sisteme Giriş Yap"):
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role, st.session_state.user, st.session_state.auth = ("Admin" if u.lower() == "admin" else "Personel"), ("Doğukan" if u.lower() == "dogukan" else "Yönetici"), True
                 st.rerun()
-            else: st.error("Hatalı bilgiler.")
+            else: st.error("Hatalı Giriş!")
         st.markdown(f'<div class="signature"><a href="{MY_LINKEDIN_URL}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
+    
     with col2:
-        medi_card_logo = APP_LOGO_HTML
         components.html(f"""
         <html><head><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"><style>
             body {{ margin:0; font-family:'Inter', sans-serif; }}
             .showcase-container {{ background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 24px; padding: 40px; color: white; height: 550px; display: flex; flex-direction: column; justify-content: center; }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px; }}
-            .product-card {{ background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; }}
+            .product-card {{ background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.3s ease; }}
+            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.2); }}
             .icon-box {{ width: 50px; height: 50px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; }}
             .icon-box img {{ width: 100%; object-fit: contain; }}
+            h4 {{ margin:0; font-size:14px; }} p {{ margin:0; font-size:11px; color:#DBEAFE; }}
         </style></head><body>
             <div class="showcase-container">
-                <h1 style="font-size:36px; font-weight:800;">Tek Platform,<br>Bütün Operasyon.</h1>
+                <h1 style="font-size:36px; font-weight:800; margin:0;">Tek Platform,<br>Bütün Operasyon.</h1>
                 <div class="grid-container">
-                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"></div><div><h4>Dentalbulut</h4></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="{medi_card_logo}"></div><div><h4>Medibulut</h4></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"></div><div><h4>Diyetbulut</h4></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"></div><div><h4>Medibulut KYS</h4></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"></div><div><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="{APP_LOGO_HTML}"></div><div><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"></div><div><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"></div><div><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div>
                 </div>
             </div>
         </body></html>
@@ -100,7 +104,7 @@ if not st.session_state.auth:
     st.stop()
 
 # =================================================
-# 3. DASHBOARD (KOYU TEMA)
+# 3. DASHBOARD (KOYU TEMA - FULL FEATURES)
 # =================================================
 st.markdown("""
 <style>
@@ -112,10 +116,11 @@ st.markdown("""
     .progress-bg { background: rgba(255,255,255,0.1); border-radius: 5px; height: 8px; margin-top: 8px; }
     .progress-fill { background: #4ADE80; height: 8px; border-radius: 5px; }
     .dashboard-signature { text-align: center; font-size: 12px; color: #4A5568; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 30px; }
+    .dashboard-signature a { text-decoration: none; color: #3b82f6; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
-# FONKSİYONLAR
+# --- FONKSİYONLAR ---
 loc = get_geolocation()
 c_lat, c_lon = (loc['coords']['latitude'], loc['coords']['longitude']) if loc else (None, None)
 
@@ -136,14 +141,15 @@ def stream_data(text):
         yield word + " "
         time.sleep(0.04)
 
-# VERİ BAĞLANTISI
+# --- VERİ BAĞLANTISI ---
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
 def load_data(sheet_id):
     try:
-        data = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}")
+        live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
+        data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
         data["lat"], data["lon"] = data["lat"].apply(fix_coord), data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
@@ -154,13 +160,12 @@ def load_data(sheet_id):
     except: return pd.DataFrame()
 
 all_df = load_data(SHEET_ID)
-if st.session_state.role == "Admin":
-    df = all_df
+if st.session_state.role == "Admin": df = all_df
 else: 
     user_clean = unicodedata.normalize('NFKD', st.session_state.user).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")
     df = all_df[all_df["Personel"].apply(lambda x: unicodedata.normalize('NFKD', str(x)).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")) == user_clean]
 
-# SIDEBAR
+# --- SIDEBAR ---
 with st.sidebar:
     if os.path.exists(LOCAL_LOGO_PATH): st.image(LOCAL_LOGO_PATH, width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -170,7 +175,7 @@ with st.sidebar:
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
     if st.button("🚪 Çıkış", type="primary", use_container_width=True): st.session_state.auth = False; st.rerun()
 
-# HEADER
+# --- HEADER ---
 st.markdown(f"""
 <div style='display: flex; align-items: center; margin-bottom: 20px;'>
     <img src="{APP_LOGO_HTML}" style="height: 55px; margin-right: 18px; border-radius:12px; background:white; padding:3px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -192,11 +197,17 @@ if not df.empty:
     k3.metric("✅ Ziyaret", len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])]))
     k4.metric("🏆 Skor", d_df["Skor"].sum())
 
-    tabs_labels = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz", "⚙️ Admin"] if st.session_state.role == "Admin" else ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
-    tabs = st.tabs(tabs_labels)
+    t_names = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz", "⚙️ Admin"] if st.session_state.role == "Admin" else ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
+    tabs = st.tabs(t_names)
 
     with tabs[0]: # Harita
-        layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='[239, 68, 68]' if "Lead" in m_view else '[16, 185, 129]', get_radius=30, radius_min_pixels=5, radius_max_pixels=25, pickable=True)]
+        def get_color(r):
+            if "Ziyaret" in m_view:
+                return [16, 185, 129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam","ok"]) else [220, 38, 38]
+            st_l = str(r["Lead Status"]).lower()
+            return [239, 68, 68] if "hot" in st_l else [245, 158, 11] if "warm" in st_l else [59, 130, 246]
+        d_df["color"] = d_df.apply(get_color, axis=1)
+        layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=30, radius_min_pixels=5, radius_max_pixels=25, pickable=True)]
         if c_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat':c_lat, 'lon':c_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=50, radius_min_pixels=8))
         st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}"}))
         
@@ -209,7 +220,7 @@ if not df.empty:
 
     with tabs[2]: # Akıllı Rota
         st.info("📍 **Akıllı Rota:** En yakın klinikten başlayarak sıralanmıştır.")
-        st.dataframe(d_df[["Klinik Adı", "Mesafe_km", "Lead Status"]].sort_values("Mesafe_km"), use_container_width=True, hide_index=True)
+        st.dataframe(d_df[["Klinik Adı", "Mesafe_km", "Lead Status", "Personel"]].sort_values("Mesafe_km"), use_container_width=True, hide_index=True)
 
     with tabs[3]: # İşlem & AI
         if c_lat:
@@ -218,31 +229,34 @@ if not df.empty:
                 sel = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
                 sel_row = yakin[yakin["Klinik Adı"] == sel].iloc[0]
                 st.markdown("### 🤖 Medibulut Asistan")
-                msg = f"Merhaba {st.session_state.user}! 🔥 {sel} 'HOT' durumda. Kapanış için tam zamanı!" if "hot" in str(sel_row["Lead Status"]).lower() else f"Selam {st.session_state.user}. 🟠 {sel} 'WARM'. Referanslarımızı hatırlatabilirsin."
-                with st.chat_message("assistant", avatar="🤖"): st.write_stream(stream_data(msg))
+                status = str(sel_row["Lead Status"]).lower()
+                advice = f"Merhaba {st.session_state.user}! 🔥 {sel} 'HOT' durumda. Satışı kapatmak için her şey hazır!" if "hot" in status else f"Selam {st.session_state.user}. 🟠 {sel} 'WARM'. Referanslarımızdan bahsederek güvenini tazele."
+                with st.chat_message("assistant", avatar="🤖"): st.write_stream(stream_data(advice))
                 st.markdown("---")
-                note = st.text_area("Ziyaret Notu:", value=st.session_state.notes.get(sel, ""), key=f"note_{sel}")
+                note = st.text_area("Ziyaret Notu Ekle:", value=st.session_state.notes.get(sel, ""), key=f"note_{sel}")
                 if st.button("Notu Kaydet"):
                     st.session_state.notes[sel] = note
                     st.toast("Not geçici hafızaya alındı!", icon="💾")
                 st.link_button(f"✅ {sel} - Ziyareti Tamamla", EXCEL_URL, use_container_width=True)
-            else: st.warning("1km yakınınızda klinik yok.")
-        else: st.error("Konum bilgisi alınamadı.")
+            else: st.warning("1km yakında klinik bulunamadı.")
+        else: st.error("GPS bilgisi bekleniyor.")
 
     if st.session_state.role == "Admin":
-        with tabs[4]: # Analiz
+        with tabs[4]: # Analiz & Liderlik
             perf_df = all_df.groupby("Personel").agg(
-                H=('Klinik Adı', 'count'),
-                Z=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
-                S=('Skor', 'sum')
-            ).reset_index().sort_values("S", ascending=False)
+                Toplam_Hedef=('Klinik Adı', 'count'),
+                Ziyaret_Edilen=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
+                Toplam_Skor=('Skor', 'sum')
+            ).reset_index().sort_values("Toplam_Skor", ascending=False)
+            
             c1, c2 = st.columns([2, 1])
-            with c1: st.altair_chart(alt.Chart(perf_df).mark_bar().encode(x=alt.X('Personel', sort='-y'), y='S', color='Personel'), use_container_width=True)
+            with c1: st.altair_chart(alt.Chart(perf_df).mark_bar().encode(x=alt.X('Personel', sort='-y'), y='Toplam_Skor', color='Personel'), use_container_width=True)
             with c2: st.altair_chart(alt.Chart(all_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=50).encode(theta='count', color='Lead Status'), use_container_width=True)
+            
             for _, r in perf_df.iterrows():
-                rate = int(r['Z']/r['H']*100) if r['H'] > 0 else 0
-                st.markdown(f'<div class="stat-card"><b>{r["Personel"]}</b><br>{r["Z"]}/{r["H"]} Ziyaret • {r["S"]} Puan<div class="progress-bg"><div class="progress-fill" style="width:{rate}%;"></div></div></div>', unsafe_allow_html=True)
+                rate = int(r['Ziyaret_Edilen']/r['Toplam_Hedef']*100) if r['Toplam_Hedef'] > 0 else 0
+                st.markdown(f'<div class="stat-card"><b>{r["Personel"]}</b><br>{r["Ziyaret_Edilen"]}/{r["Toplam_Hedef"]} Ziyaret • {r["Toplam_Skor"]} Puan<div class="progress-bg"><div class="progress-fill" style="width:{rate}%;"></div></div></div>', unsafe_allow_html=True)
 
     st.markdown(f'<div class="dashboard-signature"><a href="{MY_LINKEDIN_URL}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 else:
-    st.info("Veriler yükleniyor veya gösterilecek kayıt yok...")
+    st.info("Veriler yükleniyor...")
