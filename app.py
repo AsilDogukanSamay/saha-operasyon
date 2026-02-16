@@ -14,22 +14,33 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V126 (AI)", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V126", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA & LOGOLAR)
+# 2. GİRİŞ EKRANI (BEYAZ TEMA & SENİN LOGOLARIN)
 # =================================================
 if not st.session_state.auth:
+    # --- SADECE GİRİŞ EKRANI İÇİN BEYAZ CSS ---
     st.markdown("""
     <style>
         .stApp { background-color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] { display: none !important; }
+        section[data-testid="stSidebar"] { display: none !important; } /* Sidebar'ı gizle */
+        
         div[data-testid="stTextInput"] label { color: #000000 !important; font-weight: 800 !important; }
-        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #000000 !important; border: 2px solid #E5E7EB !important; }
-        div.stButton > button { background: #2563EB !important; color: white !important; border: none !important; width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold; }
+        div[data-testid="stTextInput"] input { 
+            background-color: #F9FAFB !important; 
+            color: #000000 !important; 
+            border: 2px solid #E5E7EB !important;
+        }
+        div.stButton > button {
+            background: #2563EB !important;
+            color: white !important;
+            border: none !important;
+            width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold;
+        }
         h1, h2, h3, p { color: black !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -41,9 +52,11 @@ if not st.session_state.auth:
         st.markdown("""<div style="margin-bottom: 20px;"><span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span><span style="color:#111827; font-weight:300; font-size:32px;">saha</span></div>""", unsafe_allow_html=True)
         st.markdown("### Personel Girişi")
         st.write("Saha operasyon paneline erişmek için giriş yapın.")
+        
         u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
         st.markdown("<br>", unsafe_allow_html=True)
+        
         if st.button("Sisteme Giriş Yap"):
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role = "Admin" if u.lower() == "admin" else "Personel"
@@ -51,14 +64,23 @@ if not st.session_state.auth:
                 st.session_state.auth = True
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
+        
         st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
+        # -------------------------------------------------------------
+        # SENİN GÖNDERDİĞİN LOGO LINKLERİ BURAYA EKLENDİ
+        # -------------------------------------------------------------
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_logo    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
-        url_dental, url_medi, url_diyet, url_kys = "https://www.dentalbulut.com", "https://www.medibulut.com", "https://www.diyetbulut.com", "https://kys.medibulut.com"
+
+        # Web Sitesi Linkleri
+        url_dental = "https://www.dentalbulut.com"
+        url_medi   = "https://www.medibulut.com"
+        url_diyet  = "https://www.diyetbulut.com"
+        url_kys    = "https://kys.medibulut.com"
 
         html_design = f"""
         <!DOCTYPE html>
@@ -67,13 +89,34 @@ if not st.session_state.auth:
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
             body {{ margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: white; }}
-            .showcase-container {{ background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 24px; padding: 40px; color: white; height: 550px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }}
+            .showcase-container {{
+                background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+                border-radius: 24px; padding: 40px; color: white; height: 550px;
+                display: flex; flex-direction: column; justify-content: center;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px;}}
+            
+            /* LINK AYARLARI */
             a {{ text-decoration: none; color: inherit; display: block; }}
-            .product-card {{ background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: transform 0.3s ease, background 0.3s ease; cursor: pointer; }}
+            
+            .product-card {{
+                background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px;
+                display: flex; align-items: center; gap: 15px;
+                transition: transform 0.3s ease, background 0.3s ease;
+                cursor: pointer;
+            }}
             .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }}
-            .icon-box {{ width: 50px; height: 50px; border-radius: 12px; background-color: white; display: flex; align-items: center; justify-content: center; padding: 5px; overflow: hidden; }}
+            
+            .icon-box {{
+                width: 50px; height: 50px; border-radius: 12px; background-color: white;
+                display: flex; align-items: center; justify-content: center; padding: 5px;
+                overflow: hidden;
+            }}
+            /* RESİMLERİ SIĞDIRMA */
             .icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
+            
             .card-text h4 {{ margin: 0; font-size: 14px; font-weight: 700; color:white; }}
             .card-text p {{ margin: 0; font-size: 11px; color: #DBEAFE; }}
         </style>
@@ -83,32 +126,93 @@ if not st.session_state.auth:
                 <h1 style="margin:0; font-size:36px; font-weight:800;">Tek Platform,<br>Bütün Operasyon.</h1>
                 <div style="color:#BFDBFE; margin-top:10px;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 <div class="grid-container">
-                    <a href="{url_dental}" target="_blank"><div class="product-card"><div class="icon-box"><img src="{dental_logo}"></div><div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div></a>
-                    <a href="{url_medi}" target="_blank"><div class="product-card"><div class="icon-box"><img src="{medi_logo}"></div><div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div></a>
-                    <a href="{url_diyet}" target="_blank"><div class="product-card"><div class="icon-box"><img src="{diyet_logo}"></div><div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div></a>
-                    <a href="{url_kys}" target="_blank"><div class="product-card"><div class="icon-box"><img src="{kys_logo}"></div><div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div></a>
+                    
+                    <a href="{url_dental}" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{dental_logo}"></div>
+                            <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
+                        </div>
+                    </a>
+
+                    <a href="{url_medi}" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{medi_logo}"></div>
+                            <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
+                        </div>
+                    </a>
+
+                    <a href="{url_diyet}" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{diyet_logo}"></div>
+                            <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
+                        </div>
+                    </a>
+
+                    <a href="{url_kys}" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{kys_logo}"></div>
+                            <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
+                        </div>
+                    </a>
+
                 </div>
             </div>
         </body>
         </html>
         """
         components.html(html_design, height=600, scrolling=False)
+    
     st.stop()
 
 # =================================================
-# 3. DASHBOARD EKRANI (KOYU TEMA)
+# 3. DASHBOARD EKRANI (KOYU TEMA - DARK MODE)
 # =================================================
+
+# --- SADECE DASHBOARD İÇİN KOYU CSS ---
 st.markdown("""
 <style>
+    /* GENEL ARKAPLAN: SİYAH/KOYU */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
-    section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.1); }
-    div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 15px; }
+    
+    /* SIDEBAR */
+    section[data-testid="stSidebar"] { 
+        background-color: #161B22 !important; 
+        border-right: 1px solid rgba(255,255,255,0.1); 
+    }
+    section[data-testid="stSidebar"] h1, p, span { color: white !important; }
+    
+    /* METRİK KARTLARI */
+    div[data-testid="stMetric"] { 
+        background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); 
+        border-radius: 12px; 
+        border: 1px solid rgba(255,255,255,0.1); 
+        padding: 15px; 
+    }
     div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
     div[data-testid="stMetricLabel"] { color: #A0AEC0 !important; }
-    div[data-testid="stDataFrame"] { background-color: #161B22 !important; border: 1px solid rgba(255,255,255,0.1); }
-    div.stButton > button { background-color: #238636 !important; color: white !important; border: none; }
-    a[kind="primary"] { background-color: #1f6feb !important; color: white !important; text-decoration: none; padding: 8px 16px; border-radius: 8px; display: block; text-align: center; font-weight: bold; }
-    div[data-testid="stExpander"] { background-color: rgba(255,255,255,0.05); border-radius: 10px; }
+
+    /* TABLOLAR */
+    div[data-testid="stDataFrame"] { 
+        background-color: #161B22 !important; 
+        border: 1px solid rgba(255,255,255,0.1); 
+    }
+    
+    /* BUTONLAR */
+    div.stButton > button { 
+        background-color: #238636 !important; 
+        color: white !important; 
+        border: none;
+    }
+    a[kind="primary"] {
+        background-color: #1f6feb !important;
+        color: white !important;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        display: block;
+        text-align: center;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,23 +288,30 @@ else:
     df = filtered_df if not filtered_df.empty else all_df
     debug_msg = "✅ Veriler Güncel" if not filtered_df.empty else "⚠️ Eşleşme Bekleniyor"
 
-# --- SIDEBAR ---
+# --- DASHBOARD SIDEBAR (KOYU) ---
 with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.success(debug_msg)
+    
     st.divider()
     m_view = st.radio("Harita Modu:", ["Ziyaret", "Lead"], label_visibility="collapsed")
     s_plan = st.toggle("📅 Sadece Bugünün Planı")
     st.divider()
-    if st.button("🔄 Verileri Yenile", use_container_width=True):
-        st.cache_data.clear(); st.rerun()
     
+    if st.button("🔄 Verileri Yenile", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+    
+    # MAIL BUTONU
     if not df.empty:
         t_total = len(df)
         t_visited = len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
-        subject = f"Saha Raporu - {st.session_state.user}"
-        body = f"Yönetici Dikkatine,%0A%0ABugünkü saha operasyon özetim:%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}%0A%0ASaygılarımla."
+        t_hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
+        t_score = df["Skor"].sum()
+        t_rate = int(t_visited/t_total*100) if t_total > 0 else 0
+        subject = f"Saha Raporu - {st.session_state.user} - {datetime.now().strftime('%d.%m')}"
+        body = f"Yönetici Dikkatine,%0A%0ABugünkü saha operasyon özetim:%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}%0A- Hot Lead: {t_hot}%0A- Puan: {t_score}%0A- Başarı: %{t_rate}%0A%0ASaygılarımla."
         mail_link = f"mailto:?subject={subject}&body={body}"
         st.markdown(f'<a href="{mail_link}" kind="primary">📧 Yöneticiye Raporla</a>', unsafe_allow_html=True)
 
@@ -208,121 +319,117 @@ with st.sidebar:
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False; st.rerun()
 
-# --- ANA EKRAN ---
-st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px;'>AI Powered</span></h1>", unsafe_allow_html=True)
+# --- ANA EKRAN (KOYU) ---
+st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise</h1>", unsafe_allow_html=True)
 
 if not df.empty:
     d_df = df.copy()
-    if s_plan: d_df = d_df[d_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
+    if s_plan:
+        d_df = d_df[d_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
+        
     if c_lat and c_lon:
         d_df["Mesafe_km"] = d_df.apply(lambda r: haversine(c_lat, c_lon, r["lat"], r["lon"]), axis=1)
         d_df = d_df.sort_values(by="Mesafe_km")
     else: d_df["Mesafe_km"] = 0
     
+    # ----------------------------------------------------
+    # 🔥 RENK MOTORU
+    # ----------------------------------------------------
     def set_color(row):
+        # 1. ZİYARET MODU (SADECE YEŞİL VE KIRMIZI)
         if "Ziyaret" in m_view:
             status = str(row["Gidildi mi?"]).lower()
-            if any(x in status for x in ["evet", "closed", "tamam", "ok"]): return [16, 185, 129]
-            return [220, 38, 38]
+            if any(x in status for x in ["evet", "closed", "tamam", "ok"]): 
+                return [16, 185, 129] # YEŞİL (Gidildi)
+            return [220, 38, 38] # KIRMIZI (Gidilmedi)
+        
+        # 2. LEAD MODU (RENKLİ)
         status_lead = str(row["Lead Status"]).lower()
-        if "hot" in status_lead: return [239, 68, 68]
-        if "warm" in status_lead: return [245, 158, 11]
-        if "cold" in status_lead: return [59, 130, 246]
-        return [156, 163, 175]
+        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI
+        if "warm" in status_lead: return [245, 158, 11] # TURUNCU
+        if "cold" in status_lead: return [59, 130, 246] # MAVİ
+        return [156, 163, 175] # GRİ
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
+    # KPI
+    total = len(d_df)
+    hot = len(d_df[d_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
+    gidilen = len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
+    total_score = d_df["Skor"].sum()
+    
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Toplam Hedef", len(d_df))
-    k2.metric("🔥 Hot Lead", len(d_df[d_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)]))
-    k3.metric("✅ Ziyaret", len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])]))
-    k4.metric("🏆 Skor", d_df["Skor"].sum())
+    k1.metric("Toplam Hedef", total)
+    k2.metric("🔥 Hot Lead", hot)
+    k3.metric("✅ Ziyaret", gidilen)
+    k4.metric("🏆 Skor", total_score)
+    
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # YENİ SEKME YAPISI (ROTA EKLENDİ)
+    # YETKİLENDİRİLMİŞ TABS
     if st.session_state.role == "Admin":
-        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota (Yeni)", "✅ İşlem & AI", "🏆 Liderlik", "⚙️ Admin"])
-        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
+        t_map, t_list, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
     else:
-        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota (Yeni)", "✅ İşlem & AI"])
-        t_map, t_list, t_route, t_action = tabs
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem"])
+        t_map, t_list, t_action = tabs[0], tabs[1], tabs[2]
         t_leader, t_admin = None, None
 
     with t_map:
-        if "Ziyaret" in m_view: st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#10B981; margin-right:10px;">● Gidildi (Yeşil)</div><div style="color:#DC2626;">● Gidilmedi (Kırmızı)</div></div>""", unsafe_allow_html=True)
-        else: st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot</div><div style="color:#F59E0B; margin-right:10px;">● Warm</div><div style="color:#3B82F6;">● Cold</div></div>""", unsafe_allow_html=True)
-        
-        layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=30, radius_min_pixels=5, radius_max_pixels=25, pickable=True)]
+        if "Ziyaret" in m_view:
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#10B981; margin-right:10px;">● Gidildi (Yeşil)</div><div style="color:#DC2626;">● Gidilmedi (Kırmızı)</div></div>""", unsafe_allow_html=True)
+        else:
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot (Sıcak)</div><div style="color:#F59E0B; margin-right:10px;">● Warm (Ilık)</div><div style="color:#3B82F6;">● Cold (Soğuk)</div></div>""", unsafe_allow_html=True)
+
+        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ (30m)
+        layers = [
+            pdk.Layer(
+                "ScatterplotLayer", 
+                data=d_df, 
+                get_position='[lon, lat]', 
+                get_color='color', 
+                get_radius=30,          
+                radius_min_pixels=5,    
+                radius_max_pixels=25,   
+                pickable=True
+            )
+        ]
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=50, radius_min_pixels=8, pickable=False))
-        st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}"}))
+
+        st.pydeck_chart(pdk.Deck(
+            map_style=pdk.map_styles.CARTO_DARK, 
+            layers=layers, 
+            initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), 
+            tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 {Personel}<br/>Durum: {Lead Status}"}
+        ))
         
     with t_list:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
-    
-    # --- YENİ: AKILLI ROTA ---
-    with t_route:
-        st.info("📍 **Akıllı Rota:** Bulunduğunuz konuma en yakından başlayarak en mantıklı ziyaret sırasını oluşturur.")
-        if c_lat and not d_df.empty:
-            st.dataframe(d_df[["Klinik Adı", "Mesafe_km", "Lead Status"]].sort_values("Mesafe_km"), use_container_width=True)
-        else: st.warning("Konum alınamadı.")
-
-    # --- YENİ: İŞLEM & AI ---
+        st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Skor", "Mesafe_km", "Git"]], 
+                     column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, 
+                     use_container_width=True, hide_index=True)
+        
     with t_action:
         if c_lat:
             yakin = d_df[d_df["Mesafe_km"] <= 0.5]
             if not yakin.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
-                sel_klinik = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
-                sel_row = yakin[yakin["Klinik Adı"] == sel_klinik].iloc[0]
-                
-                # AI ASİSTANI
-                st.markdown("---")
-                st.subheader("🤖 Medibulut AI Asistanı")
-                
-                # Basit Kural Tabanlı AI Mantığı
-                advice = ""
-                status = str(sel_row["Lead Status"]).lower()
-                
-                if "hot" in status:
-                    advice = "🔥 **Fırsat:** Bu klinik Satın Almaya çok yakın! **%10 İndirim kozunu** oyna ve kapanışı yap. Yöneticinden özel yetki isteyebilirsin."
-                elif "warm" in status:
-                    advice = "🟠 **Taktik:** İlgileri var ama kararsızlar. Referanslarımızdan (Bölgedeki diğer kliniklerden) bahset ve demo teklif et."
-                elif "cold" in status:
-                    advice = "🔵 **Strateji:** Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git. Zorlama, güven ver."
-                else:
-                    advice = "⚪ **Analiz:** Durum belirsiz. Önce ihtiyaçlarını dinle (Klinik yazılımı kullanıyorlar mı?). Not al."
-                
-                st.info(advice)
-                
-                # NOT ALMA SİMÜLASYONU
-                st.markdown("---")
-                st.subheader("📝 Ziyaret Notu Ekle")
-                note = st.text_area("Görüşme Notları:", placeholder="Örn: Doktor bey fiyatı yüksek buldu...")
-                if st.button("Notu Kaydet"):
-                    st.toast("Not başarıyla kaydedildi! (Simülasyon)", icon="✅")
-                    time.sleep(1)
-                
-                st.link_button(f"✅ {sel_klinik} - Ziyareti Tamamla (Excel)", EXCEL_URL, use_container_width=True)
+                sel = st.selectbox("Klinik:", yakin["Klinik Adı"])
+                st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
 
     if t_leader:
         with t_leader:
+            st.subheader("🏆 Personel Liderlik Tablosu")
             leaderboard = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
             st.dataframe(leaderboard, use_container_width=True)
 
     if t_admin:
         with t_admin:
             if st.session_state.role == "Admin":
-                # ISI HARİTASI
-                show_heat = st.toggle("🔥 Yoğunluk Haritası (Heatmap)")
-                if show_heat:
-                    layer = pdk.Layer("HeatmapLayer", data=d_df, get_position='[lon, lat]', opacity=0.9, get_weight=1)
-                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=[layer], initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=10)))
-                
                 out = BytesIO()
                 with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
                 st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
