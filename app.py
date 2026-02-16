@@ -5,112 +5,53 @@ import re
 import time
 import math
 import unicodedata
-import urllib.parse # <--- MAİL İÇİN EKLENDİ
+import urllib.parse
 import streamlit.components.v1 as components
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. UNIVERSAL CONFIG (RENK GARANTİSİ)
+# 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V119", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V120", layout="wide", page_icon="🚀")
 
-# BU CSS BLOĞU SİSTEMİN RENGİNİ EZER VE BİZİM İSTEDİĞİMİZİ YAPAR
-st.markdown("""
-<style>
-    /* 1. TÜM SİSTEMİ RESETLE (Koyu Modu Engelle) */
-    .stApp {
-        background-color: #F8FAFC !important; /* Kurumsal Açık Gri */
-        color: #0F172A !important; /* Koyu Lacivert/Siyah Yazı */
-    }
-    
-    /* 2. YAZILARIN RENGİNİ GARANTİYE AL */
-    h1, h2, h3, h4, h5, h6, p, span, label, div {
-        color: #0F172A !important;
-    }
-    
-    /* 3. SIDEBAR (Bembeyaz) */
-    section[data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
-        border-right: 1px solid #E2E8F0;
-    }
-    
-    /* 4. INPUT ALANLARI (Bozulmasın diye zorla beyaz) */
-    div[data-testid="stTextInput"] input {
-        background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stTextInput"] input:focus {
-        border-color: #4338ca !important;
-        box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.2) !important;
-    }
-    
-    /* 5. BUTONLAR (Özel Renk - Yazısı Beyaz Kalsın diye !important) */
-    div.stButton > button {
-        background-color: #4338ca !important;
-        color: #FFFFFF !important; /* Burası Beyaz Kalmalı */
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-    }
-    /* Link Button (Mail Butonu İçin) */
-    a[kind="primary"] {
-        background-color: #10B981 !important; /* Yeşil Renk */
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        text-align: center !important;
-        display: block !important;
-        padding: 0.5rem !important;
-        text-decoration: none !important;
-    }
-    
-    div.stButton > button p { color: #FFFFFF !important; } /* Buton içindeki p de beyaz olsun */
-    
-    /* 6. METRİK KARTLARI */
-    div[data-testid="stMetric"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-    }
-    div[data-testid="stMetricValue"] { color: #4338ca !important; } /* Rakam Rengi */
-    div[data-testid="stMetricLabel"] { color: #64748B !important; } /* Etiket Rengi */
-
-    /* 7. TABLOLAR */
-    div[data-testid="stDataFrame"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# =================================================
-# 2. GİRİŞ EKRANI
-# =================================================
+# Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
 
+# =================================================
+# 2. GİRİŞ EKRANI (BEYAZ TEMA)
+# =================================================
 if not st.session_state.auth:
-    st.markdown("""<style>section[data-testid="stSidebar"] {display: none !important;}</style>""", unsafe_allow_html=True)
-    
+    # --- SADECE GİRİŞ EKRANI İÇİN BEYAZ CSS ---
+    st.markdown("""
+    <style>
+        .stApp { background-color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] { display: none !important; } /* Sidebar'ı gizle */
+        
+        div[data-testid="stTextInput"] label { color: #000000 !important; font-weight: 800 !important; }
+        div[data-testid="stTextInput"] input { 
+            background-color: #F9FAFB !important; 
+            color: #000000 !important; 
+            border: 2px solid #E5E7EB !important;
+        }
+        div.stButton > button {
+            background: #2563EB !important;
+            color: white !important;
+            border: none !important;
+            width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold;
+        }
+        h1, h2, h3, p { color: black !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
     col1, col2 = st.columns([1, 1.5], gap="large")
 
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style="margin-bottom: 30px;">
-            <span style="color:#4338ca; font-weight:900; font-size:42px; letter-spacing:-1px;">medibulut</span>
-            <span style="color:#0F172A; font-weight:300; font-size:42px; letter-spacing:-1px;">saha</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown("""<div style="margin-bottom: 20px;"><span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span><span style="color:#111827; font-weight:300; font-size:32px;">saha</span></div>""", unsafe_allow_html=True)
         st.markdown("### Personel Girişi")
-        st.markdown("Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.")
+        st.write("Saha operasyon paneline erişmek için giriş yapın.")
         
         u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
@@ -123,64 +64,110 @@ if not st.session_state.auth:
                 st.session_state.auth = True
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
-            
-        st.markdown("""<div style="margin-top:40px; border-top:1px solid #E2E8F0; padding-top:20px; font-size:12px; color:#94A3B8; text-align:center;">© 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access</div>""", unsafe_allow_html=True)
+        
+        st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
-        # SVG LOGOLU HTML TASARIMI
+        # SVG LOGOLU HTML TASARIMI (Code 1'den)
         html_design = """
         <!DOCTYPE html>
         <html>
         <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: transparent; }
+            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: white; }
             .showcase-container {
                 background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-                border-radius: 24px; padding: 40px; color: white; height: 600px;
+                border-radius: 24px; padding: 40px; color: white; height: 550px;
                 display: flex; flex-direction: column; justify-content: center;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             }
-            h1 { font-size: 42px; font-weight: 900; margin: 0 0 15px 0; line-height: 1.1; color: white !important; }
-            .subtitle { color: #DBEAFE !important; font-size: 18px; margin-bottom: 50px; font-weight:500; }
-            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            
-            a { text-decoration: none; color: inherit; }
+            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px;}
             .product-card {
                 background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 20px;
-                display: flex; align-items: center; gap: 15px; transition: all 0.3s ease;
+                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px;
+                display: flex; align-items: center; gap: 15px;
             }
-            .product-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }
             .icon-box {
-                width: 50px; height: 50px; border-radius: 12px; background-color: white;
+                width: 45px; height: 45px; border-radius: 12px; background-color: white;
                 display: flex; align-items: center; justify-content: center;
             }
-            .icon-box svg { width: 30px; height: 30px; }
-            .card-text h4 { margin: 0; font-size: 16px; font-weight: 700; color: white !important; }
-            .card-text p { margin: 3px 0 0 0; font-size: 13px; color: #DBEAFE !important; }
+            .card-text h4 { margin: 0; font-size: 14px; font-weight: 700; color:white; }
+            .card-text p { margin: 0; font-size: 11px; color: #DBEAFE; }
         </style>
         </head>
         <body>
             <div class="showcase-container">
-                <h1>Tek Platform,<br>Bütün Operasyon.</h1>
-                <div class="subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
+                <h1 style="margin:0; font-size:36px; font-weight:800;">Tek Platform,<br>Bütün Operasyon.</h1>
+                <div style="color:#BFDBFE; margin-top:10px;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 <div class="grid-container">
-                    <a href="https://www.dentalbulut.com" target="_blank"><div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#4F46E5"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="14">D</text></svg></div><div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div></a>
-                    <a href="https://www.medibulut.com" target="_blank"><div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#3B82F6"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="14">M</text></svg></div><div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div></a>
-                    <a href="https://www.diyetbulut.com" target="_blank"><div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#10B981"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="10">Dy</text></svg></div><div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div></a>
-                    <a href="https://kys.medibulut.com" target="_blank"><div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#E11D48"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="10">KYS</text></svg></div><div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div></a>
+                    <div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#4F46E5"/><text x="50%" y="65%" text-anchor="middle" fill="white" font-weight="bold" font-size="14">D</text></svg></div><div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#3B82F6"/><text x="50%" y="65%" text-anchor="middle" fill="white" font-weight="bold" font-size="14">M</text></svg></div><div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div>
+                    <div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#10B981"/><text x="50%" y="65%" text-anchor="middle" fill="white" font-weight="bold" font-size="10">Dy</text></svg></div><div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div>
+                    <div class="product-card"><div class="icon-box"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#E11D48"/><text x="50%" y="65%" text-anchor="middle" fill="white" font-weight="bold" font-size="10">KYS</text></svg></div><div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div>
                 </div>
             </div>
         </body>
         </html>
         """
-        components.html(html_design, height=650, scrolling=False)
+        components.html(html_design, height=600, scrolling=False)
+    
     st.stop()
 
 # =================================================
-# 3. YARDIMCI FONKSİYONLAR
+# 3. DASHBOARD EKRANI (KOYU TEMA - DARK MODE)
 # =================================================
+
+# --- SADECE DASHBOARD İÇİN KOYU CSS ---
+st.markdown("""
+<style>
+    /* GENEL ARKAPLAN: SİYAH/KOYU */
+    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
+    
+    /* SIDEBAR: KOYU GRİ/MAVİ */
+    section[data-testid="stSidebar"] { 
+        background-color: #161B22 !important; 
+        border-right: 1px solid rgba(255,255,255,0.1); 
+    }
+    section[data-testid="stSidebar"] h1, p, span { color: white !important; }
+    
+    /* METRİK KARTLARI: GLASSMORPHISM KOYU */
+    div[data-testid="stMetric"] { 
+        background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); 
+        border-radius: 12px; 
+        border: 1px solid rgba(255,255,255,0.1); 
+        padding: 15px; 
+    }
+    div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
+    div[data-testid="stMetricLabel"] { color: #A0AEC0 !important; }
+
+    /* TABLOLAR: KOYU */
+    div[data-testid="stDataFrame"] { 
+        background-color: #161B22 !important; 
+        border: 1px solid rgba(255,255,255,0.1); 
+    }
+    
+    /* BUTONLAR */
+    div.stButton > button { 
+        background-color: #238636 !important; 
+        color: white !important; 
+        border: none;
+    }
+    /* Mail butonu özel renk */
+    a[kind="primary"] {
+        background-color: #1f6feb !important;
+        color: white !important;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        display: block;
+        text-align: center;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- YARDIMCI FONKSİYONLAR ---
 loc = get_geolocation()
 c_lat = loc['coords']['latitude'] if loc and 'coords' in loc else None
 c_lon = loc['coords']['longitude'] if loc and 'coords' in loc else None
@@ -217,36 +204,31 @@ def calculate_score(row):
     if any(x in visit for x in ["evet", "closed", "tamam"]): points += 20
     return points
 
-# =================================================
-# 4. VERİ MOTORU
-# =================================================
+# --- VERİ ---
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
-def load_data_v119(sheet_id):
+def load_data(sheet_id):
     try:
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
-        
         data["lat"] = data["lat"].apply(fix_coord)
         data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
         required_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]
         for col in required_cols:
-            if col not in data.columns:
-                data[col] = "Belirtilmedi" 
+            if col not in data.columns: data[col] = "Belirtilmedi" 
         
         data["Personel_Clean"] = data["Personel"].apply(normalize_text)
         data["Skor"] = data.apply(calculate_score, axis=1)
-            
         return data
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v119(SHEET_ID)
+all_df = load_data(SHEET_ID)
 
 if st.session_state.role == "Admin":
     df = all_df
@@ -257,14 +239,10 @@ else:
     df = filtered_df if not filtered_df.empty else all_df
     debug_msg = "✅ Veriler Güncel" if not filtered_df.empty else "⚠️ Eşleşme Bekleniyor"
 
-# =================================================
-# 5. SIDEBAR
-# =================================================
+# --- DASHBOARD SIDEBAR (KOYU) ---
 with st.sidebar:
-    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/medibulut-logo.png", width=150)
+    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
-    
-    st.caption(f"🕒 {datetime.now().strftime('%H:%M')}")
     st.success(debug_msg)
     
     st.divider()
@@ -274,62 +252,28 @@ with st.sidebar:
     
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         st.cache_data.clear()
-        st.toast("Veriler Güncellendi", icon="✅")
-        time.sleep(0.5)
         st.rerun()
     
-    # 📧 MAİL GÖNDERME BUTONU (YENİ ÖZELLİK)
+    # MAIL REPORTING BUTONU
     if not df.empty:
-        # Hesaplamaları yapalım
         t_total = len(df)
         t_visited = len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
         t_hot = len(df[df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
         t_score = df["Skor"].sum()
         t_rate = int(t_visited/t_total*100) if t_total > 0 else 0
         
-        # Mail İçeriği (Türkçe Karakterler için encode edilir)
-        subject = f"Günlük Saha Raporu - {st.session_state.user} - {datetime.now().strftime('%d.%m.%Y')}"
-        body = f"""Sayın Yönetici,
-
-Bugünkü saha operasyon özetim aşağıdadır:
-
-👤 Personel: {st.session_state.user}
-📅 Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}
-
-📊 GÜNLÜK ÖZET:
------------------------------------
-🎯 Toplam Hedef: {t_total}
-✅ Ziyaret Edilen: {t_visited}
-🔥 Sıcak Fırsat (Hot): {t_hot}
-🏆 Toplam Skor: {t_score}
-📈 Tamamlanma Oranı: %{t_rate}
-
-Notlar:
-Detaylı ziyaret listesi sistemde güncellenmiştir.
-
-Saygılarımla,
-{st.session_state.user}
-"""
-        # Linki oluştur (URL Encode işlemi)
-        mail_link = f"mailto:?subject={urllib.parse.quote(subject)}&body={urllib.parse.quote(body)}"
-        st.link_button("📧 Yöneticiye Raporla", mail_link, type="primary", use_container_width=True)
+        subject = f"Saha Raporu - {st.session_state.user} - {datetime.now().strftime('%d.%m')}"
+        body = f"Yönetici Dikkatine,%0A%0ABugünkü saha operasyon özetim:%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}%0A- Hot Lead: {t_hot}%0A- Puan: {t_score}%0A- Başarı: %{t_rate}%0A%0ASaygılarımla."
+        
+        mail_link = f"mailto:?subject={subject}&body={body}"
+        st.markdown(f'<a href="{mail_link}" kind="primary">📧 Yöneticiye Raporla</a>', unsafe_allow_html=True)
 
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
-    if st.button("🚪 Çıkış", type="secondary", use_container_width=True):
+    if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False; st.rerun()
 
-# =================================================
-# 6. ANA EKRAN
-# =================================================
-st.markdown(f"""
-<div style='display:flex; justify-content:space-between; align-items:center;'>
-    <h1 style='margin:0;'>🚀 Saha Enterprise</h1>
-    <div style='background-color:#E0E7FF; padding:5px 15px; border-radius:20px; color:#4338ca; font-weight:bold;'>
-        {st.session_state.user}
-    </div>
-</div>
-<hr style='margin: 10px 0 20px 0;'>
-""", unsafe_allow_html=True)
+# --- ANA EKRAN (KOYU) ---
+st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise</h1>", unsafe_allow_html=True)
 
 if not df.empty:
     d_df = df.copy()
@@ -343,14 +287,17 @@ if not df.empty:
     
     def set_color(row):
         status = str(row["Gidildi mi?"]).lower()
-        if any(x in status for x in ["evet", "closed", "tamam", "ok"]): return [16, 185, 129] # Yeşil
+        if any(x in status for x in ["evet", "closed", "tamam", "ok"]): return [16, 185, 129]
+        if "Ziyaret" in m_view: return [200, 0, 0]
+        
         status_lead = str(row["Lead Status"]).lower()
-        if "hot" in status_lead: return [239, 68, 68] # Kırmızı
-        if "warm" in status_lead: return [245, 158, 11] # Turuncu
-        return [59, 130, 246] # Mavi
+        if "hot" in status_lead: return [239, 68, 68]
+        if "warm" in status_lead: return [245, 158, 11]
+        return [59, 130, 246]
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
+    # KPI
     total = len(d_df)
     hot = len(d_df[d_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
     gidilen = len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
@@ -360,11 +307,11 @@ if not df.empty:
     k1.metric("Toplam Hedef", total)
     k2.metric("🔥 Hot Lead", hot)
     k3.metric("✅ Ziyaret", gidilen)
-    k4.metric("🏆 Toplam Skor", total_score)
+    k4.metric("🏆 Skor", total_score)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # YETKİLENDİRİLMİŞ TABS (PERSONEL İÇİN LİDERLİK YOK)
+    # YETKİLENDİRİLMİŞ TABS
     if st.session_state.role == "Admin":
         tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
         t_map, t_list, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
@@ -375,20 +322,21 @@ if not df.empty:
 
     with t_map:
         if "Ziyaret" in m_view:
-            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div class="legend-box"><div class="legend-dot" style="background:#10B981;"></div><span>Gidildi</span></div><div class="legend-box"><div class="legend-dot" style="background:#3B82F6;"></div><span>Gidilmedi</span></div></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#10B981; margin-right:10px;">● Gidildi</div><div style="color:#C80000;">● Gidilmedi</div></div>""", unsafe_allow_html=True)
         else:
-            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div class="legend-box"><div class="legend-dot" style="background:#EF4444;"></div><span>Hot</span></div><div class="legend-box"><div class="legend-dot" style="background:#F59E0B;"></div><span>Warm</span></div><div class="legend-box"><div class="legend-dot" style="background:#3B82F6;"></div><span>Cold</span></div></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot</div><div style="color:#F59E0B; margin-right:10px;">● Warm</div><div style="color:#3B82F6;">● Cold</div></div>""", unsafe_allow_html=True)
 
         layers = [pdk.Layer("ScatterplotLayer", data=d_df, get_position='[lon, lat]', get_color='color', get_radius=200, pickable=True)]
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
-            layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 0, 255], get_radius=350, pickable=False))
+            layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=350, pickable=False))
 
+        # HARİTA RENGİ (DASHBOARD KOYU OLDUĞU İÇİN DARK)
         st.pydeck_chart(pdk.Deck(
-            map_style=pdk.map_styles.CARTO_LIGHT, 
+            map_style=pdk.map_styles.CARTO_DARK, 
             layers=layers, 
             initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), 
-            tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 {Personel}<br/>Durum: {Lead Status}"}
+            tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}"}
         ))
         
     with t_list:
@@ -419,7 +367,7 @@ if not df.empty:
                 out = BytesIO()
                 with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
                 st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
-            else: st.info("Bu alan yöneticilere özeldir.")
+            else: st.info("Yetkisiz alan.")
 
 else:
-    st.info("Veriler yükleniyor veya gösterilecek kayıt bulunamadı.")
+    st.info("Veriler yükleniyor...")
