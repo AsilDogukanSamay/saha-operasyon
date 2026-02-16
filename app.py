@@ -15,16 +15,17 @@ from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. CONFIG & ASSETS (TAM KONTROL)
+# 1. CONFIG & ASSETS (GENEL AYARLAR)
 # =================================================
-LOCAL_LOGO_PATH = "logo.png" # Eğer ismin farklıysa burayı değiştir kanka
+LOCAL_LOGO_PATH = "logo.png" 
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 
 try:
-    st.set_page_config(page_title="Medibulut Saha V146", layout="wide", page_icon=LOCAL_LOGO_PATH)
+    st.set_page_config(page_title="Medibulut Saha V147", layout="wide", page_icon=LOCAL_LOGO_PATH)
 except:
-    st.set_page_config(page_title="Medibulut Saha V146", layout="wide", page_icon="☁️")
+    st.set_page_config(page_title="Medibulut Saha V147", layout="wide", page_icon="☁️")
 
+# Yerel resmi HTML için Base64'e çevirme
 def get_img_as_base64(file):
     try:
         with open(file, "rb") as f:
@@ -41,7 +42,7 @@ if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (FULL DESIGN)
+# 2. GİRİŞ EKRANI (BEYAZ TEMA & FULL TASARIM)
 # =================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -53,9 +54,7 @@ if not st.session_state.auth:
         div.stButton > button { background: #2563EB !important; color: white !important; border: none !important; width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold; }
         h1, h2, h3, p { color: black !important; }
         .signature { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-family: 'Arial', sans-serif; font-size: 12px; color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 10px; width: 80%; margin: 0 auto; }
-        .signature a { text-decoration: none; color: #94A3B8; transition: 0.3s; }
-        .signature a:hover { color: #2563EB; }
-        .signature span { color: #2563EB; font-weight: bold; }
+        .signature a { text-decoration: none; color: #94A3B8; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,7 +74,7 @@ if not st.session_state.auth:
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role, st.session_state.user, st.session_state.auth = ("Admin" if u.lower() == "admin" else "Personel"), ("Doğukan" if u.lower() == "dogukan" else "Yönetici"), True
                 st.rerun()
-            else: st.error("Hatalı Giriş!")
+            else: st.error("Hatalı bilgiler.")
         st.markdown(f'<div class="signature"><a href="{MY_LINKEDIN_URL}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
     
     with col2:
@@ -84,19 +83,18 @@ if not st.session_state.auth:
             body {{ margin:0; font-family:'Inter', sans-serif; }}
             .showcase-container {{ background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 24px; padding: 40px; color: white; height: 550px; display: flex; flex-direction: column; justify-content: center; }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px; }}
-            .product-card {{ background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.3s ease; }}
-            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.2); }}
+            .product-card {{ background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.3s; }}
             .icon-box {{ width: 50px; height: 50px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; }}
             .icon-box img {{ width: 100%; object-fit: contain; }}
-            h4 {{ margin:0; font-size:14px; }} p {{ margin:0; font-size:11px; color:#DBEAFE; }}
+            h4 {{ margin:0; font-size:14px; }}
         </style></head><body>
             <div class="showcase-container">
                 <h1 style="font-size:36px; font-weight:800; margin:0;">Tek Platform,<br>Bütün Operasyon.</h1>
                 <div class="grid-container">
-                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"></div><div><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="{APP_LOGO_HTML}"></div><div><h4>Medibulut</h4><p>Sağlık Platformu</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"></div><div><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"></div><div><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"></div><div><h4>Dentalbulut</h4></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="{APP_LOGO_HTML}"></div><div><h4>Medibulut</h4></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"></div><div><h4>Diyetbulut</h4></div></div>
+                    <div class="product-card"><div class="icon-box"><img src="https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"></div><div><h4>Medibulut KYS</h4></div></div>
                 </div>
             </div>
         </body></html>
@@ -104,7 +102,7 @@ if not st.session_state.auth:
     st.stop()
 
 # =================================================
-# 3. DASHBOARD (KOYU TEMA - FULL FEATURES)
+# 3. DASHBOARD (KOYU TEMA & TÜM ÖZELLİKLER)
 # =================================================
 st.markdown("""
 <style>
@@ -120,7 +118,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONKSİYONLAR ---
+# YARDIMCI FONKSİYONLAR
 loc = get_geolocation()
 c_lat, c_lon = (loc['coords']['latitude'], loc['coords']['longitude']) if loc else (None, None)
 
@@ -141,7 +139,7 @@ def stream_data(text):
         yield word + " "
         time.sleep(0.04)
 
-# --- VERİ BAĞLANTISI ---
+# VERİ BAĞLANTISI (SHEET ID KONTROL EDİLDİ)
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
@@ -165,7 +163,7 @@ else:
     user_clean = unicodedata.normalize('NFKD', st.session_state.user).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")
     df = all_df[all_df["Personel"].apply(lambda x: unicodedata.normalize('NFKD', str(x)).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")) == user_clean]
 
-# --- SIDEBAR ---
+# SIDEBAR
 with st.sidebar:
     if os.path.exists(LOCAL_LOGO_PATH): st.image(LOCAL_LOGO_PATH, width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -175,7 +173,7 @@ with st.sidebar:
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
     if st.button("🚪 Çıkış", type="primary", use_container_width=True): st.session_state.auth = False; st.rerun()
 
-# --- HEADER ---
+# HEADER
 st.markdown(f"""
 <div style='display: flex; align-items: center; margin-bottom: 20px;'>
     <img src="{APP_LOGO_HTML}" style="height: 55px; margin-right: 18px; border-radius:12px; background:white; padding:3px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -191,14 +189,16 @@ if not df.empty:
         d_df["Mesafe_km"] = d_df.apply(lambda r: haversine(c_lat, c_lon, r["lat"], r["lon"]), axis=1)
         d_df = d_df.sort_values(by="Mesafe_km")
     
+    # METRİKLER
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Toplam Hedef", len(d_df))
     k2.metric("🔥 Hot Lead", len(d_df[d_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)]))
     k3.metric("✅ Ziyaret", len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])]))
     k4.metric("🏆 Skor", d_df["Skor"].sum())
 
-    t_names = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz", "⚙️ Admin"] if st.session_state.role == "Admin" else ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
-    tabs = st.tabs(t_names)
+    # SEKME YAPISI
+    t_list = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz", "⚙️ Admin"] if st.session_state.role == "Admin" else ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
+    tabs = st.tabs(t_list)
 
     with tabs[0]: # Harita
         def get_color(r):
@@ -222,7 +222,7 @@ if not df.empty:
         st.info("📍 **Akıllı Rota:** En yakın klinikten başlayarak sıralanmıştır.")
         st.dataframe(d_df[["Klinik Adı", "Mesafe_km", "Lead Status", "Personel"]].sort_values("Mesafe_km"), use_container_width=True, hide_index=True)
 
-    with tabs[3]: # İşlem & AI
+    with tabs[3]: # AI & İşlem
         if c_lat:
             yakin = d_df[d_df["Mesafe_km"] <= 1.0]
             if not yakin.empty:
@@ -233,16 +233,17 @@ if not df.empty:
                 advice = f"Merhaba {st.session_state.user}! 🔥 {sel} 'HOT' durumda. Satışı kapatmak için her şey hazır!" if "hot" in status else f"Selam {st.session_state.user}. 🟠 {sel} 'WARM'. Referanslarımızdan bahsederek güvenini tazele."
                 with st.chat_message("assistant", avatar="🤖"): st.write_stream(stream_data(advice))
                 st.markdown("---")
-                note = st.text_area("Ziyaret Notu Ekle:", value=st.session_state.notes.get(sel, ""), key=f"note_{sel}")
+                note = st.text_area("Ziyaret Notu:", value=st.session_state.notes.get(sel, ""), key=f"note_{sel}")
                 if st.button("Notu Kaydet"):
                     st.session_state.notes[sel] = note
                     st.toast("Not geçici hafızaya alındı!", icon="💾")
                 st.link_button(f"✅ {sel} - Ziyareti Tamamla", EXCEL_URL, use_container_width=True)
             else: st.warning("1km yakında klinik bulunamadı.")
-        else: st.error("GPS bilgisi bekleniyor.")
+        else: st.error("Konum bilgisi bekleniyor.")
 
     if st.session_state.role == "Admin":
         with tabs[4]: # Analiz & Liderlik
+            st.subheader("📊 Ekip Performans Analizi")
             perf_df = all_df.groupby("Personel").agg(
                 Toplam_Hedef=('Klinik Adı', 'count'),
                 Ziyaret_Edilen=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
@@ -257,6 +258,7 @@ if not df.empty:
                 rate = int(r['Ziyaret_Edilen']/r['Toplam_Hedef']*100) if r['Toplam_Hedef'] > 0 else 0
                 st.markdown(f'<div class="stat-card"><b>{r["Personel"]}</b><br>{r["Ziyaret_Edilen"]}/{r["Toplam_Hedef"]} Ziyaret • {r["Toplam_Skor"]} Puan<div class="progress-bg"><div class="progress-fill" style="width:{rate}%;"></div></div></div>', unsafe_allow_html=True)
 
+    # İMZA (Dashboard)
     st.markdown(f'<div class="dashboard-signature"><a href="{MY_LINKEDIN_URL}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 else:
-    st.info("Veriler yükleniyor...")
+    st.info("Veriler yükleniyor veya gösterilecek kayıt yok...")
