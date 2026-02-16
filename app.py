@@ -68,7 +68,7 @@ if not st.session_state.auth:
         st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
-        # LOGO LINKLERI
+        # LOGO LINKLERI (SENİN VERDİKLERİN)
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
@@ -210,9 +210,10 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
     }
-    /* Expander ve Inputlar Dashboard için */
-    div[data-testid="stExpander"] { background-color: rgba(255,255,255,0.05); border-radius: 10px; }
-    div[data-testid="stTextArea"] textarea { background-color: #161B22; color: white; }
+    
+    /* AI ve NOT KUTULARI İÇİN STİL */
+    div[data-testid="stTextArea"] textarea { background-color: #161B22 !important; color: white !important; border: 1px solid #30363D !important; }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] div { background-color: #161B22 !important; color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -366,7 +367,7 @@ if not df.empty:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # --- YETKİLENDİRİLMİŞ TABS (Admin için 5, Personel için 4) ---
+    # --- YETKİLENDİRİLMİŞ TABS (Admin için 6, Personel için 4) ---
     if st.session_state.role == "Admin":
         tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Liderlik", "⚙️ Admin"])
         t_map, t_list, t_route, t_action, t_leader, t_admin = tabs
@@ -416,7 +417,6 @@ if not df.empty:
     with t_route:
         st.info("📍 **Akıllı Rota:** Bulunduğunuz konuma en yakından başlayarak en mantıklı ziyaret sırasını oluşturur.")
         if c_lat and not d_df.empty:
-            # Mesafeye göre sırala
             route_df = d_df.sort_values("Mesafe_km")
             st.dataframe(route_df[["Klinik Adı", "Mesafe_km", "Lead Status"]], use_container_width=True)
         else:
@@ -430,4 +430,60 @@ if not df.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
                 sel_klinik = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
                 
-                # Seçilen kliniğin ver
+                sel_row = yakin[yakin["Klinik Adı"] == sel_klinik].iloc[0]
+                
+                # AI ASİSTANI
+                st.markdown("---")
+                st.subheader("🤖 Medibulut AI Asistanı")
+                
+                advice = ""
+                status = str(sel_row["Lead Status"]).lower()
+                
+                if "hot" in status:
+                    advice = f"🔥 **Fırsat:** {sel_klinik} satın almaya çok yakın! **%10 İndirim kozunu** oyna ve kapanışı yap."
+                elif "warm" in status:
+                    advice = f"🟠 **Taktik:** {sel_klinik} ilgili ama kararsız. Referanslarımızdan bahset ve demo teklif et."
+                elif "cold" in status:
+                    advice = f"🔵 **Strateji:** Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git."
+                else:
+                    advice = "⚪ **Analiz:** Durum belirsiz. Önce ihtiyaçlarını dinle. Not almayı unutma."
+                
+                st.info(advice)
+                
+                # ZİYARET NOTLARI
+                st.markdown("---")
+                st.subheader("📝 Ziyaret Notu Ekle")
+                note = st.text_area("Görüşme Notları:", placeholder="Örn: Doktor bey fiyatı yüksek buldu...")
+                
+                if st.button("Notu Kaydet"):
+                    st.toast("Not başarıyla kaydedildi! (Simülasyon)", icon="✅")
+                    time.sleep(1)
+                
+                st.link_button(f"✅ {sel_klinik} - Ziyareti Tamamla (Excel)", EXCEL_URL, use_container_width=True)
+            else: st.warning("Yakında (500m) klinik yok.")
+        else: st.error("GPS bekleniyor.")
+
+    # TAB 5: LİDERLİK (SADECE ADMIN)
+    if t_leader:
+        with t_leader:
+            st.subheader("🏆 Personel Liderlik Tablosu")
+            leaderboard = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
+            st.dataframe(leaderboard, use_container_width=True)
+
+    # TAB 6: ADMIN (HEATMAP DAHİL)
+    if t_admin:
+        with t_admin:
+            if st.session_state.role == "Admin":
+                st.subheader("Yönetici Paneli")
+                show_heat = st.toggle("🔥 Yoğunluk Haritası (Heatmap)")
+                if show_heat:
+                    layer = pdk.Layer("HeatmapLayer", data=d_df, get_position='[lon, lat]', opacity=0.9, get_weight=1)
+                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=[layer], initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=10)))
+                
+                out = BytesIO()
+                with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
+                st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
+            else: st.info("Yetkisiz alan.")
+
+else:
+    st.info("Veriler yükleniyor...")
