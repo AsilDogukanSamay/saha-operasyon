@@ -14,7 +14,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V126", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V127", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
@@ -68,9 +68,7 @@ if not st.session_state.auth:
         st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
-        # -------------------------------------------------------------
-        # SENİN GÖNDERDİĞİN LOGO LINKLERİ BURAYA EKLENDİ
-        # -------------------------------------------------------------
+        # LOGO LINKLERI
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
@@ -114,7 +112,6 @@ if not st.session_state.auth:
                 display: flex; align-items: center; justify-content: center; padding: 5px;
                 overflow: hidden;
             }}
-            /* RESİMLERİ SIĞDIRMA */
             .icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
             
             .card-text h4 {{ margin: 0; font-size: 14px; font-weight: 700; color:white; }}
@@ -213,6 +210,9 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
     }
+    /* Expander ve Inputlar Dashboard için */
+    div[data-testid="stExpander"] { background-color: rgba(255,255,255,0.05); border-radius: 10px; }
+    div[data-testid="stTextArea"] textarea { background-color: #161B22; color: white; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -320,7 +320,7 @@ with st.sidebar:
         st.session_state.auth = False; st.rerun()
 
 # --- ANA EKRAN (KOYU) ---
-st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise</h1>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px;'>AI Powered</span></h1>", unsafe_allow_html=True)
 
 if not df.empty:
     d_df = df.copy()
@@ -366,22 +366,22 @@ if not df.empty:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # YETKİLENDİRİLMİŞ TABS
+    # --- YETKİLENDİRİLMİŞ TABS (Admin için 5, Personel için 4) ---
     if st.session_state.role == "Admin":
-        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
-        t_map, t_list, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Liderlik", "⚙️ Admin"])
+        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs
     else:
-        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem"])
-        t_map, t_list, t_action = tabs[0], tabs[1], tabs[2]
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"])
+        t_map, t_list, t_route, t_action = tabs
         t_leader, t_admin = None, None
 
+    # TAB 1: HARİTA
     with t_map:
         if "Ziyaret" in m_view:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#10B981; margin-right:10px;">● Gidildi (Yeşil)</div><div style="color:#DC2626;">● Gidilmedi (Kırmızı)</div></div>""", unsafe_allow_html=True)
         else:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot (Sıcak)</div><div style="color:#F59E0B; margin-right:10px;">● Warm (Ilık)</div><div style="color:#3B82F6;">● Cold (Soğuk)</div></div>""", unsafe_allow_html=True)
 
-        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ (30m)
         layers = [
             pdk.Layer(
                 "ScatterplotLayer", 
@@ -405,35 +405,29 @@ if not df.empty:
             tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 {Personel}<br/>Durum: {Lead Status}"}
         ))
         
+    # TAB 2: LİSTE
     with t_list:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Skor", "Mesafe_km", "Git"]], 
                      column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, 
                      use_container_width=True, hide_index=True)
-        
+    
+    # TAB 3: AKILLI ROTA (YENİ)
+    with t_route:
+        st.info("📍 **Akıllı Rota:** Bulunduğunuz konuma en yakından başlayarak en mantıklı ziyaret sırasını oluşturur.")
+        if c_lat and not d_df.empty:
+            # Mesafeye göre sırala
+            route_df = d_df.sort_values("Mesafe_km")
+            st.dataframe(route_df[["Klinik Adı", "Mesafe_km", "Lead Status"]], use_container_width=True)
+        else:
+            st.warning("Konum alınamadığı için rota oluşturulamadı.")
+
+    # TAB 4: İŞLEM & AI (YENİ)
     with t_action:
         if c_lat:
             yakin = d_df[d_df["Mesafe_km"] <= 0.5]
             if not yakin.empty:
                 st.success(f"📍 Konumunuzda {len(yakin)} klinik var.")
-                sel = st.selectbox("Klinik:", yakin["Klinik Adı"])
-                st.link_button(f"✅ {sel} - Ziyareti Kaydet", EXCEL_URL, use_container_width=True)
-            else: st.warning("Yakında (500m) klinik yok.")
-        else: st.error("GPS bekleniyor.")
-
-    if t_leader:
-        with t_leader:
-            st.subheader("🏆 Personel Liderlik Tablosu")
-            leaderboard = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
-            st.dataframe(leaderboard, use_container_width=True)
-
-    if t_admin:
-        with t_admin:
-            if st.session_state.role == "Admin":
-                out = BytesIO()
-                with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
-                st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
-            else: st.info("Yetkisiz alan.")
-
-else:
-    st.info("Veriler yükleniyor...")
+                sel_klinik = st.selectbox("İşlem Yapılacak Klinik:", yakin["Klinik Adı"])
+                
+                # Seçilen kliniğin ver
