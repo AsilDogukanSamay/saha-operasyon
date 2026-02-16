@@ -13,10 +13,10 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V115", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V118", layout="wide", page_icon="🚀")
 
 # =================================================
-# 2. GİRİŞ EKRANI (LOGIC & DESIGN)
+# 2. GİRİŞ EKRANI (LOGIC & DESIGN - HIGH CONTRAST)
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
@@ -26,7 +26,7 @@ if not st.session_state.auth:
     <style>
         .stApp { background-color: #FFFFFF !important; }
         
-        /* 1. INPUT ETİKETLERİ (Kullanıcı Adı, Parola) - SİMSİYAH VE KALIN */
+        /* 1. INPUT ETİKETLERİ */
         div[data-testid="stTextInput"] label {
             color: #000000 !important; /* Tam Siyah */
             font-size: 15px !important;
@@ -47,16 +47,16 @@ if not st.session_state.auth:
             background-color: #FFFFFF !important;
         }
 
-        /* 3. BAŞLIKLAR (H3, H2 vs.) */
+        /* 3. BAŞLIKLAR */
         div[data-testid="stMarkdownContainer"] h3 {
             color: #000000 !important;
             font-weight: 900 !important;
             font-size: 26px !important;
         }
 
-        /* 4. AÇIKLAMA METİNLERİ (Paragraphs) */
+        /* 4. AÇIKLAMA METİNLERİ */
         div[data-testid="stMarkdownContainer"] p {
-            color: #374151 !important; /* Koyu Gri (Okunaklı) */
+            color: #374151 !important;
             font-size: 16px !important;
             font-weight: 500 !important;
         }
@@ -75,7 +75,6 @@ if not st.session_state.auth:
         }
         div.stButton > button:hover { background: #1D4ED8 !important; }
         
-        /* Login ekranında Sidebar gizle */
         section[data-testid="stSidebar"] { display: none !important; } 
     </style>
     """, unsafe_allow_html=True)
@@ -86,7 +85,6 @@ if not st.session_state.auth:
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         
-        # LOGO KISMI (Daha Siyah ve Net)
         st.markdown("""
         <div style="margin-bottom: 25px;">
             <span style="color:#2563EB; font-weight:900; font-size:38px; letter-spacing:-1px;">medibulut</span>
@@ -112,7 +110,6 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
             
-        # FOOTER (Daha belirgin)
         st.markdown("""
         <div style="margin-top:40px; border-top:1px solid #E5E7EB; padding-top:20px; font-size:13px; color:#4B5563; font-weight:500; text-align:center;">
             © 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access - Internal Tool
@@ -169,7 +166,7 @@ if not st.session_state.auth:
         """
         components.html(html_design, height=620, scrolling=False)
     
-    st.stop() # GİRİŞ EKRANI BURADA BİTER
+    st.stop()
 
 # =================================================
 # 3. İÇERİK EKRANI (DASHBOARD)
@@ -339,10 +336,20 @@ if not df.empty:
     
     st.progress(gidilen/total if total>0 else 0)
     
-    # TABS
-    t1, t2, t3, t4, t5 = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
+    # --- YETKİLENDİRİLMİŞ TABS (PRIVILEGE CONTROL) ---
+    # Eğer Admin ise 5 sekme, Personel ise 3 sekme görür.
     
-    with t1:
+    if st.session_state.role == "Admin":
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
+        t_map, t_list, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
+    else:
+        # Personel sadece kendi işini görür
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem"])
+        t_map, t_list, t_action = tabs[0], tabs[1], tabs[2]
+        t_leader, t_admin = None, None # Bunlar personel için yok
+
+    # -- TAB 1: HARİTA --
+    with t_map:
         if "Ziyaret" in m_view:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div class="legend-box"><div class="legend-dot" style="background:#00C800;"></div>Gidildi</div><div class="legend-box"><div class="legend-dot" style="background:#C80000;"></div>Gidilmedi</div></div>""", unsafe_allow_html=True)
         else:
@@ -355,7 +362,8 @@ if not df.empty:
 
         st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 {Personel}<br/>Durum: {Lead Status}"}))
         
-    with t2:
+    # -- TAB 2: LİSTE --
+    with t_list:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Skor", "Mesafe_km", "Git"]], 
                      column_config={
@@ -364,7 +372,8 @@ if not df.empty:
                      }, 
                      use_container_width=True, hide_index=True)
         
-    with t3:
+    # -- TAB 3: İŞLEM --
+    with t_action:
         if c_lat:
             yakin = d_df[d_df["Mesafe_km"] <= 0.5]
             if not yakin.empty:
@@ -374,17 +383,22 @@ if not df.empty:
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
 
-    with t4:
-        st.subheader("🏆 Personel Liderlik Tablosu")
-        leaderboard = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
-        st.dataframe(leaderboard, use_container_width=True)
+    # -- TAB 4: LİDERLİK (SADECE ADMİN) --
+    if t_leader:
+        with t_leader:
+            st.subheader("🏆 Personel Liderlik Tablosu")
+            # Burada 'all_df' kullanıyoruz ki tüm personeli göstersin
+            leaderboard = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
+            st.dataframe(leaderboard, use_container_width=True)
 
-    with t5:
-        if st.session_state.role == "Admin":
-            out = BytesIO()
-            with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
-            st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
-        else: st.info("Yetkisiz alan.")
+    # -- TAB 5: ADMİN (SADECE ADMİN) --
+    if t_admin:
+        with t_admin:
+            if st.session_state.role == "Admin":
+                out = BytesIO()
+                with pd.ExcelWriter(out, engine='xlsxwriter') as writer: d_df.to_excel(writer, index=False)
+                st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
+            else: st.info("Yetkisiz alan.")
 
 else:
     st.error("⚠️ Veri bekleniyor... (Excel'e veri yeni girildiyse Google 1-2 dakikada işler)")
