@@ -15,7 +15,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V131", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V132", layout="wide", page_icon="☁️")
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
@@ -224,8 +224,14 @@ with st.sidebar:
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False; st.rerun()
 
-# --- ANA EKRAN ---
-st.markdown(f"<h1 style='color:white;'>🚀 Medibulut Saha Enterprise <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px;'>AI Powered</span></h1>", unsafe_allow_html=True)
+# --- ANA EKRAN (HEADER LOGOLU) ---
+st.markdown("""
+<div style='display: flex; align-items: center; margin-bottom: 20px;'>
+    <img src="https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg" style="height: 45px; margin-right: 15px;">
+    <h1 style='color:white; margin: 0; font-size: 3em;'>Medibulut Saha Enterprise</h1>
+    <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px; margin-left: 15px; height: fit-content;'>AI Powered</span>
+</div>
+""", unsafe_allow_html=True)
 
 if not df.empty:
     d_df = df.copy()
@@ -255,14 +261,13 @@ if not df.empty:
     k4.metric("🏆 Skor", d_df["Skor"].sum())
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # --- YETKİLENDİRİLMİŞ TABS (ANALİZ & GRAFİK) ---
-    # Sadece Admin "Analiz & Liderlik" sekmesini görür.
+    # --- YETKİLENDİRİLMİŞ TABS ---
     if st.session_state.role == "Admin":
         tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz & Liderlik", "⚙️ Admin"])
-        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs
+        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4], tabs[5]
     else:
         tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"])
-        t_map, t_list, t_route, t_action = tabs
+        t_map, t_list, t_route, t_action = tabs[0], tabs[1], tabs[2], tabs[3]
         t_leader, t_admin = None, None
 
     # TAB 1: HARİTA
@@ -331,8 +336,7 @@ if not df.empty:
         with t_leader:
             col_g1, col_g2 = st.columns([2, 1])
             
-            # --- VERİ HAZIRLIĞI ---
-            # Personel Performansı
+            # Veri Hazırlığı
             perf_df = all_df.groupby("Personel").agg(
                 Toplam_Hedef=('Klinik Adı', 'count'),
                 Ziyaret_Edilen=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
@@ -341,7 +345,7 @@ if not df.empty:
             perf_df["Basari_Orani"] = (perf_df["Ziyaret_Edilen"] / perf_df["Toplam_Hedef"] * 100).fillna(0).astype(int)
             perf_df = perf_df.sort_values("Toplam_Skor", ascending=False)
 
-            # --- GRAFİKLER ---
+            # Grafikler
             with col_g1:
                 st.subheader("📊 Ekip Performansı (Puan)")
                 chart = alt.Chart(perf_df).mark_bar().encode(
@@ -363,7 +367,7 @@ if not df.empty:
                 ).properties(height=300)
                 st.altair_chart(pie, use_container_width=True)
 
-            # --- DETAYLI LİSTE ---
+            # Detaylı Liste
             st.subheader("📋 Detaylı Performans Listesi")
             for index, row in perf_df.iterrows():
                 p_name = row['Personel']
