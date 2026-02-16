@@ -27,7 +27,7 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 # Sayfa Konfigürasyonu
 try:
     st.set_page_config(
-        page_title="Medibulut Saha Operasyon v151",
+        page_title="Medibulut Saha Operasyon v152",
         layout="wide",
         page_icon=LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "☁️",
         initial_sidebar_state="expanded"
@@ -202,8 +202,19 @@ st.markdown("""
     div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); border-radius: 16px; padding: 20px !important; border: 1px solid rgba(255,255,255,0.1); }
     div[data-testid="stDataFrame"] { background-color: #161B22 !important; border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.1) !important; }
     
-    /* Harita Legend */
-    .map-legend-container { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    /* Harita Legend - ORTALAMA EKLENDİ */
+    .map-legend-container { 
+        background: rgba(255, 255, 255, 0.05); 
+        padding: 15px; 
+        border-radius: 15px; 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 20px; 
+        justify-content: center;
+        margin: 0 auto; /* Ortalama için */
+        width: fit-content; /* İçerik kadar genişlik */
+    }
     .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
     
     /* Admin Kartları */
@@ -310,7 +321,6 @@ if not view_df.empty:
 
     c1,c2,c3,c4 = st.columns(4)
     c1.metric("Hedef", len(df))
-    # HATA DÜZELTİLDİ: na=False eklendi (ValueError Fix)
     c2.metric("Hot Lead", len(df[df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)]))
     c3.metric("Ziyaret", len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])]))
     c4.metric("Skor", df["Skor"].sum())
@@ -323,7 +333,6 @@ if not view_df.empty:
     with tabs[0]: # Harita
         col_ctrl, col_leg = st.columns([1, 2])
         with col_leg:
-            # HATA DÜZELTİLDİ: unsafe_allow_html=True eklendi
             leg_html = ""
             if "Ziyaret" in map_mode:
                 leg_html = """
@@ -365,7 +374,9 @@ if not view_df.empty:
         
         df["color"] = df.apply(get_color, axis=1)
         layers = [pdk.Layer("ScatterplotLayer", df, get_position='[lon, lat]', get_color='color', get_radius=25, pickable=True)]
-        if user_lat: layers.append(pdk.Layer("ScatterplotLayer", pd.DataFrame([{'lat':user_lat, 'lon':user_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=50, radius_min_pixels=8))
+        
+        # CANLI KONUM NOKTASI KÜÇÜLTÜLDÜ (Radius 50 -> 35, MinPixels 8 -> 7)
+        if user_lat: layers.append(pdk.Layer("ScatterplotLayer", pd.DataFrame([{'lat':user_lat, 'lon':user_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=35, radius_min_pixels=7))
         
         st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=user_lat or df["lat"].mean(), longitude=user_lon or df["lon"].mean(), zoom=12), layers=layers, tooltip={"html":"<b>{Klinik Adı}</b><br>{Personel}"}))
 
