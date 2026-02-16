@@ -6,6 +6,7 @@ import time
 import math
 import unicodedata
 import urllib.parse
+import altair as alt  # GRAFIKLER ICIN
 import streamlit.components.v1 as components
 from io import BytesIO
 from datetime import datetime
@@ -14,7 +15,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V130", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V131", layout="wide", page_icon="🚀")
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
@@ -112,11 +113,13 @@ st.markdown("""
     div[data-testid="stTextArea"] textarea { background-color: #161B22 !important; color: white !important; border: 1px solid #30363D !important; }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] div { background-color: #161B22 !important; color: white !important; }
     
-    /* Liderlik Tablosu İçin Özel Stil */
-    .leader-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
-    .medal { font-size: 24px; margin-right: 15px; width: 40px; text-align: center; }
-    .leader-name { font-weight: bold; font-size: 16px; color: white; flex-grow: 1; }
-    .leader-score { font-weight: 800; font-size: 18px; color: #4ADE80; }
+    /* ANALİZ KARTLARI */
+    .stat-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1); }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; }
+    .person-name { font-size: 16px; font-weight: bold; color: white; }
+    .person-stats { font-size: 13px; color: #A0AEC0; }
+    .progress-bg { background-color: rgba(255,255,255,0.1); border-radius: 5px; height: 8px; width: 100%; margin-top: 8px; }
+    .progress-fill { background-color: #4ADE80; height: 8px; border-radius: 5px; transition: width 0.5s; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -157,7 +160,6 @@ def calculate_score(row):
     if any(x in visit for x in ["evet", "closed", "tamam"]): points += 20
     return points
 
-# AI YAZMA EFEKTİ (ASİSTAN)
 def stream_data(text):
     for word in text.split(" "):
         yield word + " "
@@ -214,7 +216,7 @@ with st.sidebar:
         t_total = len(df)
         t_visited = len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
         subject = f"Saha Raporu - {st.session_state.user}"
-        body = f"Yönetici Dikkatine,%0A%0ABugünkü saha operasyon özetim:%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}"
+        body = f"Yönetici Dikkatine,%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}"
         mail_link = f"mailto:?subject={subject}&body={body}"
         st.markdown(f'<a href="{mail_link}" kind="primary">📧 Yöneticiye Raporla</a>', unsafe_allow_html=True)
 
@@ -253,15 +255,14 @@ if not df.empty:
     k4.metric("🏆 Skor", d_df["Skor"].sum())
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # --- TABS VE YETKİ KONTROLÜ ---
-    # ADMIN: Liderlik ve Admin Panelini görür.
-    # PERSONEL: Sadece Harita, Liste, Rota ve AI İşlem görür.
+    # --- YETKİLENDİRİLMİŞ TABS (ANALİZ & GRAFİK) ---
+    # Sadece Admin "Analiz & Liderlik" sekmesini görür.
     if st.session_state.role == "Admin":
-        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Liderlik", "⚙️ Admin"])
-        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4], tabs[5]
+        tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "🏆 Analiz & Liderlik", "⚙️ Admin"])
+        t_map, t_list, t_route, t_action, t_leader, t_admin = tabs
     else:
         tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"])
-        t_map, t_list, t_route, t_action = tabs[0], tabs[1], tabs[2], tabs[3]
+        t_map, t_list, t_route, t_action = tabs
         t_leader, t_admin = None, None
 
     # TAB 1: HARİTA
@@ -301,8 +302,8 @@ if not df.empty:
                 st.markdown("### 🤖 Medibulut Asistan")
                 status = str(sel_row["Lead Status"]).lower()
                 advice_text = ""
-                if "hot" in status: advice_text = f"Merhaba {st.session_state.user}! 🔥 {sel_klinik} 'HOT' statüsünde. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
-                elif "warm" in status: advice_text = f"Selam {st.session_state.user}. 🟠 {sel_klinik} 'WARM' durumda. Kararsızlar. Referanslardan bahsederek güven kazanabilirsin."
+                if "hot" in status: advice_text = f"Merhaba {st.session_state.user}! 🔥 {sel_klinik} 'HOT' statüsünde. Satın almaya çok yakın. %10 indirim veya özel kampanya ile git."
+                elif "warm" in status: advice_text = f"Selam {st.session_state.user}. 🟠 {sel_klinik} 'WARM'. İlgili ama referans istiyor olabilir."
                 elif "cold" in status: advice_text = f"Merhaba. 🔵 {sel_klinik} 'COLD'. Sadece tanışma ve broşür bırakma hedefli git."
                 else: advice_text = f"Veri yetersiz. Önce ihtiyaçlarını dinle."
 
@@ -325,19 +326,68 @@ if not df.empty:
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
 
-    # TAB 5: LİDERLİK (SADECE ADMIN)
+    # TAB 5: ANALİZ & LİDERLİK (SADECE ADMIN - GRAFİKLİ)
     if t_leader:
         with t_leader:
-            st.subheader("🏆 Şampiyonlar Ligi")
-            lb_data = all_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).reset_index()
-            for index, row in lb_data.iterrows():
-                rank = index + 1
-                medal = "🥇" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else f"#{rank}"
-                color = "#FFD700" if rank == 1 else "#C0C0C0" if rank == 2 else "#CD7F32" if rank == 3 else "white"
-                bg = "rgba(255, 215, 0, 0.1)" if rank == 1 else "rgba(255,255,255,0.05)"
-                st.markdown(f"""<div class="leader-card" style="background:{bg};"><div class="medal" style="color:{color};">{medal}</div><div class="leader-name">{row['Personel']}</div><div class="leader-score">{row['Skor']} Puan</div></div>""", unsafe_allow_html=True)
+            col_g1, col_g2 = st.columns([2, 1])
+            
+            # --- VERİ HAZIRLIĞI ---
+            # Personel Performansı
+            perf_df = all_df.groupby("Personel").agg(
+                Toplam_Hedef=('Klinik Adı', 'count'),
+                Ziyaret_Edilen=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
+                Toplam_Skor=('Skor', 'sum')
+            ).reset_index()
+            perf_df["Basari_Orani"] = (perf_df["Ziyaret_Edilen"] / perf_df["Toplam_Hedef"] * 100).fillna(0).astype(int)
+            perf_df = perf_df.sort_values("Toplam_Skor", ascending=False)
 
-    # TAB 6: ADMIN (SADECE ADMIN)
+            # --- GRAFİKLER ---
+            with col_g1:
+                st.subheader("📊 Ekip Performansı (Puan)")
+                chart = alt.Chart(perf_df).mark_bar().encode(
+                    x=alt.X('Personel', sort='-y'),
+                    y='Toplam_Skor',
+                    color=alt.Color('Personel', legend=None),
+                    tooltip=['Personel', 'Toplam_Skor', 'Ziyaret_Edilen']
+                ).properties(height=300)
+                st.altair_chart(chart, use_container_width=True)
+
+            with col_g2:
+                st.subheader("🥧 Lead Durumu")
+                lead_counts = all_df['Lead Status'].value_counts().reset_index()
+                lead_counts.columns = ['Durum', 'Sayi']
+                pie = alt.Chart(lead_counts).mark_arc(innerRadius=50).encode(
+                    theta=alt.Theta(field="Sayi", type="quantitative"),
+                    color=alt.Color(field="Durum", type="nominal"),
+                    tooltip=["Durum", "Sayi"]
+                ).properties(height=300)
+                st.altair_chart(pie, use_container_width=True)
+
+            # --- DETAYLI LİSTE ---
+            st.subheader("📋 Detaylı Performans Listesi")
+            for index, row in perf_df.iterrows():
+                p_name = row['Personel']
+                p_score = row['Toplam_Skor']
+                p_visit = row['Ziyaret_Edilen']
+                p_target = row['Toplam_Hedef']
+                p_rate = row['Basari_Orani']
+                
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-row">
+                        <div class="person-name">{p_name}</div>
+                        <div class="person-stats">🎯 {p_visit}/{p_target} Ziyaret • 🏆 {p_score} Puan</div>
+                    </div>
+                    <div class="stat-row" style="margin-top:5px; font-size:12px; color:#A0AEC0;">
+                        <span>Başarı: %{p_rate}</span>
+                    </div>
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width: {p_rate}%;"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # TAB 6: ADMIN
     if t_admin:
         with t_admin:
             if st.session_state.role == "Admin":
