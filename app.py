@@ -13,7 +13,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V109", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V110", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
@@ -42,7 +42,7 @@ if not st.session_state.auth:
 
     with col1:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        # SOL TARAF - LOGO VE FORM
+        # SOL TARAF
         st.markdown("""<div style="margin-bottom: 30px;"><span style="color:#2563EB; font-weight:900; font-size:42px; letter-spacing:-1px;">medibulut</span><span style="color:#111827; font-weight:300; font-size:42px; letter-spacing:-1px;">saha</span></div>""", unsafe_allow_html=True)
         
         st.markdown("### Personel Girişi")
@@ -64,7 +64,7 @@ if not st.session_state.auth:
 
     with col2:
         # ---------------------------------------------------------
-        # HTML TASARIM (GERÇEK LOGOLAR EKLENDİ)
+        # HTML TASARIM - ARTIK RESİM YOK, SVG KOD VAR (GARANTİ ÇALIŞIR)
         # ---------------------------------------------------------
         html_design = """
         <!DOCTYPE html>
@@ -96,20 +96,15 @@ if not st.session_state.auth:
             }
             .product-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }
             
-            /* LOGO KUTUSU (BEYAZ ARKAPLAN) */
             .icon-box {
                 width: 50px; height: 50px; border-radius: 12px;
-                background-color: white; 
+                background-color: white;
                 display: flex; align-items: center; justify-content: center;
-                overflow: hidden; padding: 8px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             }
             
-            /* RESİM AYARI */
-            .icon-box img {
-                width: 100%; height: 100%; 
-                object-fit: contain; /* Logolar bozulmadan sığsın */
-            }
+            /* SVG İKONLARI İÇİN STİL */
+            .icon-box svg { width: 30px; height: 30px; }
             
             .card-text h4 { margin: 0; font-size: 16px; font-weight: 700; }
             .card-text p { margin: 3px 0 0 0; font-size: 13px; color: #DBEAFE; opacity: 0.9; }
@@ -127,7 +122,10 @@ if not st.session_state.auth:
                     <a href="https://www.dentalbulut.com" target="_blank">
                         <div class="product-card">
                             <div class="icon-box">
-                                <img src="https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png" alt="Dental">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="12" fill="#4F46E5"/>
+                                    <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="14">D</text>
+                                </svg>
                             </div>
                             <div class="card-text">
                                 <h4>Dentalbulut</h4>
@@ -140,7 +138,10 @@ if not st.session_state.auth:
                     <a href="https://www.medibulut.com" target="_blank">
                         <div class="product-card">
                             <div class="icon-box">
-                                <img src="https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png" alt="Medi">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="12" fill="#3B82F6"/>
+                                    <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="14">M</text>
+                                </svg>
                             </div>
                             <div class="card-text">
                                 <h4>Medibulut</h4>
@@ -153,7 +154,10 @@ if not st.session_state.auth:
                     <a href="https://www.diyetbulut.com" target="_blank">
                         <div class="product-card">
                             <div class="icon-box">
-                                <img src="https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png" alt="Diyet">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="12" fill="#10B981"/>
+                                    <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="10">Dy</text>
+                                </svg>
                             </div>
                             <div class="card-text">
                                 <h4>Diyetbulut</h4>
@@ -163,14 +167,17 @@ if not st.session_state.auth:
                         </div>
                     </a>
 
-                    <a href="https://enabiz.gov.tr" target="_blank">
+                    <a href="https://kys.medibulut.com" target="_blank">
                         <div class="product-card">
                             <div class="icon-box">
-                                <img src="https://enabiz.gov.tr/assets/img/logo.png" alt="eNabız">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="12" fill="#E11D48"/>
+                                    <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-weight="bold" font-size="12">KYS</text>
+                                </svg>
                             </div>
                             <div class="card-text">
-                                <h4>e-Nabız</h4>
-                                <p>Entegrasyon</p>
+                                <h4>Medibulut KYS</h4>
+                                <p>Kurumsal Yönetim</p>
                             </div>
                             <div class="arrow">➜</div>
                         </div>
@@ -231,7 +238,7 @@ SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
-def load_data_v108(sheet_id):
+def load_data_v110(sheet_id):
     try:
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
@@ -253,7 +260,7 @@ def load_data_v108(sheet_id):
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v108(SHEET_ID)
+all_df = load_data_v110(SHEET_ID)
 
 # GİRİŞ SONRASI CSS RESET
 st.markdown("""
