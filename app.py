@@ -65,7 +65,7 @@ if not st.session_state.auth:
         
         # --- GİRİŞ EKRANI İMZASI ---
         # BURAYA KENDİ LINKEDIN ADRESİNİ YAPIŞTIR 👇
-        linkedin_url = "https://www.linkedin.com/in/dogukan" 
+        linkedin_url = "https://www.linkedin.com/in/asil-dogukan-samay/" 
         st.markdown(f'<div class="signature"><a href="{linkedin_url}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 
     with col2:
