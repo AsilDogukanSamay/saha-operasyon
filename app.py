@@ -13,36 +13,70 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V114", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V115", layout="wide", page_icon="🚀")
 
 # =================================================
-# 2. GİRİŞ EKRANI (CODE 1 - WHITE & HTML DESIGN)
+# 2. GİRİŞ EKRANI (LOGIC & DESIGN)
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    # --- GİRİŞ EKRANI ÖZEL CSS (BEYAZ TEMA) ---
+    # --- GİRİŞ EKRANI ÖZEL CSS (YÜKSEK KONTRAST) ---
     st.markdown("""
     <style>
         .stApp { background-color: #FFFFFF !important; }
-        div[data-testid="stTextInput"] input {
-            border: 1px solid #E5E7EB !important;
-            padding: 10px !important;
-            background-color: #F9FAFB !important;
-            color: #1F2937 !important;
-            border-radius: 8px !important;
+        
+        /* 1. INPUT ETİKETLERİ (Kullanıcı Adı, Parola) - SİMSİYAH VE KALIN */
+        div[data-testid="stTextInput"] label {
+            color: #000000 !important; /* Tam Siyah */
+            font-size: 15px !important;
+            font-weight: 800 !important; /* Ekstra Kalın */
         }
+        
+        /* 2. INPUT KUTULARI */
+        div[data-testid="stTextInput"] input {
+            border: 2px solid #E5E7EB !important;
+            padding: 12px !important;
+            background-color: #F9FAFB !important;
+            color: #000000 !important; /* Yazılan yazı siyah */
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+        }
+        div[data-testid="stTextInput"] input:focus {
+            border-color: #2563EB !important;
+            background-color: #FFFFFF !important;
+        }
+
+        /* 3. BAŞLIKLAR (H3, H2 vs.) */
+        div[data-testid="stMarkdownContainer"] h3 {
+            color: #000000 !important;
+            font-weight: 900 !important;
+            font-size: 26px !important;
+        }
+
+        /* 4. AÇIKLAMA METİNLERİ (Paragraphs) */
+        div[data-testid="stMarkdownContainer"] p {
+            color: #374151 !important; /* Koyu Gri (Okunaklı) */
+            font-size: 16px !important;
+            font-weight: 500 !important;
+        }
+
+        /* 5. BUTON */
         div.stButton > button {
             background: #2563EB !important;
             color: white !important;
             border: none !important;
-            padding: 0.8rem !important;
+            padding: 0.9rem !important;
             border-radius: 8px !important;
             width: 100% !important;
-            font-weight: bold !important;
+            font-weight: 800 !important;
+            font-size: 16px !important;
+            letter-spacing: 0.5px !important;
         }
         div.stButton > button:hover { background: #1D4ED8 !important; }
-        section[data-testid="stSidebar"] { display: none !important; } /* Login'de Sidebar Gizle */
+        
+        /* Login ekranında Sidebar gizle */
+        section[data-testid="stSidebar"] { display: none !important; } 
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,17 +85,21 @@ if not st.session_state.auth:
     # --- SOL TARAF: FORM ---
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
+        
+        # LOGO KISMI (Daha Siyah ve Net)
         st.markdown("""
-        <div style="margin-bottom: 20px;">
-            <span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span>
-            <span style="color:#111827; font-weight:300; font-size:32px;">saha</span>
+        <div style="margin-bottom: 25px;">
+            <span style="color:#2563EB; font-weight:900; font-size:38px; letter-spacing:-1px;">medibulut</span>
+            <span style="color:#000000; font-weight:400; font-size:38px; letter-spacing:-1px;">saha</span>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("### Personel Girişi")
-        st.write("Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.")
+        st.markdown("Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.")
         
-        u = st.text_input("Kullanıcı Adı", placeholder="Kurumsal kullanıcı adınız")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -74,9 +112,14 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
             
-        st.caption("© 2026 Medibulut Yazılım A.Ş. - Internal Tool")
+        # FOOTER (Daha belirgin)
+        st.markdown("""
+        <div style="margin-top:40px; border-top:1px solid #E5E7EB; padding-top:20px; font-size:13px; color:#4B5563; font-weight:500; text-align:center;">
+            © 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access - Internal Tool
+        </div>
+        """, unsafe_allow_html=True)
 
-    # --- SAĞ TARAF: HTML COMPONENT (CODE 1 TASARIMI) ---
+    # --- SAĞ TARAF: HTML DESIGN ---
     with col2:
         html_design = """
         <!DOCTYPE html>
@@ -87,7 +130,7 @@ if not st.session_state.auth:
             body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: white; }
             .showcase-container {
                 background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-                border-radius: 24px; padding: 40px; color: white; height: 550px;
+                border-radius: 24px; padding: 40px; color: white; height: 600px;
                 display: flex; flex-direction: column; justify-content: center;
                 box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             }
@@ -124,12 +167,12 @@ if not st.session_state.auth:
         </body>
         </html>
         """
-        components.html(html_design, height=600, scrolling=False)
+        components.html(html_design, height=620, scrolling=False)
     
     st.stop() # GİRİŞ EKRANI BURADA BİTER
 
 # =================================================
-# 3. İÇERİK EKRANI (CODE 2 - DARK MODE & DASHBOARD)
+# 3. İÇERİK EKRANI (DASHBOARD)
 # =================================================
 
 # --- DASHBOARD İÇİN KOYU TEMA CSS'İ ---
@@ -166,7 +209,6 @@ def normalize_text(text):
     text = re.sub(r'[^a-z0-9]', '', text)
     return text
 
-# Nükleer Temizlik (Koordinat Fix)
 def fix_coord(val):
     try:
         s = re.sub(r"\D", "", str(val))
@@ -186,7 +228,6 @@ def calculate_score(row):
 
 # --- VERİ YÜKLEME ---
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-# Code 2'deki gibi güvenli veri yükleme
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0)
@@ -210,7 +251,6 @@ def load_data_dashboard(sheet_id):
             
         return data
     except Exception as e:
-        st.error(f"Veri Hatası: {e}")
         return pd.DataFrame()
 
 all_df = load_data_dashboard(SHEET_ID)
@@ -228,7 +268,7 @@ else:
         debug_msg = "✅ Veriler Güncel"
     else:
         df = all_df
-        debug_msg = f"⚠️ Eşleşme Bekleniyor (Tümü Gösteriliyor)"
+        debug_msg = f"⚠️ Eşleşme Bekleniyor"
 
 # --- DASHBOARD SIDEBAR ---
 with st.sidebar:
