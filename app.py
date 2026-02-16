@@ -356,20 +356,20 @@ if not df.empty:
         with t_leader:
             col_g1, col_g2 = st.columns([2, 1])
             perf_df = all_df.groupby("Personel").agg(
-                Toplam_Hedef=('Klinik Adı', 'count'),
+                Toplam Hedef=('Klinik Adı', 'count'),
                 Ziyaret_Edilen=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet", "closed", "tamam"]).sum()),
-                Toplam_Skor=('Skor', 'sum')
+                Toplam Skor=('Skor', 'sum')
             ).reset_index()
-            perf_df["Basari_Orani"] = (perf_df["Ziyaret_Edilen"] / perf_df["Toplam_Hedef"] * 100).fillna(0).astype(int)
-            perf_df = perf_df.sort_values("Toplam_Skor", ascending=False)
+            perf_df["Basari_Orani"] = (perf_df["Ziyaret_Edilen"] / perf_df["Toplam Hedef"] * 100).fillna(0).astype(int)
+            perf_df = perf_df.sort_values("Toplam Skor", ascending=False)
 
             with col_g1:
                 st.subheader("📊 Ekip Performansı (Puan)")
                 chart = alt.Chart(perf_df).mark_bar().encode(
                     x=alt.X('Personel', sort='-y'),
-                    y='Toplam_Skor',
+                    y='Toplam Skor',
                     color=alt.Color('Personel', legend=None),
-                    tooltip=['Personel', 'Toplam_Skor', 'Ziyaret_Edilen']
+                    tooltip=['Personel', 'Toplam Skor', 'Ziyaret_Edilen']
                 ).properties(height=300)
                 st.altair_chart(chart, use_container_width=True)
 
