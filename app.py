@@ -8,43 +8,48 @@ import unicodedata
 import urllib.parse
 import altair as alt 
 import streamlit.components.v1 as components
-import base64 # <-- RESİM OKUMAK İÇİN EKLENDİ
+import base64 
 import os
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. CONFIG & RESİM İŞLEME
+# 1. CONFIG & YEREL LOGO AYARLARI
 # =================================================
-# KANKA DİKKAT: Resminin adı 'logo.png' olmalı ve bu kodla aynı klasörde durmalı.
+# Klasöründeki dosya adının aynısı olmalı:
 LOCAL_LOGO_PATH = "logo.png" 
 
-# Sayfa ayarları (İkon bulunamazsa hata vermesin diye try-except)
+# Sayfa İkonu Ayarı
 try:
-    st.set_page_config(page_title="Medibulut Saha V136", layout="wide", page_icon=LOCAL_LOGO_PATH)
+    st.set_page_config(page_title="Medibulut Saha V137", layout="wide", page_icon=LOCAL_LOGO_PATH)
 except:
-    st.set_page_config(page_title="Medibulut Saha V136", layout="wide", page_icon="☁️")
+    st.set_page_config(page_title="Medibulut Saha V137", layout="wide", page_icon="☁️")
 
-# --- YARDIMCI FONKSİYON: RESMİ HTML İÇİN KODLA ---
+# --- LOGOYU HTML İÇİN HAZIRLAMA FONKSİYONU ---
 def get_img_as_base64(file):
     try:
         with open(file, "rb") as f:
             data = f.read()
         return base64.b64encode(data).decode()
     except:
-        return ""
+        return None
 
-# Logoyu HTML formatına çeviriyoruz ki kartların içinde görünsün
-img_base64 = get_img_as_base64(LOCAL_LOGO_PATH)
-APP_LOGO_HTML = f"data:image/png;base64,{img_base64}" if img_base64 else "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+# Logoyu yükle (Yoksa internettekini kullan)
+local_img_code = get_img_as_base64(LOCAL_LOGO_PATH)
+
+if local_img_code:
+    APP_LOGO_HTML = f"data:image/png;base64,{local_img_code}"
+else:
+    # Yedek Logo (İnternet)
+    APP_LOGO_HTML = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA & LOGOLAR)
+# 2. GİRİŞ EKRANI
 # =================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -71,10 +76,10 @@ if not st.session_state.auth:
 
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        # HEADER LOGOSU (LOCAL)
+        # HEADER (SENİN LOGON İLE)
         st.markdown(f"""
         <div style="margin-bottom: 20px; display: flex; align-items: center;">
-            <img src="{APP_LOGO_HTML}" style="height: 50px; margin-right: 15px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <img src="{APP_LOGO_HTML}" style="height: 55px; margin-right: 15px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
             <div>
                 <span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span>
                 <span style="color:#111827; font-weight:300; font-size:32px;">saha</span>
@@ -94,13 +99,13 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
         
+        # İMZA
         linkedin_url = "https://www.linkedin.com/in/dogukan" 
         st.markdown(f'<div class="signature"><a href="{linkedin_url}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 
     with col2:
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        # SENİN LOGONU BURADA KULLANIYORUZ
-        medi_logo   = APP_LOGO_HTML 
+        medi_logo   = APP_LOGO_HTML # BURADA DA SENİN LOGON VAR
         diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_logo    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
         url_dental, url_medi, url_diyet, url_kys = "https://www.dentalbulut.com", "https://www.medibulut.com", "https://www.diyetbulut.com", "https://kys.medibulut.com"
@@ -217,7 +222,8 @@ def stream_data(text):
         time.sleep(0.05)
 
 # --- VERİ ---
-SHEET_ID = "9a5f68a1-d129-4ddf-8fd0-758995b3a9b4" 
+# DÜZELTİLEN SHEET ID:
+SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
@@ -251,7 +257,7 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # SIDEBARA DA LOGOYU EKLEDİK
+    # SIDEBARA DA YEREL LOGOYU EKLEDİK
     if os.path.exists(LOCAL_LOGO_PATH):
         st.image(LOCAL_LOGO_PATH, width=150)
     else:
