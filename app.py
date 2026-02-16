@@ -15,7 +15,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V132", layout="wide", page_icon="☁️")
+st.set_page_config(page_title="Medibulut Saha Operasyon Uygulaması", layout="wide", page_icon="☁️")
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
@@ -228,7 +228,7 @@ with st.sidebar:
 st.markdown("""
 <div style='display: flex; align-items: center; margin-bottom: 20px;'>
     <img src="https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg" style="height: 45px; margin-right: 15px;">
-    <h1 style='color:white; margin: 0; font-size: 3em;'>Medibulut Saha Enterprise</h1>
+    <h1 style='color:white; margin: 0; font-size: 3em;'>Saha Operasyon Uygulaması</h1>
     <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px; margin-left: 15px; height: fit-content;'>AI Powered</span>
 </div>
 """, unsafe_allow_html=True)
