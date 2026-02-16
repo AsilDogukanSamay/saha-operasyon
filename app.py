@@ -10,33 +10,91 @@ from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. PREMIUM CONFIG & STİL
+# 1. PREMIUM CONFIG & TASARIM (CSS BÜYÜSÜ)
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V101", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V102", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
-    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
-    section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.05); }
-    div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 10px; }
-    .stButton > button { border-radius: 8px; font-weight: bold; transition: all 0.3s ease; }
-    .stButton > button:hover { transform: scale(1.02); }
-    .legend-box { display: flex; align-items: center; margin-right: 15px; font-size: 14px; font-weight: bold; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    /* Genel Arkaplan */
+    .stApp { background-color: #FFFFFF !important; color: #1F2937 !important; }
+    
+    /* Sidebar Tasarımı */
+    section[data-testid="stSidebar"] { background-color: #111827 !important; }
+    section[data-testid="stSidebar"] * { color: #F3F4F6 !important; }
+
+    /* Üstteki boşluğu kaldır */
+    .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+    /* Giriş Butonu Tasarımı (Dentalbulut Moru) */
+    div.stButton > button {
+        background-color: #4338ca !important; 
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        font-weight: 600 !important;
+        border: none !important;
+        width: 100% !important;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:hover {
+        background-color: #3730a3 !important;
+        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+    }
+
+    /* Input Alanları */
+    div[data-testid="stTextInput"] input {
+        border-radius: 8px !important;
+        border: 1px solid #E5E7EB !important;
+        padding: 10px !important;
+        color: #1F2937 !important;
+        background-color: #F9FAFB !important;
+    }
+    div[data-testid="stTextInput"] label {
+        color: #374151 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Sağ Taraf (Mavi Alan) Simülasyonu */
+    .right-panel {
+        background-color: #4338ca;
+        color: white;
+        padding: 3rem;
+        border-radius: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .right-panel h1 { color: white !important; font-size: 2.5rem !important; font-weight: 800; }
+    .right-panel p { color: #E0E7FF !important; font-size: 1.1rem; line-height: 1.6; }
+    
+    /* Login Başlığı */
+    .login-header { font-size: 2rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; }
+    .login-sub { color: #6B7280; margin-bottom: 2rem; }
+
 </style>
 """, unsafe_allow_html=True)
 
 # =================================================
-# 2. GİRİŞ SİSTEMİ
+# 2. GİRİŞ SİSTEMİ (YENİ TASARIM)
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    c1, c2, c3 = st.columns([1,1,1])
-    with c2:
-        st.markdown("<br><h1 style='text-align:center;'>🔐 Giriş</h1>", unsafe_allow_html=True)
-        u = st.text_input("Kullanıcı")
-        p = st.text_input("Şifre", type="password")
+    # Ekranı ikiye bölüyoruz: Sol (Form) - Sağ (Branding)
+    col1, col2 = st.columns([1, 1.2], gap="large")
+
+    with col1:
+        st.markdown("<br><br>", unsafe_allow_html=True) # Biraz aşağı itelim
+        st.markdown('<div class="login-header">Giriş Yap</div>', unsafe_allow_html=True)
+        st.markdown('<div class="login-sub">Sisteme kayıt olduğunuz kullanıcı adı ve parola ile giriş yapabilirsiniz.</div>', unsafe_allow_html=True)
+        
+        u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
+        p = st.text_input("Parola", type="password", placeholder="••••••")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         if st.button("Giriş Yap", use_container_width=True):
             if (u.lower() in ["admin", "dogukan"]) and p == "Medibulut.2026!":
                 st.session_state.role = "Admin" if u.lower() == "admin" else "Personel"
@@ -45,7 +103,37 @@ if not st.session_state.auth:
                 st.toast("Giriş Başarılı!", icon="🚀")
                 time.sleep(0.5)
                 st.rerun()
-            else: st.error("Hatalı giriş.")
+            else: st.error("Hatalı kullanıcı adı veya şifre.")
+
+        st.markdown("""
+            <div style="text-align: center; margin-top: 1rem; color: #6B7280; font-size: 0.9rem;">
+                veya <a href="#" style="color: #4338ca; text-decoration: none; font-weight: 600;">Hemen Kayıt Ol</a>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        # Sağ taraftaki Mavi Alan
+        st.markdown("""
+        <div class="right-panel">
+            <h3 style="color:white; margin:0;">dentalbulut <span style="background:white; color:#4338ca; padding:2px 6px; border-radius:4px; font-size:12px;">e-Nabız</span></h3>
+            <br>
+            <h1>Dentalbulut Saha Operasyon</h1>
+            <p>
+                Dentalbulut Saha, randevu takibi, hasta bilgileri ve takibi, gelir-gider takibi,
+                raporlama süreçlerini otomatikleştiren saha personelinin en büyük yardımcısıdır.
+            </p>
+            <br>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex;">
+                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; margin-right:-10px;">D</span>
+                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; margin-right:-10px;">A</span>
+                    <span style="background:#E0E7FF; color:#4338ca; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;">+</span>
+                </div>
+                <p style="margin:0; font-size:0.9rem; font-weight:600;">2000'den Fazla Klinik Tarafından Tercih Ediliyor</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.stop()
 
 # =================================================
@@ -70,20 +158,11 @@ def normalize_text(text):
     text = re.sub(r'[^a-z0-9]', '', text)
     return text
 
-# 🔥 YENİ KOORDİNAT DÜZELTİCİ (NÜKLEER TEMİZLİK)
-def fix_coord_nuclear(val):
+def fix_coord(val):
     try:
-        # 1. İçinde rakam olmayan her şeyi sil (Nokta, virgül, harf hepsini at)
-        # "4.016.542..." -> "4016542..."
         s = re.sub(r"\D", "", str(val))
-        
         if not s or len(s) < 2: return None
-        
-        # 2. Türkiye Koordinatları (Lat: 36-42, Lon: 26-45)
-        # Bu yüzden sayının ilk 2 hanesini al, araya nokta koy, gerisini ekle.
-        # Örnek: "401250" -> "40.1250"
         new_val = float(s[:2] + "." + s[2:])
-        
         return new_val
     except: return None
 
@@ -100,21 +179,19 @@ def calculate_score(row):
 # 4. VERİ MOTORU
 # =================================================
 SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-@st.cache_data(ttl=0)
-def load_data_v101(url):
+@st.cache_data(ttl=0) 
+def load_data_v102(sheet_id):
     try:
-        data = pd.read_csv(url)
+        live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
+        data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
         
-        # 1. KOORDİNATLARI ZORLA DÜZELT
-        data["lat"] = data["lat"].apply(fix_coord_nuclear)
-        data["lon"] = data["lon"].apply(fix_coord_nuclear)
+        data["lat"] = data["lat"].apply(fix_coord)
+        data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
-        # 2. KOLON GARANTİSİ
         required_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]
         for col in required_cols:
             if col not in data.columns:
@@ -125,12 +202,15 @@ def load_data_v101(url):
             
         return data
     except Exception as e:
-        st.error(f"Veri Hatası: {e}")
         return pd.DataFrame()
 
-all_df = load_data_v101(CSV_URL)
+all_df = load_data_v102(SHEET_ID)
 
-# FİLTRELEME
+# FİLTRELEME (Giriş yaptıktan sonra çalışır)
+# Not: Giriş ekranında beyaz arkaplan kullandık, 
+# uygulama içine girince Dark Mode'a dönmek istersen CSS'i buraya dinamik eklemek gerekir.
+# Şimdilik giriş ekranı beyaz, içerisi koyu devam ediyor.
+
 if st.session_state.role == "Admin":
     df = all_df
     debug_msg = "Yönetici Modu"
@@ -145,6 +225,13 @@ else:
         df = all_df
         debug_msg = f"⚠️ Eşleşme Bekleniyor (Tümü Gösteriliyor)"
 
+# Giriş sonrası arkaplanı tekrar koyu yapmak için küçük bir hack
+st.markdown("""
+<style>
+    .stApp { background-color: #0E1117 !important; color: white !important; }
+</style>
+""", unsafe_allow_html=True)
+
 # =================================================
 # 5. SIDEBAR
 # =================================================
@@ -152,12 +239,13 @@ with st.sidebar:
     st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     
+    now = datetime.now().strftime("%H:%M:%S")
+    st.caption(f"🕒 Son Güncelleme: {now}")
+    
     if "⚠️" in debug_msg:
         st.warning(debug_msg)
     else:
         st.success(debug_msg)
-        
-    st.caption(f"Son Kontrol: {datetime.now().strftime('%H:%M:%S')}")
     
     st.divider()
     m_view = st.radio("Mod:", ["Ziyaret Durumu", "Lead Durumu"])
@@ -166,8 +254,8 @@ with st.sidebar:
     st.divider()
     if st.button("🔄 Verileri Şimdi Yenile", use_container_width=True):
         st.cache_data.clear()
-        st.toast("Yenileniyor...", icon="🔄")
-        time.sleep(0.5)
+        st.toast("Google Sheets'e Bağlanılıyor...", icon="⏳")
+        time.sleep(1)
         st.rerun()
         
     st.link_button("📂 Excel'i Aç", url=EXCEL_URL, use_container_width=True)
