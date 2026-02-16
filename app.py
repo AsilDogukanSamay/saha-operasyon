@@ -6,7 +6,7 @@ import time
 import math
 import unicodedata
 import urllib.parse
-import altair as alt 
+import altair as alt  # GRAFIKLER ICIN
 import streamlit.components.v1 as components
 from io import BytesIO
 from datetime import datetime
@@ -15,14 +15,14 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V133", layout="wide", page_icon="🦷")
+st.set_page_config(page_title="Medibulut Saha V132", layout="wide", page_icon="☁️")
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI
+# 2. GİRİŞ EKRANI (BEYAZ TEMA & LOGOLAR)
 # =================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -113,6 +113,7 @@ st.markdown("""
     div[data-testid="stTextArea"] textarea { background-color: #161B22 !important; color: white !important; border: 1px solid #30363D !important; }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] div { background-color: #161B22 !important; color: white !important; }
     
+    /* ANALİZ KARTLARI */
     .stat-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1); }
     .stat-row { display: flex; justify-content: space-between; align-items: center; }
     .person-name { font-size: 16px; font-weight: bold; color: white; }
@@ -164,25 +165,21 @@ def stream_data(text):
         yield word + " "
         time.sleep(0.05)
 
-# --- VERİ MOTORU (SENİN DOSYANI ÇEKİYOR ARTIK!) ---
-SHEET_ID = "9a5f68a1-d129-4ddf-8fd0-758995b3a9b4" # <-- SENİN DOSYANIN ID'Sİ
+# --- VERİ ---
+SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-@st.cache_data(ttl=60) # 60 saniyede bir güncelle
+@st.cache_data(ttl=0) 
 def load_data(sheet_id):
     try:
-        # Google Sheets'i CSV olarak çekiyoruz
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
         data.columns = [c.strip() for c in data.columns]
-        
-        # Koordinatları temizle
         data["lat"] = data["lat"].apply(fix_coord)
         data["lon"] = data["lon"].apply(fix_coord)
         data = data.dropna(subset=["lat", "lon"])
         
-        # Eksik kolonları tamamla
-        required_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe"]
+        required_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı"]
         for col in required_cols:
             if col not in data.columns: data[col] = "Belirtilmedi" 
         
@@ -196,12 +193,12 @@ all_df = load_data(SHEET_ID)
 
 if st.session_state.role == "Admin":
     df = all_df
-    debug_msg = "Yönetici Modu (Tüm Veriler)"
+    debug_msg = "Yönetici Modu"
 else:
     current_user_clean = normalize_text(st.session_state.user)
     filtered_df = all_df[all_df["Personel_Clean"] == current_user_clean]
     df = filtered_df if not filtered_df.empty else all_df
-    debug_msg = f"✅ {len(filtered_df)} Kayıt Yüklendi" if not filtered_df.empty else "⚠️ Eşleşme Bekleniyor"
+    debug_msg = "✅ Veriler Güncel" if not filtered_df.empty else "⚠️ Eşleşme Bekleniyor"
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -219,7 +216,7 @@ with st.sidebar:
         t_total = len(df)
         t_visited = len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
         subject = f"Saha Raporu - {st.session_state.user}"
-        body = f"Yönetici Dikkatine,%0A%0ABugünkü saha operasyon özetim:%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}"
+        body = f"Yönetici Dikkatine,%0A%0A- Personel: {st.session_state.user}%0A- Hedef: {t_total}%0A- Ziyaret: {t_visited}"
         mail_link = f"mailto:?subject={subject}&body={body}"
         st.markdown(f'<a href="{mail_link}" kind="primary">📧 Yöneticiye Raporla</a>', unsafe_allow_html=True)
 
@@ -282,19 +279,19 @@ if not df.empty:
         if c_lat:
             user_df = pd.DataFrame([{'lat':c_lat, 'lon':c_lon}])
             layers.append(pdk.Layer("ScatterplotLayer", data=user_df, get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=50, radius_min_pixels=8, pickable=False))
-        st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>👤 {Personel}<br/>Durum: {Lead Status}"}))
+        st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, layers=layers, initial_view_state=pdk.ViewState(latitude=c_lat if c_lat else d_df["lat"].mean(), longitude=c_lon if c_lon else d_df["lon"].mean(), zoom=11), tooltip={"html": "<b>{Klinik Adı}</b><br/>Durum: {Lead Status}"}))
         
     # TAB 2: LİSTE
     with t_list:
         d_df["Git"] = d_df.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(d_df[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Skor", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
+        st.dataframe(d_df[["Klinik Adı", "Personel", "Lead Status", "Skor", "Mesafe_km", "Git"]], column_config={"Git": st.column_config.LinkColumn("Rota", display_text="📍 Git")}, use_container_width=True, hide_index=True)
     
     # TAB 3: ROTA
     with t_route:
         st.info("📍 **Akıllı Rota:** En mantıklı ziyaret sırası (Yakından uzağa).")
         if c_lat and not d_df.empty:
             route_df = d_df.sort_values("Mesafe_km")
-            st.dataframe(route_df[["Klinik Adı", "İlçe", "Mesafe_km", "Lead Status"]], use_container_width=True)
+            st.dataframe(route_df[["Klinik Adı", "Mesafe_km", "Lead Status"]], use_container_width=True)
         else: st.warning("Konum alınamadı.")
 
     # TAB 4: AI & İŞLEM
@@ -310,10 +307,10 @@ if not df.empty:
                 st.markdown("### 🤖 Medibulut Asistan")
                 status = str(sel_row["Lead Status"]).lower()
                 advice_text = ""
-                if "hot" in status: advice_text = f"Merhaba {st.session_state.user}! 🔥 {sel_klinik} 'HOT' statüsünde. Satın almaya çok yakınlar. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
-                elif "warm" in status: advice_text = f"Selam {st.session_state.user}. 🟠 {sel_klinik} 'WARM' durumda. Kararsızlar. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
-                elif "cold" in status: advice_text = f"Merhaba. 🔵 {sel_klinik} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git. Zorlama, sadece güven ver."
-                else: advice_text = f"Bu klinik hakkında yeterli veri yok. Önce ihtiyaçlarını dinle ve not al."
+                if "hot" in status: advice_text = f"Merhaba {st.session_state.user}! 🔥 {sel_klinik} 'HOT' statüsünde. Satın almaya çok yakın. %10 indirim veya özel kampanya ile git."
+                elif "warm" in status: advice_text = f"Selam {st.session_state.user}. 🟠 {sel_klinik} 'WARM'. İlgili ama referans istiyor olabilir."
+                elif "cold" in status: advice_text = f"Merhaba. 🔵 {sel_klinik} 'COLD'. Sadece tanışma ve broşür bırakma hedefli git."
+                else: advice_text = f"Veri yetersiz. Önce ihtiyaçlarını dinle."
 
                 with st.chat_message("assistant", avatar="🤖"):
                     st.write_stream(stream_data(advice_text))
@@ -329,7 +326,7 @@ if not df.empty:
                     st.toast("Not geçici hafızaya kaydedildi!", icon="💾")
                     time.sleep(0.5); st.rerun()
                 
-                st.caption("⚠️ Not: Notlar oturum boyunca saklanır. Sayfayı kapatırsanız silinir (API Bağlantısı Gerekir).")
+                st.caption("⚠️ Not: Sayfayı yenileyince notlar silinir (API Gerekli).")
                 st.link_button(f"✅ {sel_klinik} - Ziyareti Tamamla", EXCEL_URL, use_container_width=True)
             else: st.warning("Yakında (500m) klinik yok.")
         else: st.error("GPS bekleniyor.")
