@@ -14,7 +14,7 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V123", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V124", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
@@ -68,11 +68,20 @@ if not st.session_state.auth:
         st.caption("© 2026 Medibulut Yazılım A.Ş.")
 
     with col2:
-        # LOGO LINKLERI
-        dental_logo = "https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png"
-        medi_logo   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
-        diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"
-        kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"
+        # -------------------------------------------------------------
+        # HTML KISMI - LOGOLAR VE LINKLER
+        # -------------------------------------------------------------
+        # Logoların Resim Adresleri (İnternetten çekiyor)
+        img_dental = "https://pbs.twimg.com/profile_images/1229718609565650944/0XQ4-K6H_400x400.jpg"
+        img_medi   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
+        img_diyet  = "https://pbs.twimg.com/profile_images/1351152163935252482/T_JqXgq-_400x400.jpg"
+        img_kys    = "https://enabiz.gov.tr/assets/img/logo.png" # KYS logosu bulamadığım için e-nabız koydum, değiştirebilirsin.
+
+        # Gidecekleri Web Siteleri
+        url_dental = "https://www.dentalbulut.com"
+        url_medi   = "https://www.medibulut.com"
+        url_diyet  = "https://www.diyetbulut.com"
+        url_kys    = "https://kys.medibulut.com"
 
         html_design = f"""
         <!DOCTYPE html>
@@ -89,23 +98,25 @@ if not st.session_state.auth:
             }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px;}}
             
-            /* LINK AYARLARI (Altını çizme, rengi bozma) */
-            a {{ text-decoration: none; color: inherit; }}
+            /* TIKLANABİLİR LINK AYARLARI */
+            a {{ text-decoration: none; color: inherit; display: block; }}
             
             .product-card {{
                 background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px);
                 border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px;
                 display: flex; align-items: center; gap: 15px;
                 transition: transform 0.3s ease, background 0.3s ease;
-                cursor: pointer; /* Tıklanabilir el işareti */
+                cursor: pointer;
             }}
             .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }}
             
             .icon-box {{
                 width: 50px; height: 50px; border-radius: 12px; background-color: white;
                 display: flex; align-items: center; justify-content: center; padding: 5px;
+                overflow: hidden;
             }}
             .icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
+            
             .card-text h4 {{ margin: 0; font-size: 14px; font-weight: 700; color:white; }}
             .card-text p {{ margin: 0; font-size: 11px; color: #DBEAFE; }}
         </style>
@@ -116,30 +127,30 @@ if not st.session_state.auth:
                 <div style="color:#BFDBFE; margin-top:10px;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 <div class="grid-container">
                     
-                    <a href="https://www.dentalbulut.com" target="_blank">
+                    <a href="{url_dental}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{dental_logo}"></div>
+                            <div class="icon-box"><img src="{img_dental}"></div>
                             <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
                         </div>
                     </a>
 
-                    <a href="https://www.medibulut.com" target="_blank">
+                    <a href="{url_medi}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{medi_logo}"></div>
+                            <div class="icon-box"><img src="{img_medi}"></div>
                             <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
                         </div>
                     </a>
 
-                    <a href="https://www.diyetbulut.com" target="_blank">
+                    <a href="{url_diyet}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{diyet_logo}"></div>
+                            <div class="icon-box"><img src="{img_diyet}"></div>
                             <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
                         </div>
                     </a>
 
-                    <a href="https://kys.medibulut.com" target="_blank">
+                    <a href="{url_kys}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{kys_logo}"></div>
+                            <div class="icon-box"><img src="{img_kys}"></div>
                             <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
                         </div>
                     </a>
@@ -163,7 +174,7 @@ st.markdown("""
     /* GENEL ARKAPLAN: SİYAH/KOYU */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     
-    /* SIDEBAR */
+    /* SIDEBAR: KOYU GRİ/MAVİ */
     section[data-testid="stSidebar"] { 
         background-color: #161B22 !important; 
         border-right: 1px solid rgba(255,255,255,0.1); 
@@ -180,7 +191,7 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
     div[data-testid="stMetricLabel"] { color: #A0AEC0 !important; }
 
-    /* TABLOLAR */
+    /* TABLOLAR: KOYU */
     div[data-testid="stDataFrame"] { 
         background-color: #161B22 !important; 
         border: 1px solid rgba(255,255,255,0.1); 
@@ -322,7 +333,7 @@ if not df.empty:
     else: d_df["Mesafe_km"] = 0
     
     # ----------------------------------------------------
-    # 🔥 RENK MOTORU
+    # 🔥 RENK MOTORU (İSTEDİĞİN GİBİ AYARLANDI)
     # ----------------------------------------------------
     def set_color(row):
         # 1. ZİYARET MODU (SADECE YEŞİL VE KIRMIZI)
@@ -334,10 +345,10 @@ if not df.empty:
         
         # 2. LEAD MODU (RENKLİ)
         status_lead = str(row["Lead Status"]).lower()
-        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI
-        if "warm" in status_lead: return [245, 158, 11] # TURUNCU
-        if "cold" in status_lead: return [59, 130, 246] # MAVİ
-        return [156, 163, 175] # GRİ
+        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI (Sıcak)
+        if "warm" in status_lead: return [245, 158, 11] # TURUNCU (Ilık)
+        if "cold" in status_lead: return [59, 130, 246] # MAVİ (Soğuk)
+        return [156, 163, 175] # GRİ (Tanımsız)
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
