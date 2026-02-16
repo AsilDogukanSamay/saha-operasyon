@@ -69,7 +69,7 @@ if not st.session_state.auth:
 
     with col2:
         # LOGO LINKLERI
-        dental_logo = "https://instagram.fyei1-2.fna.fbcdn.net/v/t51.2885-19/583851174_18398149717123231_2312228636725932782_n.jpg?efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMxIn0&_nc_ht=instagram.fyei1-2.fna.fbcdn.net&_nc_cat=107&_nc_oc=Q6cZ2QHcJkoYbBTzuvogcN91TyjJTTcMlmc2596rkgIcbtvHS0iVFfsjVB6e-9fv96ZwcEFx_-194h12q9ucsCtBj8hQ&_nc_ohc=dHE_-BsflbQQ7kNvwFXK7Zg&_nc_gid=dv2yrqMoJsq8azIdZg0yow&edm=AP4sbd4BAAAA&ccb=7-5&oh=00_AfvM83u1eyYajfYvmJvtPUuSWEPleyr3oud-ICjMLBPBSg&oe=6998DB94&_nc_sid=7a9f4b"
+        dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         medi_logo   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
         diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"
         kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"
