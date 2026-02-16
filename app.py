@@ -5,7 +5,7 @@ import re
 import time
 import math
 import unicodedata
-import streamlit.components.v1 as components # <--- SENİN İSTEDİĞİN SİHİRLİ KÜTÜPHANE
+import streamlit.components.v1 as components
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
@@ -13,31 +13,63 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V105", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V106", layout="wide", page_icon="🚀")
 
-# Sadece Giriş Ekranı Sol Tarafı ve Genel Reset için CSS
+# CSS İLE SOL TARAFI CANLANDIRMA VE GENEL AYARLAR
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
-    div[data-testid="stTextInput"] input {
-        border: 1px solid #E5E7EB !important;
-        padding: 10px !important;
-        background-color: #F9FAFB !important;
-        color: #1F2937 !important;
-        border-radius: 8px !important;
+    
+    /* GİRİŞ EKRANI YAZILARI - ARTIK SÖNÜK DEĞİL */
+    div[data-testid="stMarkdownContainer"] p {
+        color: #374151 !important; /* Koyu Gri */
+        font-weight: 500 !important;
     }
+    div[data-testid="stMarkdownContainer"] h3 {
+        color: #111827 !important; /* Tam Siyah */
+        font-weight: 800 !important;
+    }
+    
+    /* INPUT ETİKETLERİ (Kullanıcı Adı, Parola) */
+    div[data-testid="stTextInput"] label {
+        color: #111827 !important; /* Tam Siyah */
+        font-weight: 700 !important; /* Kalın */
+        font-size: 15px !important;
+    }
+    
+    /* INPUT KUTULARI */
+    div[data-testid="stTextInput"] input {
+        border: 2px solid #E5E7EB !important;
+        padding: 12px !important;
+        background-color: #F9FAFB !important;
+        color: #111827 !important; /* Yazı Rengi Siyah */
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #2563EB !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* BUTON */
     div.stButton > button {
-        background: #2563EB !important;
+        background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%) !important;
         color: white !important;
         border: none !important;
-        padding: 0.8rem !important;
-        border-radius: 8px !important;
+        padding: 0.9rem !important;
+        border-radius: 10px !important;
         width: 100% !important;
-        font-weight: bold !important;
+        font-weight: 800 !important;
+        font-size: 16px !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
     }
     div.stButton > button:hover {
-        background: #1D4ED8 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
     }
+    
+    /* SIDEBAR (Giriş Sonrası İçin) */
     section[data-testid="stSidebar"] { background-color: #161B22 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
 </style>
@@ -49,22 +81,28 @@ st.markdown("""
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    col1, col2 = st.columns([1, 1.5], gap="medium")
+    col1, col2 = st.columns([1, 1.5], gap="large")
 
-    # --- SOL TARAF: PYTHON (Logic İçin Şart) ---
+    # --- SOL TARAF: PYTHON (Logic) ---
     with col1:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        
+        # LOGO KISMI - DAHA BÜYÜK VE NET
         st.markdown("""
-        <div style="margin-bottom: 20px;">
-            <span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span>
-            <span style="color:#111827; font-weight:300; font-size:32px;">saha</span>
+        <div style="margin-bottom: 30px;">
+            <span style="color:#2563EB; font-weight:900; font-size:42px; letter-spacing:-1px;">medibulut</span>
+            <span style="color:#111827; font-weight:300; font-size:42px; letter-spacing:-1px;">saha</span>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("### Personel Girişi")
-        st.write("Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.")
+        st.markdown("""
+        <p style="font-size:16px; color:#4B5563; margin-bottom:20px;">
+        Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.
+        </p>
+        """, unsafe_allow_html=True)
         
-        u = st.text_input("Kullanıcı Adı", placeholder="Kurumsal kullanıcı adınız")
+        u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -77,11 +115,14 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
             
-        st.caption("© 2026 Medibulut Yazılım A.Ş. - Internal Tool")
+        st.markdown("""
+        <div style="margin-top:30px; border-top:1px solid #E5E7EB; padding-top:20px; font-size:13px; color:#6B7280; text-align:center;">
+        © 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access
+        </div>
+        """, unsafe_allow_html=True)
 
-    # --- SAĞ TARAF: COMPONENTS.HTML (Tasarım İçin Şart) ---
+    # --- SAĞ TARAF: HTML (Tıklanabilir Linkler & Logolar) ---
     with col2:
-        # İŞTE SENİN İSTEDİĞİN YAPII! BU HTML ASLA BOZULMAZ.
         html_design = """
         <!DOCTYPE html>
         <html>
@@ -93,23 +134,40 @@ if not st.session_state.auth:
             .showcase-container {
                 background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
                 border-radius: 24px;
-                padding: 40px;
+                padding: 50px;
                 color: white;
-                height: 550px; /* Sabit yükseklik */
+                height: 600px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                position: relative;
+                overflow: hidden;
             }
             
-            h1 { font-size: 36px; font-weight: 800; margin: 0 0 10px 0; line-height: 1.2; }
-            .subtitle { color: #BFDBFE; font-size: 16px; margin-bottom: 40px; }
+            /* Arkaplan Deseni */
+            .showcase-container::before {
+                content: "";
+                position: absolute;
+                width: 300px; height: 300px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 50%;
+                top: -100px; right: -100px;
+                filter: blur(50px);
+            }
+            
+            h1 { font-size: 42px; font-weight: 900; margin: 0 0 15px 0; line-height: 1.1; z-index:1; }
+            .subtitle { color: #DBEAFE; font-size: 18px; margin-bottom: 50px; z-index:1; font-weight:500; }
             
             .grid-container {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 15px;
+                gap: 20px;
+                z-index:1;
             }
+            
+            /* TIKLANABİLİR KART LINK YAPISI */
+            a { text-decoration: none; color: inherit; }
             
             .product-card {
                 background: rgba(255, 255, 255, 0.1);
@@ -117,29 +175,39 @@ if not st.session_state.auth:
                 -webkit-backdrop-filter: blur(12px);
                 border: 1px solid rgba(255, 255, 255, 0.2);
                 border-radius: 16px;
-                padding: 15px;
+                padding: 20px;
                 display: flex;
                 align-items: center;
                 gap: 15px;
-                transition: transform 0.3s ease;
-                cursor: default;
+                transition: all 0.3s ease;
+                cursor: pointer;
             }
             
             .product-card:hover {
                 transform: translateY(-5px);
-                background: rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.25);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             }
             
+            /* LOGO / IKON ALANI */
             .icon-box {
-                width: 45px;
-                height: 45px;
+                width: 50px;
+                height: 50px;
                 border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: 800;
-                font-size: 20px;
+                font-size: 22px;
                 color: white;
+                overflow: hidden; /* Resim taşmasın diye */
+            }
+            
+            /* Eğer gerçek logo resmi kullanacaksan img tagi buraya oturur */
+            .icon-box img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
             }
             
             .dental { background-color: #4F46E5; }
@@ -147,8 +215,13 @@ if not st.session_state.auth:
             .diyet { background-color: #10B981; }
             .nabiz { background-color: #EF4444; }
             
-            .card-text h4 { margin: 0; font-size: 15px; font-weight: 700; }
-            .card-text p { margin: 2px 0 0 0; font-size: 12px; color: #DBEAFE; opacity: 0.9; }
+            .card-text h4 { margin: 0; font-size: 16px; font-weight: 700; }
+            .card-text p { margin: 3px 0 0 0; font-size: 13px; color: #DBEAFE; opacity: 0.9; }
+            
+            /* Kartın sağındaki ok işareti */
+            .arrow { margin-left: auto; opacity: 0.5; transition: opacity 0.3s; }
+            .product-card:hover .arrow { opacity: 1; }
+            
         </style>
         </head>
         <body>
@@ -157,44 +230,57 @@ if not st.session_state.auth:
                 <div class="subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 
                 <div class="grid-container">
-                    <div class="product-card">
-                        <div class="icon-box dental">D</div>
-                        <div class="card-text">
-                            <h4>Dentalbulut</h4>
-                            <p>Klinik Yönetimi</p>
+                    
+                    <a href="https://www.dentalbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box dental">D</div> 
+                            <div class="card-text">
+                                <h4>Dentalbulut</h4>
+                                <p>Klinik Yönetimi</p>
+                            </div>
+                            <div class="arrow">➜</div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="product-card">
-                        <div class="icon-box medi">M</div>
-                        <div class="card-text">
-                            <h4>Medibulut</h4>
-                            <p>Sağlık Platformu</p>
+                    <a href="https://www.medibulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box medi">M</div>
+                            <div class="card-text">
+                                <h4>Medibulut</h4>
+                                <p>Sağlık Platformu</p>
+                            </div>
+                            <div class="arrow">➜</div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="product-card">
-                        <div class="icon-box diyet">Dy</div>
-                        <div class="card-text">
-                            <h4>Diyetbulut</h4>
-                            <p>Diyetisyen Sistemi</p>
+                    <a href="https://www.diyetbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box diyet">Dy</div>
+                            <div class="card-text">
+                                <h4>Diyetbulut</h4>
+                                <p>Diyetisyen Sistemi</p>
+                            </div>
+                            <div class="arrow">➜</div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="product-card">
-                        <div class="icon-box nabiz">e</div>
-                        <div class="card-text">
-                            <h4>e-Nabız</h4>
-                            <p>Entegrasyon</p>
+                    <a href="https://enabiz.gov.tr" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box nabiz">e</div>
+                            <div class="card-text">
+                                <h4>e-Nabız</h4>
+                                <p>Entegrasyon</p>
+                            </div>
+                            <div class="arrow">➜</div>
                         </div>
-                    </div>
+                    </a>
+                    
                 </div>
             </div>
         </body>
         </html>
         """
-        # BURADA components.html KULLANIYORUZ
-        components.html(html_design, height=600, scrolling=False)
+        components.html(html_design, height=650, scrolling=False)
     
     st.stop()
 
@@ -244,7 +330,7 @@ SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
-def load_data_v105(sheet_id):
+def load_data_v106(sheet_id):
     try:
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
@@ -266,18 +352,14 @@ def load_data_v105(sheet_id):
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v105(SHEET_ID)
+all_df = load_data_v106(SHEET_ID)
 
 # GİRİŞ SONRASI CSS RESET (SİYAH TEMAYA DÖNÜŞ)
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: white !important; }
-    div[data-testid="stTextInput"] input { 
-        background-color: #1F2937 !important; 
-        color: white !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important;
-    }
     div[data-testid="stMetric"] { background: rgba(255,255,255,0.05) !important; color: white !important; }
+    section[data-testid="stSidebar"] { background-color: #161B22 !important; }
 </style>
 """, unsafe_allow_html=True)
 
