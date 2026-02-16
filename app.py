@@ -27,7 +27,7 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 # Sayfa Konfigürasyonu
 try:
     st.set_page_config(
-        page_title="Medibulut Saha Operasyon v150",
+        page_title="Medibulut Saha Operasyon v151",
         layout="wide",
         page_icon=LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "☁️",
         initial_sidebar_state="expanded"
@@ -117,9 +117,9 @@ if not st.session_state.auth:
         
         # Logo & Başlık (Yan Yana)
         st.markdown(f"""
-        <div style="display: flex; align-items: center; margin-bottom: 40px;">
-            <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            <div style="line-height: 1;">
+        <div style="display: flex; align-items: center; margin-bottom: 40px; flex-wrap: nowrap;">
+            <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
+            <div style="line-height: 1; white-space: nowrap;">
                 <div style="color:#2563EB; font-weight:900; font-size:36px; letter-spacing:-1px;">medibulut</div>
                 <div style="color:#374151; font-weight:300; font-size:36px; letter-spacing:-1px;">saha</div>
             </div>
@@ -270,7 +270,6 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # BURADA LOCAL_LOGO_PATH KULLANIYORUZ, ARTIK TANIMLI (HATA VERMEZ)
     if os.path.exists(LOCAL_LOGO_PATH):
         st.image(LOCAL_LOGO_PATH, width=170)
     else:
@@ -294,7 +293,7 @@ st.markdown(f"""
 <div class="header-wrapper">
     <div style="display:flex; align-items:center;">
         <img src="{APP_LOGO_HTML}" style="height:50px; margin-right:20px; border-radius:12px; background:white; padding:4px;">
-        <h1 style='color:white; margin:0;'>Saha Operasyon Merkezi</h1>
+        <h1 style='margin:0; color:white; font-size:2.2em;'>Saha Operasyon Merkezi</h1>
     </div>
     <div class="loc-badge">{loc_txt}</div>
 </div>
@@ -311,8 +310,9 @@ if not view_df.empty:
 
     c1,c2,c3,c4 = st.columns(4)
     c1.metric("Hedef", len(df))
-    c2.metric("Hot Lead", len(df[df["Lead Status"].str.contains("Hot", case=False)]))
-    c3.metric("Ziyaret", len(df[df["Gidildi mi?"].str.lower().isin(["evet","tamam"])]))
+    # HATA DÜZELTİLDİ: na=False eklendi (ValueError Fix)
+    c2.metric("Hot Lead", len(df[df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)]))
+    c3.metric("Ziyaret", len(df[df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])]))
     c4.metric("Skor", df["Skor"].sum())
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -323,8 +323,7 @@ if not view_df.empty:
     with tabs[0]: # Harita
         col_ctrl, col_leg = st.columns([1, 2])
         with col_leg:
-            # HATA VEREN KISIM BURASIYDI, DÜZELTİLDİ:
-            # HTML stringini st.markdown(..., unsafe_allow_html=True) içine koyuyoruz.
+            # HATA DÜZELTİLDİ: unsafe_allow_html=True eklendi
             leg_html = ""
             if "Ziyaret" in map_mode:
                 leg_html = """
