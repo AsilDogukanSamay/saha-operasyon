@@ -70,7 +70,7 @@ if not st.session_state.auth:
     with col2:
         # LOGO LINKLERI
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png"
+        medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"
         kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"
 
