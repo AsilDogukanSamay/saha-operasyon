@@ -14,13 +14,13 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V124", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V125", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA & TIKLANABİLİR LOGOLAR)
+# 2. GİRİŞ EKRANI (BEYAZ TEMA & SENİN LOGOLARIN)
 # =================================================
 if not st.session_state.auth:
     # --- SADECE GİRİŞ EKRANI İÇİN BEYAZ CSS ---
@@ -69,15 +69,14 @@ if not st.session_state.auth:
 
     with col2:
         # -------------------------------------------------------------
-        # HTML KISMI - LOGOLAR VE LINKLER
+        # SENİN GÖNDERDİĞİN LOGO LINKLERİ BURAYA EKLENDİ
         # -------------------------------------------------------------
-        # Logoların Resim Adresleri (İnternetten çekiyor)
-        img_dental = "https://pbs.twimg.com/profile_images/1229718609565650944/0XQ4-K6H_400x400.jpg"
-        img_medi   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
-        img_diyet  = "https://pbs.twimg.com/profile_images/1351152163935252482/T_JqXgq-_400x400.jpg"
-        img_kys    = "https://enabiz.gov.tr/assets/img/logo.png" # KYS logosu bulamadığım için e-nabız koydum, değiştirebilirsin.
+        dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
+        medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+        diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
+        kys_logo    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
 
-        # Gidecekleri Web Siteleri
+        # Web Sitesi Linkleri
         url_dental = "https://www.dentalbulut.com"
         url_medi   = "https://www.medibulut.com"
         url_diyet  = "https://www.diyetbulut.com"
@@ -98,7 +97,7 @@ if not st.session_state.auth:
             }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px;}}
             
-            /* TIKLANABİLİR LINK AYARLARI */
+            /* LINK AYARLARI */
             a {{ text-decoration: none; color: inherit; display: block; }}
             
             .product-card {{
@@ -115,6 +114,7 @@ if not st.session_state.auth:
                 display: flex; align-items: center; justify-content: center; padding: 5px;
                 overflow: hidden;
             }}
+            /* RESİMLERİ SIĞDIRMA (COVER yerine CONTAIN kullandım ki kesilmesin) */
             .icon-box img {{ width: 100%; height: 100%; object-fit: contain; }}
             
             .card-text h4 {{ margin: 0; font-size: 14px; font-weight: 700; color:white; }}
@@ -129,28 +129,28 @@ if not st.session_state.auth:
                     
                     <a href="{url_dental}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{img_dental}"></div>
+                            <div class="icon-box"><img src="{dental_logo}"></div>
                             <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
                         </div>
                     </a>
 
                     <a href="{url_medi}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{img_medi}"></div>
+                            <div class="icon-box"><img src="{medi_logo}"></div>
                             <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
                         </div>
                     </a>
 
                     <a href="{url_diyet}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{img_diyet}"></div>
+                            <div class="icon-box"><img src="{diyet_logo}"></div>
                             <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
                         </div>
                     </a>
 
                     <a href="{url_kys}" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box"><img src="{img_kys}"></div>
+                            <div class="icon-box"><img src="{kys_logo}"></div>
                             <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
                         </div>
                     </a>
@@ -174,7 +174,7 @@ st.markdown("""
     /* GENEL ARKAPLAN: SİYAH/KOYU */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     
-    /* SIDEBAR: KOYU GRİ/MAVİ */
+    /* SIDEBAR */
     section[data-testid="stSidebar"] { 
         background-color: #161B22 !important; 
         border-right: 1px solid rgba(255,255,255,0.1); 
@@ -191,7 +191,7 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
     div[data-testid="stMetricLabel"] { color: #A0AEC0 !important; }
 
-    /* TABLOLAR: KOYU */
+    /* TABLOLAR */
     div[data-testid="stDataFrame"] { 
         background-color: #161B22 !important; 
         border: 1px solid rgba(255,255,255,0.1); 
@@ -333,22 +333,20 @@ if not df.empty:
     else: d_df["Mesafe_km"] = 0
     
     # ----------------------------------------------------
-    # 🔥 RENK MOTORU (İSTEDİĞİN GİBİ AYARLANDI)
+    # 🔥 RENK MOTORU
     # ----------------------------------------------------
     def set_color(row):
-        # 1. ZİYARET MODU (SADECE YEŞİL VE KIRMIZI)
         if "Ziyaret" in m_view:
             status = str(row["Gidildi mi?"]).lower()
             if any(x in status for x in ["evet", "closed", "tamam", "ok"]): 
                 return [16, 185, 129] # YEŞİL (Gidildi)
             return [220, 38, 38] # KIRMIZI (Gidilmedi)
         
-        # 2. LEAD MODU (RENKLİ)
         status_lead = str(row["Lead Status"]).lower()
-        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI (Sıcak)
-        if "warm" in status_lead: return [245, 158, 11] # TURUNCU (Ilık)
-        if "cold" in status_lead: return [59, 130, 246] # MAVİ (Soğuk)
-        return [156, 163, 175] # GRİ (Tanımsız)
+        if "hot" in status_lead: return [239, 68, 68] # KIRMIZI
+        if "warm" in status_lead: return [245, 158, 11] # TURUNCU
+        if "cold" in status_lead: return [59, 130, 246] # MAVİ
+        return [156, 163, 175] # GRİ
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
@@ -381,7 +379,6 @@ if not df.empty:
         else:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot (Sıcak)</div><div style="color:#F59E0B; margin-right:10px;">● Warm (Ilık)</div><div style="color:#3B82F6;">● Cold (Soğuk)</div></div>""", unsafe_allow_html=True)
 
-        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ (30m)
         layers = [
             pdk.Layer(
                 "ScatterplotLayer", 
