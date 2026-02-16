@@ -288,7 +288,7 @@ with st.sidebar:
 st.markdown(f"""
 <div style='display: flex; align-items: center; margin-bottom: 20px;'>
     <img src="{APP_LOGO_HTML}" style="height: 50px; margin-right: 15px; border-radius:10px; background:white; padding:2px;">
-    <h1 style='color:white; margin: 0; font-size: 3em;'>Medibulut Saha Enterprise</h1>
+    <h1 style='color:white; margin: 0; font-size: 3em;'>Medibulut Saha Takip Uygulaması </h1>
     <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px; margin-left: 15px; height: fit-content;'>AI Powered</span>
 </div>
 """, unsafe_allow_html=True)
