@@ -6,23 +6,26 @@ import time
 import math
 import unicodedata
 import urllib.parse
-import altair as alt  # GRAFIKLER ICIN
+import altair as alt 
 import streamlit.components.v1 as components
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
 # =================================================
-# 1. CONFIG
+# 1. CONFIG & GLOBAL ASSETS
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V134", layout="wide", page_icon="☁️")
+# YENİ LOGO URL'Sİ BURADA TANIMLI
+APP_LOGO = "https://lh3.googleusercontent.com/rd-gg-dl/AOI_d_-PXtpcS7Ejn0pXQiAA3lXXS_LOMzcrw9Bphc6mVW6Y5fHE75gAGjVO0cXAby6KS4gWQMzc5Uw3Uq1EVMo-GKKw4ReLj0tKKA6Y29ZJlFBHilX3HUZVwVbXRRvaqjvTyrehXoCgMzXrpKEs8lohrAMV6nmFKbKv-Hkq4qn57a1GlrgXvz4dCj5bJE0hERDkcXWlZ8nYP5KUIuXnb_UJ90eDkosfuSv6Y-2rYdr9w2Yo6fxmmZO7lm-TeqKpWa1KS8l-WdesfQM8YxA0RXTkFLlRtvuorjCVE9r1gP2lFUAjBNlLAG2TScipVGXDqLeWD1_hTl8vaghr1kLhnsFVt-37wKq_eNf7ZTjC8UQMcGmLOtJQb2EVZsa30DRl1yMHp4S2_Vx0SJe7G2wNgFDmpCnrlni3ONF__Au4zCwiO5xzl4MnO7b2uK2pObTaW_9v9QAaPHcEvvkJiFaVyd5xGkkJeB3Vt2Kw_zN6JeuZ_U3BGhuJT9ryqS8OrZQCNnOKL3rfikulutWRWcAAAUYuDQZGfeJicNXmtjy9vgowAtetDqE2kf7ag5zwUFO6RiSfLiHBNu7tGo7TUYN7gU7YcGIZcMkiBZ6qooRW79H8hq3vgkaRy7bV-vpKhDiNXh_FMnsibIz-8QIyC-r8t4kSgIWzWrhBJXSn8cozhJYbE3QeKZBXY9rWjWk9gM0IHrmbidFoE_Cxn0U432yM0X_oNFclsA4_hDHlYfEO7ryOIk4g2CcJ2qS46OQSvIkXhTPOk74SdRpHsaaklmvU_aaLiVwUXZEica82YLeOMiJGa70vqBivCbgOJwDg6jRhVjWRP2s4W06M6HkwPkiQjyb8c89PImyEuDiHEfV1EbEDVTNx98gEooNOxT5_wUXEFuy9KrNmYguGfhkHdgZuA0WSH_IPS-vxZsTi-DxItNB728Pr9AEIGt-tS1MorzEvROl24UaIollRhBy6ixew3tv2XtoC2YXesb1ouQh5AfLSoSCClXmTb2MDbJws2E_u02JS6gCJayAEJgtzKCdFYxoEdR5F1RhlmgAUfPQg2-t4-O5drwBQY_zOYswzbkjH8aaoEWuQDF8t_lNEl-ayCL3TyLe4_9lGSevxTRX6irpa8zBE6VIOzzZS06mEWYFP76QF1eXiohtYybYCdSpsX4DWTjJs02ldDH59xtt4Jv4vp-_F4UGImJA0Hzbut2-kXW8b08My5r8_2qsr6ghKryePKWScNy2d-AvharQFIgV6KDTBawQgrkjB7J2jihFJbQ=s1024-rj"
+
+st.set_page_config(page_title="Medibulut Saha V135", layout="wide", page_icon=APP_LOGO)
 
 # OTURUM HAFIZASI
 if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA & LOGOLAR)
+# 2. GİRİŞ EKRANI (BEYAZ TEMA)
 # =================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -34,7 +37,6 @@ if not st.session_state.auth:
         div.stButton > button { background: #2563EB !important; color: white !important; border: none !important; width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold; }
         h1, h2, h3, p { color: black !important; }
         
-        /* İMZA STİLİ (GİRİŞ EKRANI) */
         .signature {
             position: fixed; bottom: 20px; left: 0; right: 0; text-align: center;
             font-family: 'Arial', sans-serif; font-size: 12px; color: #94A3B8;
@@ -50,7 +52,17 @@ if not st.session_state.auth:
 
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("""<div style="margin-bottom: 20px;"><span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span><span style="color:#111827; font-weight:300; font-size:32px;">saha</span></div>""", unsafe_allow_html=True)
+        # Başlıkta da senin logonu kullandım
+        st.markdown(f"""
+        <div style="margin-bottom: 20px; display: flex; align-items: center;">
+            <img src="{APP_LOGO}" style="height: 50px; margin-right: 15px; border-radius: 10px;">
+            <div>
+                <span style="color:#2563EB; font-weight:900; font-size:32px;">medibulut</span>
+                <span style="color:#111827; font-weight:300; font-size:32px;">saha</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("### Personel Girişi")
         u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
@@ -63,14 +75,12 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
         
-        # --- GİRİŞ EKRANI İMZASI ---
-        # BURAYA KENDİ LINKEDIN ADRESİNİ YAPIŞTIR 👇
-        linkedin_url = "https://www.linkedin.com/in/asil-dogukan-samay/" 
+        linkedin_url = "https://www.linkedin.com/in/dogukan" 
         st.markdown(f'<div class="signature"><a href="{linkedin_url}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 
     with col2:
         dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+        medi_logo   = APP_LOGO # <-- KARTTAKİ LOGO DA GÜNCELLENDİ
         diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_logo    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
         url_dental, url_medi, url_diyet, url_kys = "https://www.dentalbulut.com", "https://www.medibulut.com", "https://www.diyetbulut.com", "https://kys.medibulut.com"
@@ -134,7 +144,6 @@ st.markdown("""
     .progress-bg { background-color: rgba(255,255,255,0.1); border-radius: 5px; height: 8px; width: 100%; margin-top: 8px; }
     .progress-fill { background-color: #4ADE80; height: 8px; border-radius: 5px; transition: width 0.5s; }
     
-    /* İMZA STİLİ (DASHBOARD) */
     .dashboard-signature {
         text-align: center; font-family: 'Arial', sans-serif; font-size: 12px; color: #4A5568;
         padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 30px;
@@ -188,7 +197,7 @@ def stream_data(text):
         time.sleep(0.05)
 
 # --- VERİ ---
-SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
+SHEET_ID = "9a5f68a1-d129-4ddf-8fd0-758995b3a9b4" # <-- SENİN DOSYAN
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
@@ -222,7 +231,8 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=150)
+    # SIDEBAR LOGOSUNU GÜNCELLEDİM
+    st.image(APP_LOGO, width=150)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.success(debug_msg)
     st.divider()
@@ -245,9 +255,9 @@ with st.sidebar:
         st.session_state.auth = False; st.rerun()
 
 # --- ANA EKRAN (HEADER LOGOLU) ---
-st.markdown("""
+st.markdown(f"""
 <div style='display: flex; align-items: center; margin-bottom: 20px;'>
-    <img src="https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg" style="height: 45px; margin-right: 15px;">
+    <img src="{APP_LOGO}" style="height: 50px; margin-right: 15px; border-radius:10px;">
     <h1 style='color:white; margin: 0; font-size: 3em;'>Medibulut Saha Enterprise</h1>
     <span style='font-size:16px; color:#1f6feb; border:1px solid #1f6feb; padding:4px 8px; border-radius:12px; margin-left: 15px; height: fit-content;'>AI Powered</span>
 </div>
@@ -415,9 +425,7 @@ if not df.empty:
                 st.download_button("Excel İndir", out.getvalue(), "rapor.xlsx")
             else: st.info("Yetkisiz alan.")
             
-    # --- DASHBOARD İMZASI ---
-    # BURAYA KENDİ LINKEDIN ADRESİNİ YAPIŞTIR 👇
-    linkedin_url = "https://www.linkedin.com/in/asil-dogukan-samay/"
+    linkedin_url = "https://www.linkedin.com/in/dogukan"
     st.markdown(f'<div class="dashboard-signature"><a href="{linkedin_url}" target="_blank">Designed & Developed by <span>Doğukan</span></a></div>', unsafe_allow_html=True)
 
 else:
