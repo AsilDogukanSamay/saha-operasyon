@@ -14,13 +14,13 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V122", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V123", layout="wide", page_icon="🚀")
 
 # Auth kontrolü
 if "auth" not in st.session_state: st.session_state.auth = False
 
 # =================================================
-# 2. GİRİŞ EKRANI (BEYAZ TEMA & LOGO ALANLARI)
+# 2. GİRİŞ EKRANI (BEYAZ TEMA & TIKLANABİLİR LOGOLAR)
 # =================================================
 if not st.session_state.auth:
     # --- SADECE GİRİŞ EKRANI İÇİN BEYAZ CSS ---
@@ -69,10 +69,10 @@ if not st.session_state.auth:
 
     with col2:
         # LOGO LINKLERI
-        dental_logo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        medi_logo   = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
-        diyet_logo  = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
-        kys_logo    = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
+        dental_logo = "https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png"
+        medi_logo   = "https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png"
+        diyet_logo  = "https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png"
+        kys_logo    = "https://enabiz.gov.tr/assets/img/logo.png"
 
         html_design = f"""
         <!DOCTYPE html>
@@ -88,11 +88,19 @@ if not st.session_state.auth:
                 box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             }}
             .grid-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:20px;}}
+            
+            /* LINK AYARLARI (Altını çizme, rengi bozma) */
+            a {{ text-decoration: none; color: inherit; }}
+            
             .product-card {{
                 background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px);
                 border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 15px;
                 display: flex; align-items: center; gap: 15px;
+                transition: transform 0.3s ease, background 0.3s ease;
+                cursor: pointer; /* Tıklanabilir el işareti */
             }}
+            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }}
+            
             .icon-box {{
                 width: 50px; height: 50px; border-radius: 12px; background-color: white;
                 display: flex; align-items: center; justify-content: center; padding: 5px;
@@ -107,10 +115,35 @@ if not st.session_state.auth:
                 <h1 style="margin:0; font-size:36px; font-weight:800;">Tek Platform,<br>Bütün Operasyon.</h1>
                 <div style="color:#BFDBFE; margin-top:10px;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
                 <div class="grid-container">
-                    <div class="product-card"><div class="icon-box"><img src="{dental_logo}"></div><div class="card-text"><h4>Dentalbulut</h4><p>Takip ve Klinik Yönetim Programı</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="{medi_logo}"></div><div class="card-text"><h4>Medibulut</h4><p>Tele-sağlık platformu</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="{diyet_logo}"></div><div class="card-text"><h4>Diyetbulut</h4><p>Akıllı Klinik Yönetim Sistemi</p></div></div>
-                    <div class="product-card"><div class="icon-box"><img src="{kys_logo}"></div><div class="card-text"><h4>Medibulut KYS</h4><p>Klinik Yönetim Sistemi</p></div></div>
+                    
+                    <a href="https://www.dentalbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{dental_logo}"></div>
+                            <div class="card-text"><h4>Dentalbulut</h4><p>Klinik Yönetimi</p></div>
+                        </div>
+                    </a>
+
+                    <a href="https://www.medibulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{medi_logo}"></div>
+                            <div class="card-text"><h4>Medibulut</h4><p>Sağlık Platformu</p></div>
+                        </div>
+                    </a>
+
+                    <a href="https://www.diyetbulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{diyet_logo}"></div>
+                            <div class="card-text"><h4>Diyetbulut</h4><p>Diyetisyen Sistemi</p></div>
+                        </div>
+                    </a>
+
+                    <a href="https://kys.medibulut.com" target="_blank">
+                        <div class="product-card">
+                            <div class="icon-box"><img src="{kys_logo}"></div>
+                            <div class="card-text"><h4>Medibulut KYS</h4><p>Kurumsal Yönetim</p></div>
+                        </div>
+                    </a>
+
                 </div>
             </div>
         </body>
@@ -337,16 +370,16 @@ if not df.empty:
         else:
             st.markdown("""<div style="display:flex; margin-bottom:10px;"><div style="color:#EF4444; margin-right:10px;">● Hot (Sıcak)</div><div style="color:#F59E0B; margin-right:10px;">● Warm (Ilık)</div><div style="color:#3B82F6;">● Cold (Soğuk)</div></div>""", unsafe_allow_html=True)
 
-        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ 🔥
+        # 🔥 HARİTA AYARI: NOKTALAR KÜÇÜLTÜLDÜ (30m)
         layers = [
             pdk.Layer(
                 "ScatterplotLayer", 
                 data=d_df, 
                 get_position='[lon, lat]', 
                 get_color='color', 
-                get_radius=30,          # Çap 200m -> 30m düşürüldü
-                radius_min_pixels=5,    # En küçük 5 piksel
-                radius_max_pixels=25,   # En büyük 25 piksel (Ekranı kaplamaz)
+                get_radius=30,          
+                radius_min_pixels=5,    
+                radius_max_pixels=25,   
                 pickable=True
             )
         ]
