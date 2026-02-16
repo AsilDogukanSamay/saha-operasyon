@@ -13,98 +13,43 @@ from streamlit_js_eval import get_geolocation
 # =================================================
 # 1. PREMIUM CONFIG
 # =================================================
-st.set_page_config(page_title="Medibulut Saha V106", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Medibulut Saha V109", layout="wide", page_icon="🚀")
 
-# CSS İLE SOL TARAFI CANLANDIRMA VE GENEL AYARLAR
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
     
-    /* GİRİŞ EKRANI YAZILARI - ARTIK SÖNÜK DEĞİL */
-    div[data-testid="stMarkdownContainer"] p {
-        color: #374151 !important; /* Koyu Gri */
-        font-weight: 500 !important;
-    }
-    div[data-testid="stMarkdownContainer"] h3 {
-        color: #111827 !important; /* Tam Siyah */
-        font-weight: 800 !important;
-    }
+    /* GİRİŞ EKRANI */
+    div[data-testid="stMarkdownContainer"] p { color: #374151 !important; font-weight: 500 !important; }
+    div[data-testid="stMarkdownContainer"] h3 { color: #111827 !important; font-weight: 800 !important; }
+    div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700 !important; font-size: 15px !important; }
+    div[data-testid="stTextInput"] input { border: 2px solid #E5E7EB !important; padding: 12px !important; background-color: #F9FAFB !important; color: #111827 !important; border-radius: 10px !important; font-weight: 600 !important; }
+    div.stButton > button { background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%) !important; color: white !important; border: none !important; padding: 0.9rem !important; border-radius: 10px !important; width: 100% !important; font-weight: 800 !important; }
     
-    /* INPUT ETİKETLERİ (Kullanıcı Adı, Parola) */
-    div[data-testid="stTextInput"] label {
-        color: #111827 !important; /* Tam Siyah */
-        font-weight: 700 !important; /* Kalın */
-        font-size: 15px !important;
-    }
-    
-    /* INPUT KUTULARI */
-    div[data-testid="stTextInput"] input {
-        border: 2px solid #E5E7EB !important;
-        padding: 12px !important;
-        background-color: #F9FAFB !important;
-        color: #111827 !important; /* Yazı Rengi Siyah */
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-    }
-    div[data-testid="stTextInput"] input:focus {
-        border-color: #2563EB !important;
-        background-color: #FFFFFF !important;
-    }
-
-    /* BUTON */
-    div.stButton > button {
-        background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: white !important;
-        border: none !important;
-        padding: 0.9rem !important;
-        border-radius: 10px !important;
-        width: 100% !important;
-        font-weight: 800 !important;
-        font-size: 16px !important;
-        letter-spacing: 0.5px !important;
-        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-    }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
-    }
-    
-    /* SIDEBAR (Giriş Sonrası İçin) */
+    /* SIDEBAR */
     section[data-testid="stSidebar"] { background-color: #161B22 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # =================================================
-# 2. GİRİŞ EKRANI (HYBRID SYSTEM)
+# 2. GİRİŞ EKRANI
 # =================================================
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
     col1, col2 = st.columns([1, 1.5], gap="large")
 
-    # --- SOL TARAF: PYTHON (Logic) ---
     with col1:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        
-        # LOGO KISMI - DAHA BÜYÜK VE NET
-        st.markdown("""
-        <div style="margin-bottom: 30px;">
-            <span style="color:#2563EB; font-weight:900; font-size:42px; letter-spacing:-1px;">medibulut</span>
-            <span style="color:#111827; font-weight:300; font-size:42px; letter-spacing:-1px;">saha</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # SOL TARAF - LOGO VE FORM
+        st.markdown("""<div style="margin-bottom: 30px;"><span style="color:#2563EB; font-weight:900; font-size:42px; letter-spacing:-1px;">medibulut</span><span style="color:#111827; font-weight:300; font-size:42px; letter-spacing:-1px;">saha</span></div>""", unsafe_allow_html=True)
         
         st.markdown("### Personel Girişi")
-        st.markdown("""
-        <p style="font-size:16px; color:#4B5563; margin-bottom:20px;">
-        Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.
-        </p>
-        """, unsafe_allow_html=True)
+        st.markdown("""<p style="font-size:16px; color:#4B5563; margin-bottom:20px;">Saha operasyon paneline erişmek için yetkili hesap bilgilerinizle giriş yapın.</p>""", unsafe_allow_html=True)
         
         u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
-        
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button("Sisteme Giriş Yap"):
@@ -115,14 +60,12 @@ if not st.session_state.auth:
                 st.rerun()
             else: st.error("Hatalı kullanıcı adı veya şifre.")
             
-        st.markdown("""
-        <div style="margin-top:30px; border-top:1px solid #E5E7EB; padding-top:20px; font-size:13px; color:#6B7280; text-align:center;">
-        © 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""<div style="margin-top:30px; border-top:1px solid #E5E7EB; padding-top:20px; font-size:13px; color:#6B7280; text-align:center;">© 2026 Medibulut Yazılım A.Ş. <br> 🔒 Secure Enterprise Access</div>""", unsafe_allow_html=True)
 
-    # --- SAĞ TARAF: HTML (Tıklanabilir Linkler & Logolar) ---
     with col2:
+        # ---------------------------------------------------------
+        # HTML TASARIM (GERÇEK LOGOLAR EKLENDİ)
+        # ---------------------------------------------------------
         html_design = """
         <!DOCTYPE html>
         <html>
@@ -130,98 +73,48 @@ if not st.session_state.auth:
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
             body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: white; }
-            
             .showcase-container {
                 background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-                border-radius: 24px;
-                padding: 50px;
-                color: white;
-                height: 600px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-                position: relative;
-                overflow: hidden;
+                border-radius: 24px; padding: 50px; color: white; height: 600px;
+                display: flex; flex-direction: column; justify-content: center;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
             }
-            
-            /* Arkaplan Deseni */
             .showcase-container::before {
-                content: "";
-                position: absolute;
-                width: 300px; height: 300px;
-                background: rgba(255,255,255,0.1);
-                border-radius: 50%;
-                top: -100px; right: -100px;
-                filter: blur(50px);
+                content: ""; position: absolute; width: 300px; height: 300px;
+                background: rgba(255,255,255,0.1); border-radius: 50%; top: -100px; right: -100px; filter: blur(50px);
             }
-            
             h1 { font-size: 42px; font-weight: 900; margin: 0 0 15px 0; line-height: 1.1; z-index:1; }
             .subtitle { color: #DBEAFE; font-size: 18px; margin-bottom: 50px; z-index:1; font-weight:500; }
+            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; z-index:1; }
             
-            .grid-container {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                z-index:1;
-            }
-            
-            /* TIKLANABİLİR KART LINK YAPISI */
             a { text-decoration: none; color: inherit; }
             
             .product-card {
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 16px;
-                padding: 20px;
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                transition: all 0.3s ease;
-                cursor: pointer;
+                background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 20px;
+                display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; cursor: pointer;
             }
+            .product-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.25); }
             
-            .product-card:hover {
-                transform: translateY(-5px);
-                background: rgba(255, 255, 255, 0.25);
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            }
-            
-            /* LOGO / IKON ALANI */
+            /* LOGO KUTUSU (BEYAZ ARKAPLAN) */
             .icon-box {
-                width: 50px;
-                height: 50px;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 800;
-                font-size: 22px;
-                color: white;
-                overflow: hidden; /* Resim taşmasın diye */
+                width: 50px; height: 50px; border-radius: 12px;
+                background-color: white; 
+                display: flex; align-items: center; justify-content: center;
+                overflow: hidden; padding: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             }
             
-            /* Eğer gerçek logo resmi kullanacaksan img tagi buraya oturur */
+            /* RESİM AYARI */
             .icon-box img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
+                width: 100%; height: 100%; 
+                object-fit: contain; /* Logolar bozulmadan sığsın */
             }
-            
-            .dental { background-color: #4F46E5; }
-            .medi { background-color: #3B82F6; }
-            .diyet { background-color: #10B981; }
-            .nabiz { background-color: #EF4444; }
             
             .card-text h4 { margin: 0; font-size: 16px; font-weight: 700; }
             .card-text p { margin: 3px 0 0 0; font-size: 13px; color: #DBEAFE; opacity: 0.9; }
-            
-            /* Kartın sağındaki ok işareti */
             .arrow { margin-left: auto; opacity: 0.5; transition: opacity 0.3s; }
             .product-card:hover .arrow { opacity: 1; }
-            
         </style>
         </head>
         <body>
@@ -233,7 +126,9 @@ if not st.session_state.auth:
                     
                     <a href="https://www.dentalbulut.com" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box dental">D</div> 
+                            <div class="icon-box">
+                                <img src="https://medibulut.com/wp-content/uploads/2024/01/dental-logo-icon.png" alt="Dental">
+                            </div>
                             <div class="card-text">
                                 <h4>Dentalbulut</h4>
                                 <p>Klinik Yönetimi</p>
@@ -244,7 +139,9 @@ if not st.session_state.auth:
 
                     <a href="https://www.medibulut.com" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box medi">M</div>
+                            <div class="icon-box">
+                                <img src="https://medibulut.com/wp-content/uploads/2021/09/medibulut-logo.png" alt="Medi">
+                            </div>
                             <div class="card-text">
                                 <h4>Medibulut</h4>
                                 <p>Sağlık Platformu</p>
@@ -255,7 +152,9 @@ if not st.session_state.auth:
 
                     <a href="https://www.diyetbulut.com" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box diyet">Dy</div>
+                            <div class="icon-box">
+                                <img src="https://medibulut.com/wp-content/uploads/2024/01/diyet-logo-icon.png" alt="Diyet">
+                            </div>
                             <div class="card-text">
                                 <h4>Diyetbulut</h4>
                                 <p>Diyetisyen Sistemi</p>
@@ -266,7 +165,9 @@ if not st.session_state.auth:
 
                     <a href="https://enabiz.gov.tr" target="_blank">
                         <div class="product-card">
-                            <div class="icon-box nabiz">e</div>
+                            <div class="icon-box">
+                                <img src="https://enabiz.gov.tr/assets/img/logo.png" alt="eNabız">
+                            </div>
                             <div class="card-text">
                                 <h4>e-Nabız</h4>
                                 <p>Entegrasyon</p>
@@ -330,7 +231,7 @@ SHEET_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
 @st.cache_data(ttl=0) 
-def load_data_v106(sheet_id):
+def load_data_v108(sheet_id):
     try:
         live_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         data = pd.read_csv(live_url)
@@ -352,9 +253,9 @@ def load_data_v106(sheet_id):
     except Exception as e:
         return pd.DataFrame()
 
-all_df = load_data_v106(SHEET_ID)
+all_df = load_data_v108(SHEET_ID)
 
-# GİRİŞ SONRASI CSS RESET (SİYAH TEMAYA DÖNÜŞ)
+# GİRİŞ SONRASI CSS RESET
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: white !important; }
@@ -422,7 +323,6 @@ if not df.empty:
         d_df = d_df.sort_values(by="Mesafe_km")
     else: d_df["Mesafe_km"] = 0
     
-    # RENKLER
     def set_color(row):
         if "Ziyaret" in m_view:
             status = str(row["Gidildi mi?"]).lower()
@@ -437,7 +337,6 @@ if not df.empty:
 
     d_df["color"] = d_df.apply(set_color, axis=1)
 
-    # KPI
     total = len(d_df)
     hot = len(d_df[d_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
     gidilen = len(d_df[d_df["Gidildi mi?"].astype(str).str.lower().isin(["evet", "closed", "tamam"])])
@@ -451,7 +350,6 @@ if not df.empty:
     
     st.progress(gidilen/total if total>0 else 0)
     
-    # TABS
     t1, t2, t3, t4, t5 = st.tabs(["🗺️ Harita", "📋 Liste", "✅ 500m İşlem", "🏆 Liderlik", "⚙️ Admin"])
     
     with t1:
