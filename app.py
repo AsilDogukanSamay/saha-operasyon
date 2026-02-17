@@ -828,3 +828,21 @@ if not view_df.empty:
 
 else:
     st.warning("Veriler yükleniyor veya gösterilecek kayıt bulunamadı. Lütfen bekleyiniz...")
+
+
+    # --- EKSİK OLAN KISIM EKLENDİ ---
+        with dashboard_tabs[5]: # Heatmap (Yoğunluk)
+            st.subheader("🔥 Saha Yoğunluk Haritası")
+            heat_layer = pdk.Layer("HeatmapLayer", data=main_df, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
+            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=user_lat or main_df["lat"].mean(), longitude=user_lon or main_df["lon"].mean(), zoom=10), layers=[heat_layer]))
+            st.divider()
+            st.markdown("#### 📥 Raporlama")
+            try:
+                buf = BytesIO()
+                with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
+                st.download_button("Tüm Veriyi İndir (Excel)", buf.getvalue(), f"Saha_Rapor_{datetime.now().date()}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            except: st.error("Excel oluşturma modülü (xlsxwriter) eksik olabilir.")
+
+    st.markdown(f'<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>', unsafe_allow_html=True)
+else:
+    st.warning("Veriler yükleniyor...")
