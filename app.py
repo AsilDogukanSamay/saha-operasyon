@@ -837,12 +837,57 @@ if not view_df.empty:
                     type="primary" # Dikkat çeksin diye primary yaptım
                 )
 
-    # --- TAB 5: YÖNETİCİ ANALİZLERİ ---
+    # --- TAB 5: YÖNETİCİ ANALİZLERİ (GÜNCELLENDİ) ---
     if st.session_state.role == "Yönetici":
         with dashboard_tabs[4]:
-            st.subheader("📊 Ekip Performans Analizi")
+            st.subheader("📊 Ekip Performans ve Saha Analizi")
             
-            stats = main_df.groupby("Personel").agg(
+            # 1. PERSONEL SEÇİM FİLTRESİ (Sadece harita için)
+            ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
+            secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
+            
+            # Veriyi filtrele
+            if secilen_personel == "Tüm Ekip":
+                map_df = main_df.copy()
+            else:
+                map_df = main_df[main_df["Personel"] == secilen_personel]
+
+            # 2. PERSONEL ÖZEL HARİTASI
+            st.markdown(f"#### 📍 {secilen_personel} Saha Dağılımı")
+            
+            def get_status_color(r):
+                s = str(r["Lead Status"]).lower()
+                if "hot" in s: return [239, 68, 68]     # Kırmızı
+                if "warm" in s: return [245, 158, 11]   # Turuncu
+                return [59, 130, 246]                   # Mavi (Cold)
+
+            map_df["color"] = map_df.apply(get_status_color, axis=1)
+            
+            personel_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=map_df,
+                get_position='[lon, lat]',
+                get_color='color',
+                get_radius=100,
+                radius_min_pixels=6,
+                pickable=True
+            )
+
+            st.pydeck_chart(pdk.Deck(
+                map_style=pdk.map_styles.CARTO_DARK,
+                initial_view_state=pdk.ViewState(
+                    latitude=map_df["lat"].mean() if not map_df.empty else 41.0,
+                    longitude=map_df["lon"].mean() if not map_df.empty else 29.0,
+                    zoom=10
+                ),
+                layers=[personel_layer],
+                tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
+            ))
+
+            st.divider()
+
+            # 3. PERFORMANS İSTATİSTİKLERİ (Senin mevcut kodun)
+            perf_stats = main_df.groupby("Personel").agg(
                 H_Adet=('Klinik Adı','count'),
                 Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()),
                 S_Toplam=('Skor','sum')
@@ -850,7 +895,7 @@ if not view_df.empty:
             
             gc1, gc2 = st.columns([2,1])
             with gc1:
-                bar = alt.Chart(stats).mark_bar(cornerRadiusTopLeft=10).encode(
+                bar = alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(
                     x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel'
                 ).properties(height=350)
                 st.altair_chart(bar, use_container_width=True)
@@ -862,7 +907,7 @@ if not view_df.empty:
             
             st.divider()
             
-            for _, r in stats.iterrows():
+            for _, r in perf_stats.iterrows():
                 rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                 st.markdown(f"""
                 <div class="admin-perf-card">
