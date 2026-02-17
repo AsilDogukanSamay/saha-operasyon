@@ -23,7 +23,7 @@ from streamlit_js_eval import get_geolocation
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 
 # Yerel Dosya Yolları
-LOCAL_LOGO_PATH = "SahaBulut.jpg" 
+LOCAL_LOGO_PATH = "logo.png" 
 
 # Google Sheets Veri Kaynağı ID'si
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
