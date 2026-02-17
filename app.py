@@ -369,7 +369,7 @@ st.markdown("""
     
     /* Sidebar Logo HD Ayarı */
     .hd-sidebar-logo {
-        width: 70%;
+        width: 50%;
         border-radius: 15px;
         image-rendering: -webkit-optimize-contrast;
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
