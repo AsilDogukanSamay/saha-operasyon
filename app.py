@@ -14,9 +14,9 @@ from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 
-# ==============================================================================
+# ===============================================================================
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
-# ==============================================================================
+# ===============================================================================
 # Not: Bu ayarlar uygulamanın en başında tanımlanmalıdır.
 
 # Kurumsal Sosyal Medya Bağlantıları
