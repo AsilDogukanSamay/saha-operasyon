@@ -18,7 +18,7 @@ from streamlit_js_eval import get_geolocation
 # 1. GLOBAL AYARLAR VE SABİTLER (EN TEPEDE - HATA ÖNLEYİCİ)
 # ==============================================================================
 
-# Dosya ve Link Tanımları (Burada tanımlandığı için NameError vermez)
+# Dosya ve Link Tanımları
 LOCAL_LOGO_PATH = "SahaBulut.jpg" 
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
@@ -27,7 +27,7 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 # Sayfa Konfigürasyonu
 try:
     st.set_page_config(
-        page_title="Medibulut Saha Operasyon v152",
+        page_title="Medibulut Saha Operasyon v155",
         layout="wide",
         page_icon=LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "☁️",
         initial_sidebar_state="expanded"
@@ -37,7 +37,6 @@ except Exception:
 
 # --- RESİM İŞLEME FONKSİYONLARI ---
 def get_img_as_base64(file_path):
-    """Görseli HTML için Base64'e çevirir."""
     try:
         if os.path.exists(file_path):
             with open(file_path, "rb") as f:
@@ -64,73 +63,34 @@ if "user" not in st.session_state: st.session_state.user = None
 # 2. GİRİŞ EKRANI (DÜZELTİLMİŞ TASARIM)
 # ==============================================================================
 if not st.session_state.auth:
-    # --- CSS: Giriş Ekranı ---
     st.markdown("""
     <style>
         .stApp { background-color: #FFFFFF !important; }
         section[data-testid="stSidebar"] { display: none !important; }
-        
-        div[data-testid="stTextInput"] label { 
-            color: #111827 !important; 
-            font-weight: 700 !important; 
-            font-size: 14px !important;
-            margin-bottom: 5px !important;
-        }
-        
-        div[data-testid="stTextInput"] input { 
-            background-color: #F9FAFB !important; 
-            color: #111827 !important; 
-            border: 1px solid #D1D5DB !important; 
-            border-radius: 10px !important; 
-            padding: 12px !important;
-        }
-        
-        div.stButton > button { 
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; 
-            color: white !important; 
-            border: none !important; 
-            width: 100% !important; 
-            padding: 14px !important; 
-            border-radius: 10px; 
-            font-weight: 700; 
-            font-size: 16px;
-            margin-top: 20px;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
-        }
-        
-        .login-footer-wrapper { 
-            text-align: center; margin-top: 50px; 
-            font-size: 12px; color: #6B7280; 
-            border-top: 1px solid #F3F4F6; padding-top: 20px; 
-        }
+        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700 !important; font-size: 14px !important; margin-bottom: 5px !important; }
+        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB !important; border-radius: 10px !important; padding: 12px !important; }
+        div.stButton > button { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 700; font-size: 16px; margin-top: 20px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
+        .login-footer-wrapper { text-align: center; margin-top: 50px; font-size: 12px; color: #6B7280; border-top: 1px solid #F3F4F6; padding-top: 20px; }
         .login-footer-wrapper a { color: #2563EB; text-decoration: none; font-weight: 700; }
-        
         @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
     </style>
     """, unsafe_allow_html=True)
 
     col_left, col_right = st.columns([1, 1.3], gap="large")
 
-    # SOL PANEL
     with col_left:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        
-        # Logo & Başlık (Yan Yana)
         st.markdown(f"""
-        <div style="display: flex; align-items: center; margin-bottom: 40px; flex-wrap: nowrap;">
-            <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
-            <div style="line-height: 1; white-space: nowrap;">
+        <div style="display: flex; align-items: center; margin-bottom: 40px;">
+            <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="line-height: 1;">
                 <div style="color:#2563EB; font-weight:900; font-size:36px; letter-spacing:-1px;">medibulut</div>
                 <div style="color:#374151; font-weight:300; font-size:36px; letter-spacing:-1px;">saha</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Başlık (Koyu ve Belirgin)
-        st.markdown("""
-        <h2 style='color:#111827; font-weight:800; font-size:28px; margin-bottom:10px;'>Sistem Girişi</h2>
-        <p style='color:#6B7280; font-size:15px; margin-bottom:30px;'>Saha operasyon verilerine erişmek için giriş yapın.</p>
-        """, unsafe_allow_html=True)
+        st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:28px; margin-bottom:10px;'>Sistem Girişi</h2><p style='color:#6B7280; font-size:15px; margin-bottom:30px;'>Saha operasyon verilerine erişmek için giriş yapın.</p>""", unsafe_allow_html=True)
         
         u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         p = st.text_input("Parola", type="password", placeholder="••••••••")
@@ -150,10 +110,8 @@ if not st.session_state.auth:
         
         st.markdown(f'<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>', unsafe_allow_html=True)
 
-    # SAĞ PANEL (HTML KARTLAR)
     with col_right:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
-        
         dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
@@ -190,39 +148,17 @@ if not st.session_state.auth:
 # ==============================================================================
 st.markdown("""
 <style>
-    /* Dashboard Genel */
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.1); }
-    
-    /* Header & Badge */
     .header-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .loc-badge { background: rgba(59, 130, 246, 0.1); color: #60A5FA; border: 1px solid #3B82F6; padding: 8px 18px; border-radius: 25px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    
-    /* Kartlar & Tablolar */
     div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); border-radius: 16px; padding: 20px !important; border: 1px solid rgba(255,255,255,0.1); }
     div[data-testid="stDataFrame"] { background-color: #161B22 !important; border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-    
-    /* Harita Legend - ORTALAMA EKLENDİ */
-    .map-legend-container { 
-        background: rgba(255, 255, 255, 0.05); 
-        padding: 15px; 
-        border-radius: 15px; 
-        border: 1px solid rgba(255, 255, 255, 0.1); 
-        display: flex; 
-        flex-wrap: wrap; 
-        gap: 20px; 
-        justify-content: center;
-        margin: 0 auto; /* Ortalama için */
-        width: fit-content; /* İçerik kadar genişlik */
-    }
+    .map-legend-container { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin: 0 auto; width: fit-content; }
     .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-    
-    /* Admin Kartları */
     .admin-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; }
     .prog-track { background: rgba(255,255,255,0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .prog-fill { background: #10B981; height: 8px; border-radius: 6px; }
-    
-    /* İmza */
     .dash-footer { text-align: center; margin-top: 60px; padding: 30px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 12px; color: #4B5563; }
     .dash-footer a { color: #3B82F6; text-decoration: none; font-weight: 700; }
 </style>
@@ -258,7 +194,7 @@ def typewriter(text):
 
 # --- VERİ ÇEKME ---
 @st.cache_data(ttl=0) 
-def fetch_data(sid):
+def fetch_operational_data(sid): # İsim karışıklığı düzeltildi
     try:
         url = f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
         df = pd.read_csv(url)
@@ -271,7 +207,7 @@ def fetch_data(sid):
         return df
     except: return pd.DataFrame()
 
-main_df = fetch_data(SHEET_DATA_ID)
+main_df = fetch_operational_data(SHEET_DATA_ID) # Doğru fonksiyon çağrıldı
 
 if st.session_state.role == "Yönetici":
     view_df = main_df
@@ -281,18 +217,12 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    if os.path.exists(LOCAL_LOGO_PATH):
-        st.image(LOCAL_LOGO_PATH, width=170)
-    else:
-        st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=170)
-    
+    if os.path.exists(LOCAL_LOGO_PATH): st.image(LOCAL_LOGO_PATH, width=170)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"Rol: {st.session_state.role}")
     st.divider()
-    
     map_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
     today_filter = st.toggle("📅 Sadece Bugünün Planı")
-    
     st.divider()
     if st.button("🔄 Verileri Güncelle", use_container_width=True): st.cache_data.clear(); st.rerun()
     st.link_button("📂 Kaynak Excel", url=EXCEL_DOWNLOAD_URL, use_container_width=True)
@@ -304,7 +234,7 @@ st.markdown(f"""
 <div class="header-wrapper">
     <div style="display:flex; align-items:center;">
         <img src="{APP_LOGO_HTML}" style="height:50px; margin-right:20px; border-radius:12px; background:white; padding:4px;">
-        <h1 style='margin:0; color:white; font-size:2.2em;'>Saha Operasyon Merkezi</h1>
+        <h1 style='margin:0; color:white;'>Saha Operasyon Merkezi</h1>
     </div>
     <div class="loc-badge">{loc_txt}</div>
 </div>
@@ -374,9 +304,7 @@ if not view_df.empty:
         
         df["color"] = df.apply(get_color, axis=1)
         layers = [pdk.Layer("ScatterplotLayer", df, get_position='[lon, lat]', get_color='color', get_radius=25, pickable=True)]
-        
-        # CANLI KONUM NOKTASI KÜÇÜLTÜLDÜ (Radius 50 -> 35, MinPixels 8 -> 7)
-        if user_lat: layers.append(pdk.Layer("ScatterplotLayer", pd.DataFrame([{'lat':user_lat, 'lon':user_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=35, radius_min_pixels=7))
+        if user_lat: layers.append(pdk.Layer("ScatterplotLayer", pd.DataFrame([{'lat':user_lat, 'lon':user_lon}]), get_position='[lon,lat]', get_color=[0,255,255], get_radius=35, radius_min_pixels=7)) # Küçültülen nokta
         
         st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=user_lat or df["lat"].mean(), longitude=user_lon or df["lon"].mean(), zoom=12), layers=layers, tooltip={"html":"<b>{Klinik Adı}</b><br>{Personel}"}))
 
