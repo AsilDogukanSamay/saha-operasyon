@@ -758,45 +758,71 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-    # --- TAB 4: İŞLEM & AI ---
+   # --- TAB 4: İŞLEM & AI (GÜNCELLENMİŞ HALİ) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
         
-        # En yakındaki kliniği varsayılan seç
         default_idx = 0
         if nearby_list:
             default_idx = all_clinics.index(nearby_list[0])
             st.success(f"📍 Konumunuza en yakın klinik ({nearby_list[0]}) otomatik seçildi.")
         
-        sel_name = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
+        selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
         
-        if sel_name:
-            clinic_r = processed_df[processed_df["Klinik Adı"] == sel_name].iloc[0]
+        if selected_clinic_ai:
+            clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
+            
             st.markdown("#### 🤖 Medibulut Saha Stratejisti")
             
-            ls = str(clinic_r["Lead Status"]).lower()
-            msg = ""
-            if "hot" in ls: msg = f"Kritik Fırsat! 🔥 {sel_name} 'HOT' durumda. %10 indirim kozunu kullan."
-            elif "warm" in ls: msg = f"Selam. 🟠 {sel_name} 'WARM'. Referanslardan bahset."
-            else: msg = f"Bilgilendirme. 🔵 {sel_name} 'COLD'. Sadece broşür bırak."
+            lead_stat = str(clinic_row["Lead Status"]).lower()
+            ai_msg = ""
+            
+            if "hot" in lead_stat:
+                ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Satın almaya çok yakınlar. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
+            elif "warm" in lead_stat:
+                ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. İlgililer ama kararsızlar. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
+            else:
+                ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git. Zorlama, sadece güven ver."
             
             with st.chat_message("assistant", avatar="🤖"):
-                st.write_stream(typewriter_effect(msg))
+                st.write_stream(typewriter_effect(ai_msg))
             
             st.markdown("---")
             st.markdown("#### 📝 Ziyaret Kayıt Notları")
             
-            old_n = st.session_state.notes.get(sel_name, "")
-            new_n = st.text_area("Not Ekle:", value=old_n, key=f"note_{sel_name}")
+            existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
+            new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
             
-            c_s, c_c = st.columns(2)
-            with c_s:
+            col_save, col_close = st.columns(2)
+            with col_save:
                 if st.button("💾 Notu Kaydet", use_container_width=True):
-                    st.session_state.notes[sel_name] = new_n
-                    st.toast("Kaydedildi!", icon="✅")
-            with c_c:
-                st.link_button("✅ Ziyareti Kapat", EXCEL_DOWNLOAD_URL, use_container_width=True)
+                    st.session_state.notes[selected_clinic_ai] = new_note_val
+                    st.toast("Not başarıyla kaydedildi!", icon="✅")
+            with col_close:
+                st.link_button(f"✅ Ziyareti Kapat (Excel)", EXCEL_DOWNLOAD_URL, use_container_width=True)
+
+            # --- YENİ EKLENEN KISIM: NOTLARI İNDİRME BUTONU ---
+            st.markdown("---")
+            if st.session_state.notes:
+                st.info(f"📂 Şu ana kadar **{len(st.session_state.notes)}** adet not aldınız.")
+                
+                # Notları Excel'e Çevirme Mantığı
+                notes_data = [{"Klinik": k, "Alınan Not": v, "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")} for k, v in st.session_state.notes.items()]
+                df_notes = pd.DataFrame(notes_data)
+                
+                buffer = BytesIO()
+                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                    df_notes.to_excel(writer, index=False)
+                
+                st.download_button(
+                    label="📥 Günlük Notları Excel Olarak İndir",
+                    data=buffer.getvalue(),
+                    file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    type="primary" # Dikkat çeksin diye primary yaptım
+                )
 
     # --- TAB 5: YÖNETİCİ ANALİZLERİ ---
     if st.session_state.role == "Yönetici":
