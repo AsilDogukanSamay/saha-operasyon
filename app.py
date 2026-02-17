@@ -202,8 +202,8 @@ if not st.session_state.auth:
         <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 40px; flex-wrap: nowrap;">
             <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
             <div style="line-height: 1; white-space: nowrap;">
-                <div style="color:#2563EB; font-weight:900; font-size: 36px; letter-spacing:-1px;">medibulut</div>
-                <div style="color:#374151; font-weight:300; font-size: 36px; letter-spacing:-1px;">saha</div>
+                <div style="color:#2563EB; font-weight:900; font-size: 36px; letter-spacing:-1px;">Saha</div>
+                <div style="color:#374151; font-weight:300; font-size: 36px; letter-spacing:-1px;">Bulut</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
