@@ -604,8 +604,6 @@ with st.sidebar:
     # --- YENİ EKLENEN HD GÖRSEL BLOĞU ---
     st.markdown(f'<img src="{APP_LOGO_HTML}" class="hd-sidebar-logo">', unsafe_allow_html=True)
     st.markdown(f"""
-    <div style='color:#2563EB; font-weight:900; font-size: 24px; text-align:center; margin-bottom:10px; font-family:"Inter";'>
-        Saha<span style='color:#6B7280; font-weight:300;'>Bulut</span>
     </div>
     """, unsafe_allow_html=True)
     # ------------------------------------
