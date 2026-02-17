@@ -12,3 +12,5 @@ xlsxwriter
 openpyxl
 streamlit-geolocation
 xlsxwriter
+altair
+streamlit-elements
