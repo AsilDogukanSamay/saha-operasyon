@@ -367,6 +367,16 @@ st.markdown("""
         border-right: 1px solid rgba(255,255,255,0.1); 
     }
     
+    /* Sidebar Logo HD Ayarı */
+    .hd-sidebar-logo {
+        width: 100%;
+        border-radius: 15px;
+        image-rendering: -webkit-optimize-contrast;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        margin-bottom: 15px;
+        display: block;
+    }
+    
     /* Header Container */
     .header-master-wrapper { 
         display: flex; 
@@ -591,10 +601,14 @@ else:
 
 # --- KENAR MENÜ (SIDEBAR) ---
 with st.sidebar:
-    if os.path.exists(LOCAL_LOGO_PATH):
-        st.image(LOCAL_LOGO_PATH, width=170)
-    else:
-        st.image("https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/white-hasta.png", width=170)
+    # --- YENİ EKLENEN HD GÖRSEL BLOĞU ---
+    st.markdown(f'<img src="{APP_LOGO_HTML}" class="hd-sidebar-logo">', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='color:#2563EB; font-weight:900; font-size: 24px; text-align:center; margin-bottom:10px; font-family:"Inter";'>
+        Saha<span style='color:#6B7280; font-weight:300;'>Bulut</span>
+    </div>
+    """, unsafe_allow_html=True)
+    # ------------------------------------
     
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"Rol: {st.session_state.role}")
