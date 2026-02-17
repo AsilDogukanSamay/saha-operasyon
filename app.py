@@ -35,14 +35,14 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 # Eğer ikon dosyası yerelde yoksa internet ikonuna (cloud) düşer.
 try:
     st.set_page_config(
-        page_title="Medibulut Saha Operasyon Yönetimi V156",
+        page_title="Medibulut Saha Operasyon Sistemi",
         layout="wide",
         page_icon=LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "☁️",
         initial_sidebar_state="expanded"
     )
 except Exception:
     st.set_page_config(
-        page_title="Medibulut Saha",
+        page_title="SahaBulut",
         layout="wide",
         page_icon="☁️"
     )
