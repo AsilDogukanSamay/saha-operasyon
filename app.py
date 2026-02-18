@@ -13,6 +13,16 @@ import os
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
+# ================= AI ENTEGRASYONU =================
+import google.generativeai as genai
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    st.warning("AI aktif değil (GEMINI_API_KEY bulunamadı)")
+
 
 # ==============================================================================
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
