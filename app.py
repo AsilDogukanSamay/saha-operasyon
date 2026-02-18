@@ -790,7 +790,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI) ---
+   # --- TAB 4: İŞLEM & AI (GARANTİLİ MODEL SEÇİMİ: GEMINI-PRO) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
@@ -825,29 +825,20 @@ if not view_df.empty:
                 else:
                     with st.spinner("Saha verileri analiz ediliyor..."):
                         try:
-                            # Gemini Modeli Çağırma (HATASIZ MODEL İSMİ)
-                            model = genai.GenerativeModel('gemini-1.5-pro')
-                            prompt = f"""
-                            Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
-                            Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
-                            
-                            Müşteri Durumu (Lead Score): {lead_stat}
-                            Personelin Sahadan Girdiği Gözlem: "{user_context}"
-                            
-                            Görevin:
-                            1. Bu müşteriyi ikna etmek için personele 3 maddelik çok kısa, net ve vurucu bir taktik ver.
-                            2. Eğer müşteri 'Hot' ise satışı kapatmaya odaklan. 'Cold' ise güven kazanmaya odaklan.
-                            3. Asla genel konuşma, girilen gözleme özel cevap ver.
-                            4. Cevabın samimi, motive edici ve Türkçe olsun.
-                            """
-                            response = model.generate_content(prompt)
+                            # 1. Deneme: Flash (Hızlı)
+                            try:
+                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                resp = model.generate_content(f"Sen Medibulut saha satış koçusun. Müşteri durumu: {lead_stat}. Gözlem: '{user_context}'. Görevin: Bu müşteriyi ikna etmek için 3 maddelik kısa, samimi ve Türkçe taktik ver.")
+                            except:
+                                # 2. Deneme: Pro (Standart)
+                                model = genai.GenerativeModel('gemini-pro')
+                                resp = model.generate_content(f"Sen Medibulut saha satış koçusun. Müşteri durumu: {lead_stat}. Gözlem: '{user_context}'. Görevin: Bu müşteriyi ikna etmek için 3 maddelik kısa, samimi ve Türkçe taktik ver.")
                             
                             st.markdown("### 🧠 AI Önerisi:")
-                            st.success(response.text)
-                            st.session_state.ai_response = response.text
-                            
+                            st.success(resp.text)
+                            st.session_state.ai_response = resp.text
                         except Exception as e:
-                            st.error(f"AI Bağlantı Hatası: {e}")
+                            st.error(f"AI Hatası: {e}")
             
             st.markdown("---")
             st.markdown("#### 📝 Ziyaret Kayıt Notları")
