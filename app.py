@@ -18,7 +18,6 @@ from datetime import datetime
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
 # ==============================================================================
 
-# Sabitler
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 LOCAL_LOGO_PATH = "SahaBulut.jpg"
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
@@ -42,7 +41,7 @@ try:
         initial_sidebar_state="expanded"
     )
 except Exception:
-    st.set_page_config(page_title="SahaBulut", layout="wide", page_icon="☁️")
+    pass
 
 # ==============================================================================
 # 2. YARDIMCI FONKSİYONLAR & GÜVENLİK
@@ -145,14 +144,14 @@ if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
 # ==============================================================================
-# 4. GİRİŞ EKRANI (SENİN GÖRSEL TASARIMIN + BENİM VERİTABANIM)
+# 4. GİRİŞ EKRANI
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
     <style>
         .stApp { background-color: #FFFFFF !important; }
         section[data-testid="stSidebar"] { display: none !important; }
-        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700 !important; font-family: 'Inter', sans-serif; font-size: 14px !important; }
+        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 14px !important; }
         div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB !important; border-radius: 10px !important; padding: 12px 15px !important; }
         div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
         div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
@@ -295,13 +294,14 @@ with st.sidebar:
     st.caption(f"Rol: {st.session_state.role}")
     st.divider()
     
-    # GAMIFICATION
-    st.markdown("##### 🏆 GÜNÜN LİDERLERİ")
-    if not main_df.empty:
-        leaders = main_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).head(3)
-        for i, (name, score) in enumerate(leaders.items()):
-            st.markdown(f"**{i+1}. {name}** - {score} P")
-    st.divider()
+    # GAMIFICATION (SADECE YÖNETİCİYE GÖZÜKSÜN)
+    if st.session_state.role == "Yönetici":
+        st.markdown("##### 🏆 GÜNÜN LİDERLERİ")
+        if not main_df.empty:
+            leaders = main_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).head(3)
+            for i, (name, score) in enumerate(leaders.items()):
+                st.markdown(f"**{i+1}. {name}** - {score} P")
+        st.divider()
 
     map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True)
@@ -345,7 +345,13 @@ if not view_df.empty:
     col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
     
     st.markdown("<br>", unsafe_allow_html=True)
-    dashboard_tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "📊 Analiz (Yönetici)", "🔥 Yoğunluk (Yönetici)"])
+    
+    # DİNAMİK SEKME YAPISI
+    tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
+    if st.session_state.role == "Yönetici":
+        tab_titles += ["📊 Analiz", "🔥 Yoğunluk"]
+        
+    dashboard_tabs = st.tabs(tab_titles)
 
     # TAB 1: HARİTA
     with dashboard_tabs[0]:
@@ -443,7 +449,7 @@ if not view_df.empty:
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                     st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-    # TAB 5 & 6 (YÖNETİCİ)
+    # TAB 5 & 6 (SADECE YÖNETİCİ GÖRÜR)
     if st.session_state.role == "Yönetici":
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
@@ -458,7 +464,7 @@ if not view_df.empty:
                 return [59, 130, 246]
             map_df["color"] = map_df.apply(get_status_color, axis=1)
             
-            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df["lat"].mean() if not map_df.empty else 41.0, longitude=map_df["lon"].mean() if not map_df.empty else 29.0, zoom=10), layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=100, radius_min_pixels=6, pickable=True)], tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}))
+            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df["lat"].mean() if not map_df.empty else 41.0, longitude=map_df["lon"].mean() if not map_df.empty else 29.0, zoom=8), layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=150, radius_min_pixels=6, pickable=True)], tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}))
             st.divider()
             perf_stats = main_df.groupby("Personel").agg(H_Adet=('Klinik Adı','count'), Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()), S_Toplam=('Skor','sum')).reset_index().sort_values("S_Toplam", ascending=False)
             gc1, gc2 = st.columns([2,1])
