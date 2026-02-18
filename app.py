@@ -18,6 +18,23 @@ from streamlit_js_eval import get_geolocation
 # ==============================================================================
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
 # ==============================================================================
+# --- GEMINI AI BAĞLANTISI ---
+api_active = False
+model = None
+
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+
+    MODEL_NAME = "gemini-1.5-flash"
+
+    model = genai.GenerativeModel(MODEL_NAME)
+    api_active = True
+
+except Exception as e:
+    print("AI Bağlanamadı:", e)
+    api_active = False
+
 # Not: Bu ayarlar uygulamanın en başında tanımlanmalıdır.
 
 # Kurumsal Sosyal Medya Bağlantıları
@@ -36,7 +53,6 @@ try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-    MODEL_NAME = "gemini-1.5-flash"
     api_active = True
 except Exception:
     # Eğer lokalde çalışıyorsa veya secret yoksa sessizce geç
@@ -793,6 +809,45 @@ if not view_df.empty:
 
    # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI) ---
     with dashboard_tabs[3]:
+    st.subheader("🤖 AI Satış Koçu")
+
+user_context = st.text_area("Saha Notunu Yaz:", height=120)
+
+lead_stat = st.selectbox(
+    "Lead Durumu",
+    ["Cold", "Warm", "Hot"]
+)
+
+if st.button("AI Önerisi Oluştur"):
+
+    if not api_active:
+        st.error("AI aktif değil! Secrets içine GOOGLE_API_KEY eklemelisin.")
+    else:
+        try:
+            prompt = f"""
+            Sen Medibulut saha satış ekibinin yapay zeka koçusun.
+
+            Satılan ürünler:
+            - Dentalbulut
+            - Medibulut
+            - Diyetbulut
+
+            Lead Seviyesi: {lead_stat}
+
+            Saha personeli gözlemi:
+            {user_context}
+
+            Buna göre satış stratejisi, yaklaşım dili ve kapanış önerisi ver.
+            """
+
+            response = model.generate_content(prompt)
+
+            st.success("AI Önerisi:")
+            st.write(response.text)
+
+        except Exception as e:
+            st.error(f"AI Hatası: {e}")
+
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
         
