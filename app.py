@@ -790,7 +790,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GERÇEK YAPAY ZEKA GÜNCELLEMESİ) ---
+   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
