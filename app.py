@@ -38,7 +38,7 @@ try:
     if "GOOGLE_API_KEY" in st.secrets:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        MODEL_NAME = "gemini-1.5-flash"
+        MODEL_NAME = "gemini-1.5-latest"
         model = genai.GenerativeModel(MODEL_NAME)
         api_active = True
     else:
