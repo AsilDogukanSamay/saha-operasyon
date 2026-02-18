@@ -72,7 +72,7 @@ def load_users():
         # İLK KURULUM İÇİN VARSAYILAN KULLANICILAR
         default_data = {
             "admin@medibulut.com":   {"pass": "Medibulut.2026!", "role": "Yönetici", "name": "Yönetici", "recovery_key": "admin123"},
-            "dogukan@medibulut.com": {"pass": "Medibulut.2026!", "role": "Saha Personeli", "name": "Doğukan", "recovery_key": "sivasli58"},
+            "dogukan.samay@medibulut.com": {"pass": "Medibulut.2026!", "role": "Saha Personeli", "name": "Doğukan", "recovery_key": "Fenerbahçe1907"},
             "satis@medibulut.com":   {"pass": "Saha123",         "role": "Saha Personeli", "name": "Saha Ekibi", "recovery_key": "saha123"}
         }
         with open(DB_FILE, "w", encoding="utf-8") as f:
