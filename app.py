@@ -34,7 +34,7 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 api_active = False
 try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
-    api_key = st.secrets["GOOGLE_API_KEY"]
+    api_key = st.secrets["AIzaSyD3ifzxpVMmmXE529JZLsatLykbgE7247s"]
     genai.configure(api_key=api_key)
     api_active = True
 except Exception:
