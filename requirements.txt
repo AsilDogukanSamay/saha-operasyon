@@ -6,13 +6,8 @@ openpyxl
 scikit-learn
 numpy
 streamlit-js-eval
-streamlit
-eval
 xlsxwriter
-openpyxl
 streamlit-geolocation
-xlsxwriter
 altair
 streamlit-elements
-google-generativeai
 google-generativeai>=0.7.0
