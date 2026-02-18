@@ -52,15 +52,36 @@ except Exception:
 # 2. YARDIMCI FONKSİYON KÜTÜPHANESİ
 # ==============================================================================
 
+d# ==============================================================================
+# 2. YARDIMCI FONKSİYONLAR (BURAYI KOMPLE DEĞİŞTİR)
+# ==============================================================================
+
 def get_img_as_base64(file_path):
-    # --- ŞİFRE VE VERİTABANI YÖNETİMİ ---
+    """Görseli okur ve base64 formatına çevirir."""
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
+        return None
+    except Exception:
+        return None
+
+# Logoyu Sisteme Hazırla
+local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
+
+if local_logo_data:
+    APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}"
+else:
+    APP_LOGO_HTML = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+
+# --- ŞİFRE VE VERİTABANI YÖNETİMİ (YENİ EKLENEN KISIM) ---
 DB_FILE = "users_db.json" # Şifrelerin tutulacağı dosya
 
 def load_users():
     """Kullanıcıları dosyadan çeker, dosya yoksa oluşturur."""
     if not os.path.exists(DB_FILE):
         # İLK KURULUM İÇİN VARSAYILAN KULLANICILAR
-        # recovery_key: Şifre sıfırlamak için gizli kelime
         default_data = {
             "admin@medibulut.com":   {"pass": "Medibulut.2026!", "role": "Yönetici", "name": "Yönetici", "recovery_key": "admin123"},
             "dogukan@medibulut.com": {"pass": "Medibulut.2026!", "role": "Saha Personeli", "name": "Doğukan", "recovery_key": "sivasli58"},
@@ -82,23 +103,6 @@ def update_user_password(email, new_pass):
             json.dump(users, f)
         return True
     return False
-    """
-    Yerel bir görsel dosyasını okuyup HTML/CSS içinde kullanılabilecek 
-    Base64 formatına çevirir.
-    
-    Args:
-        file_path (str): Dosyanın yerel yolu.
-    Returns:
-        str: Base64 string veya None.
-    """
-    try:
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                data = f.read()
-            return base64.b64encode(data).decode()
-        return None
-    except Exception:
-        return None
 
 # Logoyu Sisteme Hazırla
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
