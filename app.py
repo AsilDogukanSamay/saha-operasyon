@@ -10,6 +10,7 @@ import altair as alt
 import streamlit.components.v1 as components
 import base64 
 import os
+import google.generativeai as genai # YENİ EKLENEN
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
@@ -28,6 +29,17 @@ LOCAL_LOGO_PATH = "SahaBulut.jpg"
 # Google Sheets Veri Kaynağı ID'si
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
+
+# --- YENİ: GÜVENLİ AI BAĞLANTISI ---
+api_active = False
+try:
+    # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    api_active = True
+except Exception:
+    # Eğer lokalde çalışıyorsa veya secret yoksa sessizce geç
+    api_active = False
 
 # ------------------------------------------------------------------------------
 # Sayfa Konfigürasyonu (Page Config)
@@ -94,6 +106,9 @@ if "role" not in st.session_state:
 
 if "user" not in st.session_state:
     st.session_state.user = None
+
+if "ai_response" not in st.session_state: # YENİ EKLENEN
+    st.session_state.ai_response = ""
 
 # ==============================================================================
 # 3. KURUMSAL GİRİŞ EKRANI (FULL DETAYLI TASARIM)
@@ -256,7 +271,7 @@ if not st.session_state.auth:
         dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
-        # BURASI DÜZELTİLDİ: Medibulut için orijinal internet logosu tanımlandı
+        # Medibulut için orijinal internet logosu
         medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         
         # HTML Yapısı (Multi-line String)
@@ -606,6 +621,8 @@ with st.sidebar:
     # --- YENİ EKLENEN HD GÖRSEL BLOĞU ---
     st.markdown(f'<img src="{APP_LOGO_HTML}" class="hd-sidebar-logo">', unsafe_allow_html=True)
     st.markdown(f"""
+    <div style='color:#2563EB; font-weight:900; font-size: 24px; text-align:center; margin-bottom:10px; font-family:"Inter";'>
+        Saha<span style='color:#6B7280; font-weight:300;'>Bulut</span>
     </div>
     """, unsafe_allow_html=True)
     # ------------------------------------
@@ -773,7 +790,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GÜNCELLENMİŞ HALİ) ---
+   # --- TAB 4: İŞLEM & AI (GERÇEK YAPAY ZEKA GÜNCELLEMESİ) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
@@ -788,20 +805,49 @@ if not view_df.empty:
         if selected_clinic_ai:
             clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
             
-            st.markdown("#### 🤖 Medibulut Saha Stratejisti")
+            st.markdown("#### 🤖 Medibulut Akıllı Satış Koçu (Gemini AI)")
             
             lead_stat = str(clinic_row["Lead Status"]).lower()
-            ai_msg = ""
             
-            if "hot" in lead_stat:
-                ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Satın almaya çok yakınlar. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
-            elif "warm" in lead_stat:
-                ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. İlgililer ama kararsızlar. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
-            else:
-                ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git. Zorlama, sadece güven ver."
+            # Statü Göstergesi
+            stat_color = "red" if "hot" in lead_stat else "orange" if "warm" in lead_stat else "blue"
+            st.markdown(f"**Mevcut Durum:** <span style='color:{stat_color}; font-weight:bold; font-size:18px;'>{lead_stat.upper()}</span>", unsafe_allow_html=True)
             
-            with st.chat_message("assistant", avatar="🤖"):
-                st.write_stream(typewriter_effect(ai_msg))
+            st.info("💡 **İpucu:** Yapay zekadan nokta atışı taktik almak için sahadaki durumu (fiyat, rakip, ilgi düzeyi vb.) aşağıya yaz.")
+            
+            user_context = st.text_area("Sahadan Gözlemlerin:", placeholder="Örn: Doktor arayüzü beğendi ama fiyatı yüksek buldu...", height=100)
+            
+            if st.button("🚀 Strateji Üret (AI)", use_container_width=True):
+                if not api_active:
+                    st.error("⚠️ AI Anahtarı Eksik! Streamlit Secrets ayarlarını kontrol et.")
+                elif not user_context:
+                    st.warning("Lütfen bir gözlem gir, sana ona göre taktik vereyim.")
+                else:
+                    with st.spinner("Saha verileri analiz ediliyor..."):
+                        try:
+                            # Gemini Modeli Çağırma
+                            model = genai.GenerativeModel('gemini-pro')
+                            prompt = f"""
+                            Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
+                            Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
+                            
+                            Müşteri Durumu (Lead Score): {lead_stat}
+                            Personelin Sahadan Girdiği Gözlem: "{user_context}"
+                            
+                            Görevin:
+                            1. Bu müşteriyi ikna etmek için personele 3 maddelik çok kısa, net ve vurucu bir taktik ver.
+                            2. Eğer müşteri 'Hot' ise satışı kapatmaya odaklan. 'Cold' ise güven kazanmaya odaklan.
+                            3. Asla genel konuşma, girilen gözleme özel cevap ver.
+                            4. Cevabın samimi, motive edici ve Türkçe olsun.
+                            """
+                            response = model.generate_content(prompt)
+                            
+                            st.markdown("### 🧠 AI Önerisi:")
+                            st.success(response.text)
+                            st.session_state.ai_response = response.text
+                            
+                        except Exception as e:
+                            st.error(f"AI Bağlantı Hatası: {e}")
             
             st.markdown("---")
             st.markdown("#### 📝 Ziyaret Kayıt Notları")
@@ -839,22 +885,22 @@ if not view_df.empty:
                     type="primary" # Dikkat çeksin diye primary yaptım
                 )
 
-    # --- TAB 5: YÖNETİCİ ANALİZLERİ (GÜNCELLENDİ) ---
+    # --- TAB 5: YÖNETİCİ ANALİZLERİ ---
     if st.session_state.role == "Yönetici":
         with dashboard_tabs[4]:
-            st.subheader("📊 Ekip Performans ve Saha Analizi")
+            st.subheader("📊 Ekip Performans Analizi")
             
-            # 1. PERSONEL SEÇİM FİLTRESİ (Sadece harita için)
+            # --- PERSONEL FİLTRESİ EKLEMESİ ---
             ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
             secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
             
-            # Veriyi filtrele
             if secilen_personel == "Tüm Ekip":
                 map_df = main_df.copy()
             else:
                 map_df = main_df[main_df["Personel"] == secilen_personel]
+            # -----------------------------------
 
-            # 2. PERSONEL ÖZEL HARİTASI
+            # --- DİNAMİK HARİTA ---
             st.markdown(f"#### 📍 {secilen_personel} Saha Dağılımı")
             
             def get_status_color(r):
@@ -865,16 +911,6 @@ if not view_df.empty:
 
             map_df["color"] = map_df.apply(get_status_color, axis=1)
             
-            personel_layer = pdk.Layer(
-                "ScatterplotLayer",
-                data=map_df,
-                get_position='[lon, lat]',
-                get_color='color',
-                get_radius=100,
-                radius_min_pixels=6,
-                pickable=True
-            )
-
             st.pydeck_chart(pdk.Deck(
                 map_style=pdk.map_styles.CARTO_DARK,
                 initial_view_state=pdk.ViewState(
@@ -882,14 +918,13 @@ if not view_df.empty:
                     longitude=map_df["lon"].mean() if not map_df.empty else 29.0,
                     zoom=10
                 ),
-                layers=[personel_layer],
+                layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=100, pickable=True)],
                 tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
             ))
-
             st.divider()
-
-            # 3. PERFORMANS İSTATİSTİKLERİ (Senin mevcut kodun)
-            perf_stats = main_df.groupby("Personel").agg(
+            # ---------------------
+            
+            stats = main_df.groupby("Personel").agg(
                 H_Adet=('Klinik Adı','count'),
                 Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()),
                 S_Toplam=('Skor','sum')
@@ -897,7 +932,7 @@ if not view_df.empty:
             
             gc1, gc2 = st.columns([2,1])
             with gc1:
-                bar = alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(
+                bar = alt.Chart(stats).mark_bar(cornerRadiusTopLeft=10).encode(
                     x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel'
                 ).properties(height=350)
                 st.altair_chart(bar, use_container_width=True)
@@ -909,7 +944,7 @@ if not view_df.empty:
             
             st.divider()
             
-            for _, r in perf_stats.iterrows():
+            for _, r in stats.iterrows():
                 rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                 st.markdown(f"""
                 <div class="admin-perf-card">
