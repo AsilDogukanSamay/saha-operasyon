@@ -115,6 +115,19 @@ def typewriter_effect(text):
 # 3. KURUMSAL GİRİŞ EKRANI (ŞİFRE SIFIRLAMA ÖZELLİKLİ)
 # ==============================================================================
 if not st.session_state.auth:
+    # --- GEÇİCİ ONARIM BUTONU (Bunu giriş yaptıktan sonra silebilirsin) ---
+    with st.sidebar:
+        st.markdown("### 🛠️ Bakım")
+        if st.button("Kullanıcıları Yükle / Onar"):
+            # Varsayılan kullanıcıları zorla dosyaya yaz
+            default_data = {
+                "admin@medibulut.com":   {"pass": "Medibulut.2026!", "role": "Yönetici", "name": "Yönetici", "recovery_key": "admin123"},
+                "dogukan@medibulut.com": {"pass": "Medibulut.2026!", "role": "Saha Personeli", "name": "Doğukan", "recovery_key": "sivasli58"},
+                "satis@medibulut.com":   {"pass": "Saha123",         "role": "Saha Personeli", "name": "Saha Ekibi", "recovery_key": "saha123"}
+            }
+            with open("users_db.json", "w", encoding="utf-8") as f:
+                json.dump(default_data, f)
+            st.success("✅ Veritabanı onarıldı! Şimdi giriş yapabilirsin.")
     
     # CSS Tasarımı (Değişmedi, aynı kalitesini koruyor)
     st.markdown("""
