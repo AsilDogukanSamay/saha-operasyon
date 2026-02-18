@@ -1,4 +1,4 @@
-    import streamlit as st
+import streamlit as st
     import pandas as pd
     import pydeck as pdk
     import re
@@ -10,9 +10,8 @@
     import streamlit.components.v1 as components
     import base64 
     import os
-    from io import BytesIO
-    from datetime import datetime
-    from streamlit_js_eval import get_geolocation
+    from io import BytesIO    from datetime import datetime
+ from streamlit_js_eval import get_geolocation
 
     # ==============================================================================
     # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
