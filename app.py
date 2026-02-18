@@ -112,23 +112,128 @@ def typewriter_effect(text):
         time.sleep(0.04)
 
 # ==============================================================================
-# 3. KURUMSAL GİRİŞ EKRANI (ŞİFRE SIFIRLAMA ÖZELLİKLİ)
+# 3. KURUMSAL GİRİŞ EKRANI (KAYIT OL ÖZELLİKLİ)
 # ==============================================================================
 if not st.session_state.auth:
-    # --- GEÇİCİ ONARIM BUTONU (Bunu giriş yaptıktan sonra silebilirsin) ---
-    with st.sidebar:
-        st.markdown("### 🛠️ Bakım")
-        if st.button("Kullanıcıları Yükle / Onar"):
-            # Varsayılan kullanıcıları zorla dosyaya yaz
-            default_data = {
-                "admin@medibulut.com":   {"pass": "Medibulut.2026!", "role": "Yönetici", "name": "Yönetici", "recovery_key": "admin123"},
-                "dogukan@medibulut.com": {"pass": "Medibulut.2026!", "role": "Saha Personeli", "name": "Doğukan", "recovery_key": "sivasli58"},
-                "satis@medibulut.com":   {"pass": "Saha123",         "role": "Saha Personeli", "name": "Saha Ekibi", "recovery_key": "saha123"}
-            }
-            with open("users_db.json", "w", encoding="utf-8") as f:
-                json.dump(default_data, f)
-            st.success("✅ Veritabanı onarıldı! Şimdi giriş yapabilirsin.")
     
+    st.markdown("""
+    <style>
+        .stApp { background-color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] { display: none !important; }
+        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB; border-radius: 10px; padding: 12px 15px; font-size: 16px; }
+        div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; margin-top: 25px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
+        .login-footer-wrapper { text-align: center; margin-top: 60px; font-size: 13px; color: #6B7280; border-top: 1px solid #F3F4F6; padding-top: 25px; }
+        @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_l, col_r = st.columns([1, 1.3], gap="large")
+
+    with col_l:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 40px;">
+            <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="line-height: 1;">
+                <div style="color:#2563EB; font-weight:900; font-size: 36px; letter-spacing:-1px;">Saha<span style="color:#6B7280; font-weight:300;">Bulut</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # --- 3 SEKMELİ YAPI (GİRİŞ / KAYIT OL / ŞİFREMİ UNUTTUM) ---
+        tab_login, tab_signup, tab_reset = st.tabs(["🔒 Giriş", "📝 Kayıt Ol", "🔑 Şifre"])
+        
+        # 1. SEKME: GİRİŞ
+        with tab_login:
+            st.markdown("Sisteme erişmek için kimliğinizi doğrulayın.")
+            u_mail = st.text_input("E-Posta", placeholder="ad.soyad@medibulut.com", key="login_email")
+            u_pass = st.text_input("Parola", type="password", placeholder="••••••••", key="login_pass")
+            
+            if st.button("Güvenli Giriş Yap"):
+                db = load_users()
+                clean_mail = u_mail.strip().lower()
+                
+                if clean_mail in db:
+                    if db[clean_mail]["pass"] == u_pass:
+                        st.session_state.role = db[clean_mail]["role"]
+                        st.session_state.user = db[clean_mail]["name"]
+                        st.session_state.auth = True
+                        st.toast(f"Hoş geldin {st.session_state.user}!", icon="👋")
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.error("Hatalı parola girdiniz.")
+                else:
+                    st.error("Bu e-posta adresi kayıtlı değil. Lütfen 'Kayıt Ol' sekmesini kullanın.")
+
+        # 2. SEKME: KAYIT OL (YENİ EKLENDİ)
+        with tab_signup:
+            st.info("Yeni hesap oluşturmak için bilgilerinizi girin.")
+            new_name = st.text_input("Adınız Soyadınız", placeholder="Örn: Ahmet Yılmaz", key="reg_name")
+            new_mail = st.text_input("E-Posta Adresiniz", placeholder="ahmet@medibulut.com", key="reg_email")
+            new_pass = st.text_input("Parola Belirleyin", type="password", key="reg_pass")
+            new_key = st.text_input("Kurtarma Anahtarı (Unutma!)", placeholder="Örn: ilk arabam", key="reg_key")
+            
+            if st.button("Hesap Oluştur"):
+                db = load_users()
+                clean_new_mail = new_mail.strip().lower()
+                
+                if not new_name or not new_mail or not new_pass or not new_key:
+                    st.warning("Lütfen tüm alanları doldurunuz.")
+                elif clean_new_mail in db:
+                    st.error("Bu e-posta adresi zaten kayıtlı!")
+                else:
+                    # Yeni kullanıcıyı veritabanına ekle
+                    db[clean_new_mail] = {
+                        "pass": new_pass,
+                        "role": "Saha Personeli", # Varsayılan rol
+                        "name": new_name,
+                        "recovery_key": new_key
+                    }
+                    with open(DB_FILE, "w", encoding="utf-8") as f:
+                        json.dump(db, f)
+                    
+                    st.success("✅ Kayıt başarılı! Şimdi 'Giriş' sekmesinden giriş yapabilirsin.")
+
+        # 3. SEKME: ŞİFRE SIFIRLAMA
+        with tab_reset:
+            st.info("Şifrenizi sıfırlamak için kayıt olurken belirlediğiniz **Kurtarma Anahtarı**nı giriniz.")
+            r_mail = st.text_input("E-Posta Adresiniz", key="res_mail")
+            r_key = st.text_input("Kurtarma Anahtarı", type="password", key="res_key")
+            r_new_pass = st.text_input("Yeni Parola", type="password", key="res_new_pass")
+            
+            if st.button("Şifreyi Güncelle"):
+                db = load_users()
+                clean_r_mail = r_mail.strip().lower()
+                
+                if clean_r_mail in db:
+                    if db[clean_r_mail].get("recovery_key") == r_key:
+                        if len(r_new_pass) >= 4:
+                            update_user_password(clean_r_mail, r_new_pass)
+                            st.success("✅ Şifre değiştirildi! Giriş yapabilirsiniz.")
+                        else:
+                            st.warning("Şifre en az 4 karakter olmalı.")
+                    else:
+                        st.error("❌ Hatalı Kurtarma Anahtarı!")
+                else:
+                    st.error("Kullanıcı bulunamadı.")
+
+        st.markdown(f'<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>', unsafe_allow_html=True)
+
+    with col_r:
+        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
+        # (Buradaki HTML kodlarını tekrar kopyalamana gerek yok, mevcut kodundaki aynı kalabilir)
+        # Ama garanti olsun diye aşağıya kısa halini bırakıyorum
+        dental = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
+        medibulut = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+        diyet = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
+        kys = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
+        html = f"""<html><head><style>body{{margin:0;font-family:'Inter',sans-serif;}}.hero{{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:45px;padding:60px 50px;color:white;height:620px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 25px 50px -12px rgba(30,64,175,0.4);}}.grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:50px;}}.card{{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:25px;display:flex;align-items:center;gap:15px;color:white;text-decoration:none;transition:transform 0.3s;}}.card:hover{{transform:translateY(-5px);background:rgba(255,255,255,0.2);}}.icon{{width:50px;height:50px;background:white;border-radius:12px;padding:7px;display:flex;align-items:center;justify-content:center;}}.icon img{{width:100%;height:100%;object-fit:contain;}}</style></head><body><div class="hero"><h1 style="font-size:52px;font-weight:800;margin:0;">Tek Platform,<br>Bütün Operasyon.</h1><div class="grid"><a href="#" class="card"><div class="icon"><img src="{dental}"></div><h4>Dentalbulut</h4></a><a href="#" class="card"><div class="icon"><img src="{medibulut}"></div><h4>Medibulut</h4></a><a href="#" class="card"><div class="icon"><img src="{diyet}"></div><h4>Diyetbulut</h4></a><a href="#" class="card"><div class="icon"><img src="{kys}"></div><h4>Medibulut KYS</h4></a></div></div></body></html>"""
+        components.html(html, height=660)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.stop()
     # CSS Tasarımı (Değişmedi, aynı kalitesini koruyor)
     st.markdown("""
     <style>
