@@ -14,3 +14,4 @@ streamlit-geolocation
 xlsxwriter
 altair
 streamlit-elements
+google-generativeai
