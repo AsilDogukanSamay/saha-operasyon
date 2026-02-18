@@ -35,8 +35,8 @@ api_active = False
 try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
     # Hem yerel (secrets.toml) hem cloud (Secrets) uyumlu
-    if "GOOGLE_API_KEY" in st.secrets:
-        api_key = st.secrets["GOOGLE_API_KEY"]
+    if "AIzaSyCeLxyfXTYrVeQUz6T3ASKRkUfvc44ep1g" in st.secrets:
+        api_key = st.secrets["AIzaSyCeLxyfXTYrVeQUz6T3ASKRkUfvc44ep1g"]
         genai.configure(api_key=api_key)
         api_active = True
 except Exception:
