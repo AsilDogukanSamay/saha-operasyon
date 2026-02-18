@@ -1,3 +1,4 @@
+import google.generativeai as genai
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
@@ -862,12 +863,41 @@ if not view_df.empty:
             lead_stat = str(clinic_row["Lead Status"]).lower()
             ai_msg = ""
             
-            if "hot" in lead_stat:
-                ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Satın almaya çok yakınlar. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
-            elif "warm" in lead_stat:
-                ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. İlgililer ama kararsızlar. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
-            else:
-                ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git. Zorlama, sadece güven ver."
+           # ================= GEMINI BAĞLANTISI =================
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    st.error("GEMINI_API_KEY tanımlı değil!")
+    st.stop()
+
+genai.configure(api_key=api_key)
+
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ================= AI ANALİZ =================
+prompt = f"""
+Sen Medibulut için çalışan deneyimli bir saha satış yöneticisisin.
+
+Klinik Adı: {clinic_row['Klinik Adı']}
+İlçe: {clinic_row['İlçe']}
+Lead Status: {clinic_row['Lead Status']}
+Mesafe: {clinic_row['Mesafe_km']} km
+Ziyaret Notu: {clinic_row.get('Ziyaret Notu','')}
+
+Bu klinik için:
+
+1. Satış ihtimalini değerlendir
+2. Nasıl konuşulmalı söyle
+3. İndirim verilmeli mi?
+4. Ziyaretin amacı ne olmalı?
+
+Kısa, aksiyon odaklı saha koçu gibi cevap ver.
+"""
+
+with st.spinner("AI strateji oluşturuyor..."):
+    response = model.generate_content(prompt)
+    ai_msg = response.text
+
             
             with st.chat_message("assistant", avatar="🤖"):
                 st.write_stream(typewriter_effect(ai_msg))
