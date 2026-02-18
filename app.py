@@ -248,7 +248,7 @@ if not st.session_state.auth:
         </div>
         """, unsafe_allow_html=True)
 
-    # --- SAĞ PANEL: HTML/CSS KART TASARIMI ---
+   # --- SAĞ PANEL: HTML/CSS KART TASARIMI ---
     with col_right_showcase:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
         
@@ -256,6 +256,8 @@ if not st.session_state.auth:
         dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
+        # BURASI DÜZELTİLDİ: Medibulut için orijinal internet logosu tanımlandı
+        medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         
         # HTML Yapısı (Multi-line String)
         showcase_html = f"""
@@ -323,7 +325,7 @@ if not st.session_state.auth:
                     </a>
                     <a href="https://www.medibulut.com" target="_blank">
                         <div class="product-card">
-                            <div class="icon-wrapper"><img src="{APP_LOGO_HTML}"></div>
+                            <div class="icon-wrapper"><img src="{medibulut_logo_url}"></div>
                             <div><h4 style="margin:0;">Medibulut</h4></div>
                         </div>
                     </a>
