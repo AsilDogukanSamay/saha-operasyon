@@ -790,7 +790,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI) ---
+   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN KISIM: GEMINI-PRO) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
@@ -825,8 +825,8 @@ if not view_df.empty:
                 else:
                     with st.spinner("Saha verileri analiz ediliyor..."):
                         try:
-                            # Gemini Modeli Çağırma (HATASIZ MODEL İSMİ)
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            # HATA DÜZELTME: Eski model 'gemini-pro' kullanılıyor
+                            model = genai.GenerativeModel('gemini-pro')
                             prompt = f"""
                             Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
                             Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
