@@ -36,6 +36,7 @@ try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
+    MODEL_NAME = "gemini-1.5-flash"
     api_active = True
 except Exception:
     # Eğer lokalde çalışıyorsa veya secret yoksa sessizce geç
