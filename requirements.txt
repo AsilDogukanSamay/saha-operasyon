@@ -1,13 +1,8 @@
 streamlit
 pandas
 pydeck
-plotly
-openpyxl
-scikit-learn
-numpy
+altair
 streamlit-js-eval
 xlsxwriter
-streamlit-geolocation
-altair
-streamlit-elements
+openpyxl
 google-generativeai>=0.7.0
