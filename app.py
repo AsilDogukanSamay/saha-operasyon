@@ -10,7 +10,7 @@ import altair as alt
 import streamlit.components.v1 as components
 import base64 
 import os
-import google.generativeai as genai # YENİ EKLENEN
+import google.generativeai as genai # EKLENDI: AI Kütüphanesi
 from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
@@ -30,11 +30,11 @@ LOCAL_LOGO_PATH = "SahaBulut.jpg"
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
 
-# --- YENİ: GÜVENLİ AI BAĞLANTISI ---
+# --- EKLENDI: GÜVENLİ AI BAĞLANTISI ---
 api_active = False
 try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
-    api_key = st.secrets["AIzaSyD3ifzxpVMmmXE529JZLsatLykbgE7247s"]
+    api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
     api_active = True
 except Exception:
@@ -107,7 +107,7 @@ if "role" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = None
 
-if "ai_response" not in st.session_state: # YENİ EKLENEN
+if "ai_response" not in st.session_state: # EKLENDI
     st.session_state.ai_response = ""
 
 # ==============================================================================
@@ -271,7 +271,7 @@ if not st.session_state.auth:
         dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
-        # Medibulut için orijinal internet logosu
+        # BURASI DÜZELTİLDİ: Medibulut için orijinal internet logosu tanımlandı
         medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         
         # HTML Yapısı (Multi-line String)
@@ -885,10 +885,10 @@ if not view_df.empty:
                     type="primary" # Dikkat çeksin diye primary yaptım
                 )
 
-    # --- TAB 5: YÖNETİCİ ANALİZLERİ ---
+    # --- TAB 5: YÖNETİCİ ANALİZLERİ (GÜNCELLENDİ) ---
     if st.session_state.role == "Yönetici":
         with dashboard_tabs[4]:
-            st.subheader("📊 Ekip Performans Analizi")
+            st.subheader("📊 Ekip Performans ve Saha Analizi")
             
             # --- PERSONEL FİLTRESİ EKLEMESİ ---
             ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
@@ -911,6 +911,16 @@ if not view_df.empty:
 
             map_df["color"] = map_df.apply(get_status_color, axis=1)
             
+            personel_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=map_df,
+                get_position='[lon, lat]',
+                get_color='color',
+                get_radius=100,
+                radius_min_pixels=6,
+                pickable=True
+            )
+
             st.pydeck_chart(pdk.Deck(
                 map_style=pdk.map_styles.CARTO_DARK,
                 initial_view_state=pdk.ViewState(
@@ -918,7 +928,7 @@ if not view_df.empty:
                     longitude=map_df["lon"].mean() if not map_df.empty else 29.0,
                     zoom=10
                 ),
-                layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=100, pickable=True)],
+                layers=[personel_layer],
                 tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
             ))
             st.divider()
