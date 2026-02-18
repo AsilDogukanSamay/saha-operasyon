@@ -826,7 +826,7 @@ if not view_df.empty:
                     with st.spinner("Saha verileri analiz ediliyor..."):
                         try:
                             # Gemini Modeli Çağırma (HATASIZ MODEL İSMİ)
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            model = genai.GenerativeModel('gemini-1.5-pro')
                             prompt = f"""
                             Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
                             Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
