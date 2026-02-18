@@ -792,7 +792,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI: HATA ÖNLEYİCİ) ---
+   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI: 1.5 FLASH) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
@@ -826,35 +826,31 @@ if not view_df.empty:
                     st.warning("Lütfen bir gözlem gir, sana ona göre taktik vereyim.")
                 else:
                     with st.spinner("Saha verileri analiz ediliyor..."):
-                        # --- HATA ÖNLEYİCİ AI MODELİ SEÇİMİ ---
                         try:
-                            # 1. Öncelik: En Yeni ve Hızlı Model (Flash)
+                            # 1.5 FLASH MODELİ (EN GÜNCEL)
                             model = genai.GenerativeModel('gemini-1.5-flash')
-                            prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
-                            response = model.generate_content(prompt)
-                            st.markdown("### 🧠 AI Önerisi (Flash):")
-                            st.success(response.text)
-                        
-                        except Exception as e_flash:
-                            try:
-                                # 2. Öncelik: Standart Model (Pro) - Eğer Flash hata verirse
-                                model = genai.GenerativeModel('gemini-pro')
-                                prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
-                                response = model.generate_content(prompt)
-                                st.markdown("### 🧠 AI Önerisi (Pro):")
-                                st.success(response.text)
+                            prompt = f"""
+                            Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
+                            Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
                             
-                            except Exception as e_pro:
-                                try:
-                                    # 3. Öncelik: En Eski ve Kararlı Model (1.0 Pro)
-                                    model = genai.GenerativeModel('gemini-1.0-pro')
-                                    prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
-                                    response = model.generate_content(prompt)
-                                    st.markdown("### 🧠 AI Önerisi (1.0 Pro):")
-                                    st.success(response.text)
-                                    
-                                except Exception as e_final:
-                                    st.error(f"Hata: Hiçbir AI modeline bağlanılamadı. Lütfen API anahtarını ve 'requirements.txt' dosyasını kontrol et. (Hata: {e_final})")
+                            Müşteri Durumu (Lead Score): {lead_stat}
+                            Personelin Sahadan Girdiği Gözlem: "{user_context}"
+                            
+                            Görevin:
+                            1. Bu müşteriyi ikna etmek için personele 3 maddelik çok kısa, net ve vurucu bir taktik ver.
+                            2. Eğer müşteri 'Hot' ise satışı kapatmaya odaklan. 'Cold' ise güven kazanmaya odaklan.
+                            3. Asla genel konuşma, girilen gözleme özel cevap ver.
+                            4. Cevabın samimi, motive edici ve Türkçe olsun.
+                            """
+                            response = model.generate_content(prompt)
+                            
+                            st.markdown("### 🧠 AI Önerisi:")
+                            st.success(response.text)
+                            st.session_state.ai_response = response.text
+                            
+                        except Exception as e:
+                            st.error(f"AI Hatası: {e}")
+                            st.info("Lütfen 'requirements.txt' dosyasını güncelleyip uygulamayı Reboot edin.")
             
             st.markdown("---")
             st.markdown("#### 📝 Ziyaret Kayıt Notları")
