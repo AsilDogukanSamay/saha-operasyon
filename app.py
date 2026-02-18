@@ -47,16 +47,6 @@ LOCAL_LOGO_PATH = "SahaBulut.jpg"
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
 
-# --- EKLENDI: GÜVENLİ AI BAĞLANTISI ---
-api_active = False
-try:
-    # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
-    api_active = True
-except Exception:
-    # Eğer lokalde çalışıyorsa veya secret yoksa sessizce geç
-    api_active = False
 
 # ------------------------------------------------------------------------------
 # Sayfa Konfigürasyonu (Page Config)
@@ -807,140 +797,63 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI) ---
-    with dashboard_tabs[3]:
+# --- TAB 4: İŞLEM & AI ---
+with dashboard_tabs[3]:
+
     st.subheader("🤖 AI Satış Koçu")
 
-user_context = st.text_area("Saha Notunu Yaz:", height=120)
+    lead_stat = st.selectbox(
+        "Müşteri Lead Durumu:",
+        ["Hot", "Warm", "Cold"]
+    )
 
-lead_stat = st.selectbox(
-    "Lead Durumu",
-    ["Cold", "Warm", "Hot"]
-)
+    user_context = st.text_area(
+        "Sahadan Gözlemlerin:",
+        placeholder="Örn: Doktor sistemi beğendi ama fiyatı pahalı buldu...",
+        height=120
+    )
 
-if st.button("AI Önerisi Oluştur"):
+    if st.button("🚀 Strateji Üret (AI)", use_container_width=True):
 
-    if not api_active:
-        st.error("AI aktif değil! Secrets içine GOOGLE_API_KEY eklemelisin.")
-    else:
-        try:
-            prompt = f"""
-            Sen Medibulut saha satış ekibinin yapay zeka koçusun.
+        if not api_active:
+            st.error("API bağlantısı yok. Secrets ayarını kontrol et.")
+        elif not user_context:
+            st.warning("Gözlem girmen lazım.")
+        else:
+            with st.spinner("AI analiz yapıyor..."):
+                try:
 
-            Satılan ürünler:
-            - Dentalbulut
-            - Medibulut
-            - Diyetbulut
+                    prompt = f"""
+Sen Medibulut saha satış ekibinin yapay zeka koçusun.
 
-            Lead Seviyesi: {lead_stat}
+Satılan ürünler:
+- Dentalbulut
+- Medibulut
+- Diyetbulut
 
-            Saha personeli gözlemi:
-            {user_context}
+Müşteri Lead Durumu: {lead_stat}
 
-            Buna göre satış stratejisi, yaklaşım dili ve kapanış önerisi ver.
-            """
+Saha Personeli Gözlemi:
+{user_context}
 
-            response = model.generate_content(prompt)
+Görevin:
+1️⃣ Personele özel 3 aksiyon ver.
+2️⃣ Hot ise satışı kapattır.
+3️⃣ Cold ise güven oluştur.
+4️⃣ Genel konuşma YAPMA.
+5️⃣ Net, kısa, sahaya uygun yaz.
+"""
 
-            st.success("AI Önerisi:")
-            st.write(response.text)
+                    response = model.generate_content(prompt)
 
-        except Exception as e:
-            st.error(f"AI Hatası: {e}")
+                    st.session_state.ai_response = response.text
 
-        all_clinics = processed_df["Klinik Adı"].tolist()
-        nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
-        
-        default_idx = 0
-        if nearby_list:
-            default_idx = all_clinics.index(nearby_list[0])
-            st.success(f"📍 Konumunuza en yakın klinik ({nearby_list[0]}) otomatik seçildi.")
-        
-        selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
-        
-        if selected_clinic_ai:
-            clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
-            
-            st.markdown("#### 🤖 Medibulut Akıllı Satış Koçu (Gemini AI)")
-            
-            lead_stat = str(clinic_row["Lead Status"]).lower()
-            
-            # Statü Göstergesi
-            stat_color = "red" if "hot" in lead_stat else "orange" if "warm" in lead_stat else "blue"
-            st.markdown(f"**Mevcut Durum:** <span style='color:{stat_color}; font-weight:bold; font-size:18px;'>{lead_stat.upper()}</span>", unsafe_allow_html=True)
-            
-            st.info("💡 **İpucu:** Yapay zekadan nokta atışı taktik almak için sahadaki durumu (fiyat, rakip, ilgi düzeyi vb.) aşağıya yaz.")
-            
-            user_context = st.text_area("Sahadan Gözlemlerin:", placeholder="Örn: Doktor arayüzü beğendi ama fiyatı yüksek buldu...", height=100)
-            
-            if st.button("🚀 Strateji Üret (AI)", use_container_width=True):
-                if not api_active:
-                    st.error("⚠️ AI Anahtarı Eksik! Streamlit Secrets ayarlarını kontrol et.")
-                elif not user_context:
-                    st.warning("Lütfen bir gözlem gir, sana ona göre taktik vereyim.")
-                else:
-                    with st.spinner("Saha verileri analiz ediliyor..."):
-                        try:
-                            # Gemini Modeli Çağırma (HATASIZ MODEL İSMİ)
-                            model = genai.GenerativeModel('gemini-1.5-flash')
-                            prompt = f"""
-                            Sen Medibulut saha satış ekibinin yapay zeka koçusun. 
-                            Satışını yaptığımız ürünler: Dentalbulut, Medibulut, Diyetbulut (Klinik yönetim yazılımları).
-                            
-                            Müşteri Durumu (Lead Score): {lead_stat}
-                            Personelin Sahadan Girdiği Gözlem: "{user_context}"
-                            
-                            Görevin:
-                            1. Bu müşteriyi ikna etmek için personele 3 maddelik çok kısa, net ve vurucu bir taktik ver.
-                            2. Eğer müşteri 'Hot' ise satışı kapatmaya odaklan. 'Cold' ise güven kazanmaya odaklan.
-                            3. Asla genel konuşma, girilen gözleme özel cevap ver.
-                            4. Cevabın samimi, motive edici ve Türkçe olsun.
-                            """
-                            response = model.generate_content(prompt)
-                            
-                            st.markdown("### 🧠 AI Önerisi:")
-                            st.success(response.text)
-                            st.session_state.ai_response = response.text
-                            
-                        except Exception as e:
-                            st.error(f"AI Bağlantı Hatası: {e}")
-            
-            st.markdown("---")
-            st.markdown("#### 📝 Ziyaret Kayıt Notları")
-            
-            existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-            new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-            
-            col_save, col_close = st.columns(2)
-            with col_save:
-                if st.button("💾 Notu Kaydet", use_container_width=True):
-                    st.session_state.notes[selected_clinic_ai] = new_note_val
-                    st.toast("Not başarıyla kaydedildi!", icon="✅")
-            with col_close:
-                st.link_button(f"✅ Ziyareti Kapat (Excel)", EXCEL_DOWNLOAD_URL, use_container_width=True)
+                except Exception as e:
+                    st.error(f"AI Hatası: {e}")
 
-            # --- YENİ EKLENEN KISIM: NOTLARI İNDİRME BUTONU ---
-            st.markdown("---")
-            if st.session_state.notes:
-                st.info(f"📂 Şu ana kadar **{len(st.session_state.notes)}** adet not aldınız.")
-                
-                # Notları Excel'e Çevirme Mantığı
-                notes_data = [{"Klinik": k, "Alınan Not": v, "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")} for k, v in st.session_state.notes.items()]
-                df_notes = pd.DataFrame(notes_data)
-                
-                buffer = BytesIO()
-                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                    df_notes.to_excel(writer, index=False)
-                
-                st.download_button(
-                    label="📥 Günlük Notları Excel Olarak İndir",
-                    data=buffer.getvalue(),
-                    file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                    type="primary" # Dikkat çeksin diye primary yaptım
-                )
-
+    if st.session_state.ai_response:
+        st.success(st.session_state.ai_response)
+    
     # --- TAB 5: YÖNETİCİ ANALİZLERİ (GÜNCELLENDİ) ---
     if st.session_state.role == "Yönetici":
         with dashboard_tabs[4]:
