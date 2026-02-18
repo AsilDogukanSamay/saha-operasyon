@@ -895,6 +895,46 @@ if not view_df.empty:
                     <div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div>
                 </div>""", unsafe_allow_html=True)
 
+                # --- YÖNETİCİ PANELİNİN EN ALTINA EKLENECEK KISIM ---
+    if st.session_state.role == "Yönetici":
+        # ... (Senin mevcut kodların burada duruyor) ...
+        
+        # MEVCUT KODLARININ ALTINA BUNU YAPIŞTIR:
+        st.divider()
+        st.markdown("### 👥 Kayıtlı Kullanıcı Listesi (Veritabanı)")
+        
+        # Veritabanı dosyasını oku ve tablo yap
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                users_data = json.load(f)
+            
+            # JSON'ı düzgün bir tabloya çevirelim
+            users_list = []
+            for email, info in users_data.items():
+                users_list.append({
+                    "E-Posta": email,
+                    "İsim": info.get("name", ""),
+                    "Rol": info.get("role", ""),
+                    "Kurtarma Anahtarı": info.get("recovery_key", ""),
+                    "Şifre": info.get("pass", "") # Admin görsün diye
+                })
+            
+            df_users = pd.DataFrame(users_list)
+            st.dataframe(df_users, use_container_width=True)
+            
+            # İndirme Butonu
+            buf_users = BytesIO()
+            with pd.ExcelWriter(buf_users, engine='xlsxwriter') as writer:
+                df_users.to_excel(writer, index=False)
+            st.download_button(
+                label="📥 Kullanıcı Listesini İndir",
+                data=buf_users.getvalue(),
+                file_name=f"Kullanicilar_{datetime.now().date()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("Henüz veritabanı dosyası oluşmamış.")
+
         # --- TAB 6: HEATMAP (DÜZELTİLMİŞ) ---
         with dashboard_tabs[5]:
             st.subheader("🔥 Saha Yoğunluk Haritası")
