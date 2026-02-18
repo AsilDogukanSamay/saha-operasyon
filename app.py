@@ -404,9 +404,33 @@ if not view_df.empty:
             with col_op:
                 st.markdown("### 🛠️ Operasyon Paneli")
                 st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                phone_dummy = "905551234567"
+                
+                # --- GÜNCELLENEN KISIM BAŞLANGIÇ ---
+                # Excel'deki "İletişim" sütunundan numarayı al ve temizle
+                raw_phone = str(clinic_row.get("İletişim", ""))
+                
+                # Sadece rakamları bırak (Boşluk, parantez vb. temizle)
+                clean_phone = re.sub(r"\D", "", raw_phone)
+                
+                # Eğer numara başında 90 yoksa ekle (Türkiye formatı)
+                if clean_phone.startswith("5"):
+                    clean_phone = "90" + clean_phone
+                
+                # Mesaj içeriği
                 msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                st.markdown(f"""<a href="https://wa.me/{phone_dummy}?text={msg_body}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold;">📲 WhatsApp ile Mesaj Gönder</div></a>""", unsafe_allow_html=True)
+                
+                # Eğer geçerli bir numara varsa linki oluştur, yoksa uyarı ver
+                if len(clean_phone) >= 10:
+                    wa_link = f"https://wa.me/{clean_phone}?text={msg_body}"
+                    st.markdown(f"""
+                    <a href="{wa_link}" target="_blank" style="text-decoration:none;">
+                        <div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">
+                            📲 WhatsApp ile Mesaj Gönder ({raw_phone})
+                        </div>
+                    </a>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.warning("⚠️ Bu kliniğin iletişim numarası eksik veya hatalı.")
                 
                 # Kronometre
                 st.markdown("#### ⏱️ Ziyaret Süresi")
