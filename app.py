@@ -14,17 +14,10 @@ import hashlib
 import json
 from io import BytesIO
 from datetime import datetime
-# Harici kütüphane kontrolü
-try:
-    from streamlit_js_eval import get_geolocation
-except ImportError:
-    st.error("Lütfen 'streamlit_js_eval' kütüphanesini yükleyin: pip install streamlit_js_eval")
-    st.stop()
 
 # ==============================================================================
 # 1. GLOBAL YAPILANDIRMA VE SABİTLER
 # ==============================================================================
-# Projenin omurgası burasıdır.
 
 PAGE_TITLE = "Medibulut Saha Operasyon Sistemi"
 PAGE_ICON = "☁️"
@@ -39,7 +32,14 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 # Rakip Analizi İçin Sabitler
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
 
-# Sayfa Config (Hata toleranslı)
+# Streamlit-js-eval kütüphanesi kontrolü
+try:
+    from streamlit_js_eval import get_geolocation
+except ImportError:
+    st.error("Lütfen 'streamlit_js_eval' kütüphanesini yükleyin: pip install streamlit_js_eval")
+    st.stop()
+
+# Sayfa Config
 try:
     st.set_page_config(
         page_title=PAGE_TITLE,
@@ -48,14 +48,14 @@ try:
         initial_sidebar_state="expanded"
     )
 except Exception:
-    pass # Config zaten set edildiyse geç
+    pass 
 
 # ==============================================================================
-# 2. GÜVENLİK VE VERİTABANI KATMANI (BACKEND LOGIC)
+# 2. GÜVENLİK VE VERİTABANI KATMANI
 # ==============================================================================
 
 def make_hashes(password):
-    """Parolayı SHA256 ile şifreler (Güvenlik Standardı)."""
+    """Parolayı SHA256 ile şifreler."""
     return hashlib.sha256(str.encode(password)).hexdigest()
 
 def check_hashes(password, hashed_text):
@@ -106,8 +106,16 @@ def authenticate_user(username, password):
     return None
 
 # ==============================================================================
-# 3. YARDIMCI FONKSİYONLAR (UTILS)
+# 3. YARDIMCI FONKSİYONLAR (UTILS) - HATA BURADA DÜZELTİLDİ
 # ==============================================================================
+
+def normalize_text(text):
+    """
+    Türkçe karakter sorunlarını ve büyük/küçük harf eşleşmesini çözer.
+    Örn: 'Doğukan' -> 'dogukan'
+    """
+    if pd.isna(text): return ""
+    return unicodedata.normalize('NFKD', str(text)).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")
 
 def get_img_as_base64(file_path):
     """Görselleri HTML içinde göstermek için Base64'e çevirir."""
@@ -192,7 +200,6 @@ def fetch_data(sheet_id):
 # ==============================================================================
 # 4. SESSION STATE YÖNETİMİ
 # ==============================================================================
-# Sayfa yenilendiğinde verilerin kaybolmaması için.
 
 defaults = {
     "auth": False, "role": None, "user": None, "notes": {}, 
@@ -252,7 +259,7 @@ if not st.session_state.auth:
             <img src="{APP_LOGO_HTML}" style="height:55px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); margin-right:15px;">
             <div>
                 <h1 style="color:#2563EB; font-size:32px; font-weight:900; margin:0; line-height:1;">Saha<span style="color:#6B7280; font-weight:300;">Bulut</span></h1>
-                <span style="color:#9CA3AF; font-size:12px; font-weight:500;">Operasyon Yönetim Sistemi v2.4</span>
+                <span style="color:#9CA3AF; font-size:12px; font-weight:500;">Operasyon Yönetim Sistemi v2.5</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -493,6 +500,7 @@ st.markdown(f"""
 if st.session_state.role == "Yönetici":
     view_df = main_df
 else:
+    # İsim eşleştirme (HATA DÜZELTİLDİ: normalize_text artık tanımlı)
     u_norm = normalize_text(st.session_state.user)
     view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
 
