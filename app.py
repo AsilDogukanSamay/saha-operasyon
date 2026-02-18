@@ -49,11 +49,7 @@ except Exception:
     )
 
 # ==============================================================================
-# 2. YARDIMCI FONKSİYON KÜTÜPHANESİ
-# ==============================================================================
-
-d# ==============================================================================
-# 2. YARDIMCI FONKSİYONLAR (BURAYI KOMPLE DEĞİŞTİR)
+# 2. YARDIMCI FONKSİYONLAR VE VERİTABANI
 # ==============================================================================
 
 def get_img_as_base64(file_path):
@@ -67,15 +63,7 @@ def get_img_as_base64(file_path):
     except Exception:
         return None
 
-# Logoyu Sisteme Hazırla
-local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
-
-if local_logo_data:
-    APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}"
-else:
-    APP_LOGO_HTML = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
-
-# --- ŞİFRE VE VERİTABANI YÖNETİMİ (YENİ EKLENEN KISIM) ---
+# --- ŞİFRE VE VERİTABANI YÖNETİMİ ---
 DB_FILE = "users_db.json" # Şifrelerin tutulacağı dosya
 
 def load_users():
@@ -108,26 +96,20 @@ def update_user_password(email, new_pass):
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 
 if local_logo_data:
-    # JPG formatı varsayılmıştır, png ise image/png yapılabilir.
     APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}"
 else:
-    # Yedek Logo (Online)
     APP_LOGO_HTML = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
 # --- OTURUM (SESSION STATE) BAŞLATMA ---
-# Sayfa yenilendiğinde verilerin kaybolmaması için session state tanımları.
+if "notes" not in st.session_state: st.session_state.notes = {}
+if "auth" not in st.session_state: st.session_state.auth = False
+if "role" not in st.session_state: st.session_state.role = None
+if "user" not in st.session_state: st.session_state.user = None
 
-if "notes" not in st.session_state:
-    st.session_state.notes = {}
-
-if "auth" not in st.session_state:
-    st.session_state.auth = False
-
-if "role" not in st.session_state:
-    st.session_state.role = None
-
-if "user" not in st.session_state:
-    st.session_state.user = None
+def typewriter_effect(text):
+    for word in text.split(" "):
+        yield word + " "
+        time.sleep(0.04)
 
 # ==============================================================================
 # 3. KURUMSAL GİRİŞ EKRANI (ŞİFRE SIFIRLAMA ÖZELLİKLİ)
