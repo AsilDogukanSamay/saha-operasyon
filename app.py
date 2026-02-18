@@ -405,32 +405,38 @@ if not view_df.empty:
                 st.markdown("### 🛠️ Operasyon Paneli")
                 st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
                 
-                # --- GÜNCELLENEN KISIM BAŞLANGIÇ ---
-                # Excel'deki "İletişim" sütunundan numarayı al ve temizle
+               # --- TELEFON NUMARASI DÜZELTME BLOĞU (BAŞLANGIÇ) ---
                 raw_phone = str(clinic_row.get("İletişim", ""))
                 
-                # Sadece rakamları bırak (Boşluk, parantez vb. temizle)
+                # 1. Sadece rakamları al
                 clean_phone = re.sub(r"\D", "", raw_phone)
                 
-                # Eğer numara başında 90 yoksa ekle (Türkiye formatı)
-                if clean_phone.startswith("5"):
+                # 2. Eğer numara '0' ile başlıyorsa, o sıfırı at (Örn: 0532 -> 532)
+                if clean_phone.startswith("0"):
+                    clean_phone = clean_phone[1:]
+                
+                # 3. Eğer numara 10 haneli kaldıysa (532xxxxxxx), başına '90' ekle
+                if len(clean_phone) == 10:
                     clean_phone = "90" + clean_phone
                 
                 # Mesaj içeriği
                 msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
                 
-                # Eğer geçerli bir numara varsa linki oluştur, yoksa uyarı ver
-                if len(clean_phone) >= 10:
-                    wa_link = f"https://wa.me/{clean_phone}?text={msg_body}"
+                # Linki Oluştur
+                if len(clean_phone) >= 10: # En az 10 hane olmalı
+                    # api.whatsapp.com kullanmak bazen daha kararlıdır
+                    wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
+                    
                     st.markdown(f"""
                     <a href="{wa_link}" target="_blank" style="text-decoration:none;">
-                        <div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">
-                            📲 WhatsApp ile Mesaj Gönder ({raw_phone})
+                        <div style="background:#25D366; color:white; padding:12px; border-radius:10px; text-align:center; margin-bottom:15px; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2);">
+                            📲 WhatsApp Mesajı Gönder ({raw_phone})
                         </div>
                     </a>
                     """, unsafe_allow_html=True)
                 else:
-                    st.warning("⚠️ Bu kliniğin iletişim numarası eksik veya hatalı.")
+                    st.error("⚠️ İletişim numarası formatı hatalı.")
+                # --- TELEFON NUMARASI DÜZELTME BLOĞU (BİTİŞ) ---
                 
                 # Kronometre
                 st.markdown("#### ⏱️ Ziyaret Süresi")
