@@ -158,6 +158,7 @@ if not st.session_state.auth:
                     if db[clean_mail]["pass"] == u_pass:
                         st.session_state.role = db[clean_mail]["role"]
                         st.session_state.user = db[clean_mail]["name"]
+                        st.session_state.email = clean_mail
                         st.session_state.auth = True
                         st.toast(f"Hoş geldin {st.session_state.user}!", icon="👋")
                         time.sleep(0.5)
@@ -569,13 +570,21 @@ def fetch_operational_data(sheet_id):
 # Verileri Yükle
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
-# Kullanıcı Yetkisine Göre Veriyi Filtrele
+# --- FİLTRELEME MANTIĞI (GÜNCELLENDİ: MAİLE GÖRE) ---
 if st.session_state.role == "Yönetici":
+    # Yönetici her şeyi görür
     view_df = main_df
 else: 
-    u_norm = normalize_text(st.session_state.user)
-    view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
-
+    # Personel sadece "Atanan Mail" sütununda kendi maili yazanları görür
+    # Önce Excel'de bu sütun var mı diye kontrol edelim (Hata almamak için)
+    if "Atanan Mail" in main_df.columns:
+        # Hem Excel'deki hem giriş yapanın mailini küçültüp boşlukları siliyoruz ki %100 eşleşsin
+        user_mail = str(st.session_state.email).strip().lower()
+        view_df = main_df[main_df["Atanan Mail"].astype(str).str.lower().str.strip() == user_mail]
+    else:
+        st.error("⚠️ Excel dosyasında 'Atanan Mail' sütunu bulunamadı! Lütfen ekleyin.")
+        view_df = pd.DataFrame() # Boş tablo döndür
+        
 # --- KENAR MENÜ (SIDEBAR) ---
 with st.sidebar:
     # --- YENİ EKLENEN HD GÖRSEL BLOĞU ---
