@@ -1,7 +1,7 @@
-import google.generativeai as genai
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import google.generativeai as genai
 import re
 import time
 import math
@@ -15,14 +15,15 @@ from io import BytesIO
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 # ================= AI ENTEGRASYONU =================
-import google.generativeai as genai
+# ===== GEMINI API (STREAMLIT CLOUD SECRET) =====
+api_key = st.secrets.get("GEMINI_API_KEY")
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+if api_key:
+    genai.configure(api_key=api_key)
 else:
-    st.warning("AI aktif değil (GEMINI_API_KEY bulunamadı)")
+    st.error("API Key bulunamadı! Streamlit Secrets kontrol et.")
+# ==============================================
+
 
 
 # ==============================================================================
