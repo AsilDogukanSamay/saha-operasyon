@@ -957,7 +957,7 @@ Görevin:
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-            except:
+                        except:
                 st.error("Excel modülü eksik.")
 
     # --- FOOTER ---
