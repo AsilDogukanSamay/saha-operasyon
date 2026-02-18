@@ -34,9 +34,11 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 api_active = False
 try:
     # API Anahtarını Streamlit Secrets'tan güvenli bir şekilde çekiyoruz
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
-    api_active = True
+    # Hem yerel (secrets.toml) hem cloud (Secrets) uyumlu
+    if "GOOGLE_API_KEY" in st.secrets:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        genai.configure(api_key=api_key)
+        api_active = True
 except Exception:
     # Eğer lokalde çalışıyorsa veya secret yoksa sessizce geç
     api_active = False
@@ -790,7 +792,7 @@ if not view_df.empty:
             use_container_width=True, hide_index=True
         )
 
-   # --- TAB 4: İŞLEM & AI (GARANTİLİ MODEL SEÇİMİ: GEMINI-PRO) ---
+   # --- TAB 4: İŞLEM & AI (GÜNCELLENEN YAPAY ZEKA KISMI: HATA ÖNLEYİCİ) ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         nearby_list = processed_df[processed_df["Mesafe_km"] <= 1.5]["Klinik Adı"].tolist()
@@ -824,21 +826,35 @@ if not view_df.empty:
                     st.warning("Lütfen bir gözlem gir, sana ona göre taktik vereyim.")
                 else:
                     with st.spinner("Saha verileri analiz ediliyor..."):
+                        # --- HATA ÖNLEYİCİ AI MODELİ SEÇİMİ ---
                         try:
-                            # 1. Deneme: Flash (Hızlı)
+                            # 1. Öncelik: En Yeni ve Hızlı Model (Flash)
+                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
+                            response = model.generate_content(prompt)
+                            st.markdown("### 🧠 AI Önerisi (Flash):")
+                            st.success(response.text)
+                        
+                        except Exception as e_flash:
                             try:
-                                model = genai.GenerativeModel('gemini-1.5-flash')
-                                resp = model.generate_content(f"Sen Medibulut saha satış koçusun. Müşteri durumu: {lead_stat}. Gözlem: '{user_context}'. Görevin: Bu müşteriyi ikna etmek için 3 maddelik kısa, samimi ve Türkçe taktik ver.")
-                            except:
-                                # 2. Deneme: Pro (Standart)
+                                # 2. Öncelik: Standart Model (Pro) - Eğer Flash hata verirse
                                 model = genai.GenerativeModel('gemini-pro')
-                                resp = model.generate_content(f"Sen Medibulut saha satış koçusun. Müşteri durumu: {lead_stat}. Gözlem: '{user_context}'. Görevin: Bu müşteriyi ikna etmek için 3 maddelik kısa, samimi ve Türkçe taktik ver.")
+                                prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
+                                response = model.generate_content(prompt)
+                                st.markdown("### 🧠 AI Önerisi (Pro):")
+                                st.success(response.text)
                             
-                            st.markdown("### 🧠 AI Önerisi:")
-                            st.success(resp.text)
-                            st.session_state.ai_response = resp.text
-                        except Exception as e:
-                            st.error(f"AI Hatası: {e}")
+                            except Exception as e_pro:
+                                try:
+                                    # 3. Öncelik: En Eski ve Kararlı Model (1.0 Pro)
+                                    model = genai.GenerativeModel('gemini-1.0-pro')
+                                    prompt = f"Sen Medibulut saha satış koçusun. Müşteri: {lead_stat}. Gözlem: '{user_context}'. Türkçe, kısa 3 taktik ver."
+                                    response = model.generate_content(prompt)
+                                    st.markdown("### 🧠 AI Önerisi (1.0 Pro):")
+                                    st.success(response.text)
+                                    
+                                except Exception as e_final:
+                                    st.error(f"Hata: Hiçbir AI modeline bağlanılamadı. Lütfen API anahtarını ve 'requirements.txt' dosyasını kontrol et. (Hata: {e_final})")
             
             st.markdown("---")
             st.markdown("#### 📝 Ziyaret Kayıt Notları")
