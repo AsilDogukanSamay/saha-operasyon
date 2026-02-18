@@ -563,6 +563,65 @@ def typewriter_effect(text):
         yield word + " "
         time.sleep(0.04)
 
+        # ================= AI MODEL =================
+@st.cache_resource
+def load_ai_model():
+    try:
+        return genai.GenerativeModel("gemini-1.5-flash")
+    except Exception:
+        return None
+
+ai_model = load_ai_model()
+
+
+def ask_ai(prompt):
+    if not ai_model:
+        return "AI servisi bağlı değil."
+
+    try:
+        response = ai_model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"AI hata verdi: {e}"
+
+
+def analyze_visit(row):
+    prompt = f"""
+    Sen deneyimli bir medikal yazılım saha satış uzmanısın.
+
+    Klinik: {row['Klinik Adı']}
+    İlçe: {row['İlçe']}
+    Lead Durumu: {row['Lead Status']}
+    Ziyaret Yapıldı mı: {row['Gidildi mi?']}
+    Not: {row.get('Ziyaret Notu','')}
+
+    Şunları yaz:
+
+    - Satış ihtimali (yüzde)
+    - Müşteri psikolojisi
+    - Nasıl kapanır?
+    - Tek cümle aksiyon planı
+
+    Kısa ve net yaz.
+    """
+
+    return ask_ai(prompt)
+
+
+def generate_daily_route(df):
+    clinics = "\n".join(df["Klinik Adı"].head(15).tolist())
+
+    prompt = f"""
+    Aşağıdaki klinikler için en verimli ziyaret sırasını oluştur:
+
+    {clinics}
+
+    Trafik ve satış önceliğine göre sırala.
+    """
+
+    return ask_ai(prompt)
+
+
 # --- VERİ BAĞLANTISI VE YÜKLEME ---
 @st.cache_data(ttl=0) 
 def fetch_operational_data(sheet_id):
