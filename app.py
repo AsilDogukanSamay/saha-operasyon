@@ -516,21 +516,59 @@ if st.session_state.auth and not view_df.empty:
                     st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
     # YÖNETİCİ SEKMELERİ
-    if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
-        with dashboard_tabs[4]:
-            st.subheader("📊 Ekip Performans ve Saha Analizi")
-            ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
-            secilen_personel = st.selectbox("Personel Seç:", ekip_listesi)
-            map_df = main_df.copy() if secilen_personel == "Tüm Ekip" else main_df[main_df["Personel"] == secilen_personel]
+    # --- TAB 5: ANALİZ GÜNCELLEMESİ ---
+with dashboard_tabs[4]:
+    st.subheader("📊 Ekip Performans ve Saha Analizi")
+    
+    if not main_df.empty:
+        ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
+        secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
+        
+        # Filtreleme mantığını sağlamlaştıralım
+        if secilen_personel == "Tüm Ekip":
+            map_df = main_df.copy()
+        else:
+            map_df = main_df[main_df["Personel"] == secilen_personel]
+        
+        if not map_df.empty:
             def get_status_color(r):
                 s = str(r["Lead Status"]).lower()
-                return [239, 68, 68] if "hot" in s else [245, 158, 11] if "warm" in s else [59, 130, 246]
+                if "hot" in s: return [239, 68, 68]
+                if "warm" in s: return [245, 158, 11]
+                return [59, 130, 246]
+            
             map_df["color"] = map_df.apply(get_status_color, axis=1)
-            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df["lat"].mean(), longitude=map_df["lon"].mean(), zoom=8), layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=150, pickable=True)]))
-            st.divider()
-            perf_stats = main_df.groupby("Personel").agg(H_Adet=('Klinik Adı','count'), S_Toplam=('Skor','sum')).reset_index().sort_values("S_Toplam", ascending=False)
-            st.altair_chart(alt.Chart(perf_stats).mark_bar().encode(x='Personel', y='S_Toplam', color='Personel'), use_container_width=True)
+            
+            # Harita merkezi için güvenli ortalama alalım
+            avg_lat = map_df["lat"].mean()
+            avg_lon = map_df["lon"].mean()
 
+            st.pydeck_chart(pdk.Deck(
+                map_style=pdk.map_styles.CARTO_DARK, 
+                initial_view_state=pdk.ViewState(
+                    latitude=avg_lat, 
+                    longitude=avg_lon, 
+                    zoom=8,
+                    pitch=45
+                ), 
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer", 
+                        data=map_df, 
+                        get_position='[lon, lat]', # Sütun isimlerinin lon/lat olduğundan emin ol
+                        get_color='color', 
+                        get_radius=200, 
+                        radius_min_pixels=6, 
+                        pickable=True
+                    )
+                ], 
+                tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
+            ))
+        else:
+            st.warning("⚠️ Seçilen personel için haritada gösterilecek kordinatlı veri bulunamadı.")
+            
+        st.divider()
+        # Grafiklerin ve performans kartlarının olduğu kısım buradan devam ediyor...
         with dashboard_tabs[5]:
             st.subheader("🔥 Saha Yoğunluk Haritası")
             heat_layer = pdk.Layer("HeatmapLayer", data=main_df, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
