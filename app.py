@@ -121,12 +121,15 @@ def typewriter_effect(text):
 
 # --- KURUMSAL MAİL GÖNDERME FONKSİYONU ---
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
-    # ⚠️ BURAYI KENDİ BİLGİLERİNLE DOLDUR
     sender_email = "asildogukansamay@gmail.com" 
     app_password = "codgkulmjapjlvsw" 
     
-    if sender_email == "asildogukansamay@gmail.com":
-        return False
+    # İF BLOĞUNU BURADAN TAMAMEN SİLDİK!
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
+    msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
+    msg["To"] = receiver_email
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
