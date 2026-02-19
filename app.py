@@ -66,8 +66,14 @@ def init_db():
 def add_user_to_db(username, password, email, role, real_name):
     init_db()
     df = pd.read_csv(USER_DB_FILE)
+    
+    # HATA ÇÖZÜMÜ: Eğer eski veritabanında 'email' sütunu yoksa, otomatik olarak ekle
+    if 'email' not in df.columns:
+        df['email'] = "veri_yok@mail.com"
+        
     if username in df['username'].values or email in df['email'].values: 
         return False
+        
     new_row = pd.DataFrame([{"username": username, "password": make_hashes(password), "email": email, "role": role, "real_name": real_name, "points": 0}])
     pd.concat([df, new_row], ignore_index=True).to_csv(USER_DB_FILE, index=False)
     return True
@@ -123,7 +129,6 @@ def send_welcome_email(receiver_email, user_name):
     sender_email = "senin_gmail_adresin@gmail.com" 
     app_password = "onaltihanelisifre" 
     
-    # Şifre girilmemişse kodu patlatmasın, direkt geçsin diye kontrol
     if sender_email == "senin_gmail_adresin@gmail.com":
         return False
 
@@ -170,7 +175,7 @@ def fetch_operational_data(sheet_id):
         df["lat"] = df["lat"].apply(clean_coord)
         df["lon"] = df["lon"].apply(clean_coord)
         df = df.dropna(subset=["lat", "lon"])
-        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe"]
+        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
         df["Skor"] = df.apply(lambda r: (25 if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet", "tamam"]) else 0) + 
@@ -407,7 +412,7 @@ if not view_df.empty:
     # DİNAMİK SEKME YAPISI
     tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
     if st.session_state.role == "Yönetici":
-        tab_titles += ["📊 Analiz", "🔥 Yoğunluk"]
+        tab_titles += ["📊 Analiz", "🔥 Yoğunluk", "⚙️ Personel Yönetimi"] # Admin Tablosu Eklendi
         
     dashboard_tabs = st.tabs(tab_titles)
 
@@ -485,37 +490,39 @@ if not view_df.empty:
                 else:
                     elapsed = int(time.time() - st.session_state.timer_start)
                     mins, secs = divmod(elapsed, 60)
-                    st.warning(f"⏳ Süre: {mins:02d}:{secs:02d} ({st.session_state.timer_clinic})")
+                    st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d} ({st.session_state.timer_clinic})")
                     if c_t2.button("⏹️ Bitir"):
                         st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
                         st.session_state.timer_start = None
-                        st.success("Kaydedildi!")
+                        st.success("Ziyaret süresi kaydedildi!")
                         st.rerun()
 
             with col_ai:
                 st.markdown("### 🤖 Saha Stratejisti")
                 lead_stat = str(clinic_row["Lead Status"]).lower()
                 ai_msg = ""
-                if "hot" in lead_stat: ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Önerim: %10 İndirim kozunu masaya koy ve kapat!"
-                elif "warm" in lead_stat: ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. Bölgedeki diğer mutlu müşterilerimizden bahsederek güven kazan."
-                else: ai_msg = f"Bilgi. 🔵 {selected_clinic_ai} şu an 'COLD'. Sadece tanışma ve broşür bırakma hedefli git."
+                if "hot" in lead_stat: ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
+                elif "warm" in lead_stat: ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
+                else: ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git."
                 
                 with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
                 st.markdown("---")
-                new_note_val = st.text_area("Not Ekle:", value=st.session_state.notes.get(selected_clinic_ai, ""))
+                existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
+                new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
                 if st.button("💾 Notu Kaydet", use_container_width=True):
                     st.session_state.notes[selected_clinic_ai] = new_note_val
-                    st.toast("Kaydedildi!", icon="✅")
+                    st.toast("Not başarıyla kaydedildi!", icon="✅")
                 
                 if st.session_state.notes:
                     notes_data = [{"Klinik": k, "Alınan Not": v, "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")} for k, v in st.session_state.notes.items()]
                     df_notes = pd.DataFrame(notes_data)
                     buffer = BytesIO()
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                    st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Notlar_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                    st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-    # TAB 5 & 6 (SADECE YÖNETİCİ GÖRÜR)
+    # YÖNETİCİ SEKMELERİ (Analiz, Isı Haritası, Personel Yönetimi)
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
+        # TAB 5: ANALİZ
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
             ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
@@ -540,6 +547,7 @@ if not view_df.empty:
                 rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                 st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
 
+        # TAB 6: ISI HARİTASI
         with dashboard_tabs[5]:
             st.subheader("🔥 Saha Yoğunluk Haritası")
             heat_layer = pdk.Layer("HeatmapLayer", data=main_df, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
@@ -550,6 +558,41 @@ if not view_df.empty:
                 with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
                 st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             except: st.error("Excel modülü eksik.")
+
+        # TAB 7: PERSONEL YÖNETİMİ (YENİ EKLENDİ)
+        with dashboard_tabs[6]:
+            st.subheader("⚙️ Personel Yönetimi (Veritabanı)")
+            st.info("Sisteme kayıtlı kullanıcıları buradan görebilir ve silebilirsiniz. (Silinen kullanıcılar sisteme tekrar giriş yapamazlar.)")
+            
+            try:
+                # Veritabanını Oku
+                user_db_df = pd.read_csv(USER_DB_FILE)
+                
+                # Güvenlik: Şifreleri ekranda gösterme
+                display_df = user_db_df[['username', 'real_name', 'email', 'role', 'points']]
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                
+                st.divider()
+                st.markdown("#### 🗑️ Kullanıcı Sil")
+                
+                # Admin kendi kendini silemesin diye listeyi filtrele
+                silinebilir_kullanicilar = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
+                
+                kullanici_sec = st.selectbox("Silinecek Personeli Seçiniz:", ["Seçiniz..."] + silinebilir_kullanicilar)
+                
+                if st.button("❌ Personeli Sistemden Kalıcı Olarak Sil", type="primary"):
+                    if kullanici_sec != "Seçiniz...":
+                        # Seçilen kullanıcıyı veritabanından çıkar ve dosyayı tekrar kaydet
+                        user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
+                        user_db_df.to_csv(USER_DB_FILE, index=False)
+                        st.success(f"'{kullanici_sec}' başarıyla sistemden silindi!")
+                        time.sleep(1)
+                        st.rerun() # Sayfayı yenile ki tablo güncellensin
+                    else:
+                        st.warning("Lütfen silmek için bir personel seçin.")
+                        
+            except Exception as e:
+                st.warning(f"Kullanıcı veritabanı okunurken bir hata oluştu: {e}")
 
     st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 else:
