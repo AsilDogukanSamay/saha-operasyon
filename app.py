@@ -238,13 +238,15 @@ if not st.session_state.auth:
         auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
-        if st.button("Güvenli Giriş Yap"):
-            user_info = authenticate_user(auth_u, auth_p)
-            if user_info is not None:
-                st.session_state.role = user_info['role']
-                st.session_state.user = user_info['real_name']
-                st.session_state.auth = True
-                st.rerun()
+       # GİRİŞ BUTONUNUN OLDUĞU YER:
+if st.button("Güvenli Giriş Yap"):
+    user_info = authenticate_user(auth_u, auth_p)
+    if user_info is not None:
+        st.session_state.role = user_info['role']
+        st.session_state.user = user_info['real_name'] # Ekranda Ad Soyad gözükmesi için
+        st.session_state.auth_user_info = user_info    # Tüm bilgileri (username dahil) sakla
+        st.session_state.auth = True
+        st.rerun()
             else: st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
 
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
