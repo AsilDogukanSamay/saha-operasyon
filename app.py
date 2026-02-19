@@ -247,7 +247,7 @@ if st.button("Güvenli Giriş Yap"):
         st.session_state.auth_user_info = user_info    # Tüm bilgileri (username dahil) sakla
         st.session_state.auth = True
         st.rerun()
-            else: st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
+        else: st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
 
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 
