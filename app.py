@@ -124,7 +124,12 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
     msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
     msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
     msg["To"] = receiver_email
-    html_content = f"<html><body style='font-family: Arial;'><h2>Hoş Geldin, {user_name}!</h2><p>Giriş Bilgileri:</p><b>Kullanıcı Adı: {user_login}</b><br><b>Parola: {user_pass}</b><br><br><a href='{app_url}'>Sisteme Giriş Yap</a></body></html>"
+    html_content = f"""
+    <html><body style="font-family: Arial;">
+    <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
+    <p>Giriş Bilgileri:</p><b>Kullanıcı Adı: {user_login}</b><br><b>Parola: {user_pass}</b><br><br>
+    <a href="{app_url}" style="background:#2563EB; color:white; padding:10px; text-decoration:none; border-radius:5px;">Sisteme Giriş Yap</a>
+    </body></html>"""
     msg.attach(MIMEText(html_content, "html"))
     try:
         server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
@@ -160,9 +165,10 @@ if "role" not in st.session_state: st.session_state.role = None
 if "auth_user_info" not in st.session_state: st.session_state.auth_user_info = None
 if "notes" not in st.session_state: st.session_state.notes = {}
 if "timer_start" not in st.session_state: st.session_state.timer_start = None
+if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
-# --- F5 KORUMASI ---
+# --- F5 KORUMASI (URL Parametrelerini Oku) ---
 if not st.session_state.auth:
     params = st.query_params
     if "u" in params and "r" in params and "n" in params:
@@ -175,28 +181,67 @@ if not st.session_state.auth:
 # 4. GİRİŞ EKRANI
 # ==============================================================================
 if not st.session_state.auth:
-    st.markdown("""<style>.stApp { background-color: #FFFFFF !important; } section[data-testid="stSidebar"] { display: none !important; }</style>""", unsafe_allow_html=True)
-    col1, col2 = st.columns([1, 1.3])
-    with col1:
-        st.markdown(f"<br><br><img src='{APP_LOGO_HTML}' style='height: 60px;'><h1 style='color:#2563EB;'>SahaBulut</h1>", unsafe_allow_html=True)
-        auth_u = st.text_input("Kullanıcı Adı")
-        auth_p = st.text_input("Parola", type="password")
+    st.markdown("""
+    <style>
+        .stApp { background-color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] { display: none !important; }
+        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; border-radius: 10px !important; padding: 12px !important; }
+        div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; width: 100% !important; border-radius: 10px; font-weight: 800; padding: 14px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_left, col_right = st.columns([1, 1.3], gap="large")
+
+    with col_left:
+        st.markdown(f"<br><br><br><img src='{APP_LOGO_HTML}' style='height: 60px;'><h1 style='color:#2563EB; font-weight:900;'>SahaBulut</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#6B7280;'>Devam etmek için giriş yapın.</p>", unsafe_allow_html=True)
+        auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
+        auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
+        
         if st.button("Güvenli Giriş Yap"):
-            u_info = authenticate_user(auth_u, auth_p)
-            if u_info is not None:
-                st.session_state.role, st.session_state.user, st.session_state.auth = u_info['role'], u_info['real_name'], True
-                st.session_state.auth_user_info = u_info
-                st.query_params["u"], st.query_params["r"], st.query_params["n"] = u_info['username'], u_info['role'], u_info['real_name']
+            user_info = authenticate_user(auth_u, auth_p)
+            if user_info is not None:
+                st.session_state.role = user_info['role']
+                st.session_state.user = user_info['real_name']
+                st.session_state.auth_user_info = user_info 
+                st.session_state.auth = True
+                
+                # F5 KORUMASI İÇİN URL'YE YAZ
+                st.query_params["u"] = user_info['username']
+                st.query_params["r"] = user_info['role']
+                st.query_params["n"] = user_info['real_name']
                 st.rerun()
-            else: st.error("Hatalı bilgiler.")
+            else:
+                st.error("Hatalı bilgiler.")
+
+    with col_right:
+        dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
+        showcase_html = f"""<div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 45px; padding: 60px; color: white; height: 600px; display: flex; flex-direction: column; justify-content: center;">
+        <h1 style="font-size: 48px; font-weight: 800; margin: 0;">Tek Platform,<br>Bütün Operasyon.</h1>
+        <p style="font-size: 18px; margin-top: 20px; opacity: 0.9;">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</p>
+        </div>"""
+        components.html(showcase_html, height=650)
     st.stop()
 
 # ==============================================================================
-# 5. DASHBOARD
+# 5. DASHBOARD (KOYU TEMA)
 # ==============================================================================
-st.markdown("""<style>.stApp { background-color: #0E1117 !important; color: white !important; }</style>""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+    .stApp { background-color: #0E1117 !important; color: white !important; }
+    section[data-testid="stSidebar"] { background-color: #161B22 !important; }
+    div[data-testid="stMetric"] { background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 20px !important; border: 1px solid rgba(255,255,255,0.1); }
+</style>
+""", unsafe_allow_html=True)
+
+loc_data = None
+try: loc_data = get_geolocation()
+except: pass
+user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longitude']) if loc_data and 'coords' in loc_data else (None, None)
+
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
+# Filtreleme
 if st.session_state.role == "Yönetici":
     view_df = main_df
 else:
@@ -205,41 +250,96 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
+    st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; margin-bottom: 15px;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"Rol: {st.session_state.role}")
+    st.divider()
+    
+    map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"])
+    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True)
+    
+    if st.button("🔄 Verileri Güncelle", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+        
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False
         st.query_params.clear()
         st.rerun()
 
+# --- HEADER ---
+st.markdown(f"<h1 style='letter-spacing:-1px;'>Saha Operasyon Merkezi</h1>", unsafe_allow_html=True)
+
 # --- İÇERİK ---
 if not view_df.empty:
     processed_df = view_df.copy()
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Hedef", len(processed_df))
-    col2.metric("Ziyaret", len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])]))
-    col3.metric("Skor", processed_df["Skor"].sum())
-
-    tab1, tab2, tab3 = st.tabs(["🗺️ Harita", "📋 Liste", "⚙️ Yönetim"])
+    if filter_today:
+        processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
     
-    with tab1:
+    if user_lat:
+        processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
+        processed_df = processed_df.sort_values(by="Mesafe_km")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Toplam Hedef", len(processed_df))
+    c2.metric("🔥 Hot Lead", len(processed_df[processed_df["Lead Status"].str.contains("Hot", case=False, na=False)]))
+    c3.metric("✅ Ziyaret", len(processed_df[processed_df["Gidildi mi?"].str.lower().isin(["evet","tamam"])]))
+    c4.metric("🏆 Skor", processed_df["Skor"].sum())
+
+    tabs = st.tabs(["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI", "⚙️ Personel"])
+
+    with tabs[0]:
         if not processed_df.empty:
+            def get_color(r):
+                if "Ziyaret" in map_view_mode: return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
+                s = str(r["Lead Status"]).lower()
+                return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
+            
+            processed_df["color"] = processed_df.apply(get_color, axis=1)
             st.pydeck_chart(pdk.Deck(
                 map_style=pdk.map_styles.CARTO_DARK,
-                initial_view_state=pdk.ViewState(latitude=processed_df["lat"].mean(), longitude=processed_df["lon"].mean(), zoom=11),
-                layers=[pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color="[239, 68, 68]", get_radius=100)]
+                initial_view_state=pdk.ViewState(latitude=processed_df["lat"].mean(), longitude=processed_df["lon"].mean(), zoom=12, pitch=45),
+                layers=[pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=60, pickable=True)],
+                tooltip={"html": "<b>{Klinik Adı}</b>"}
             ))
-        else: st.warning("Veri yok.")
+        else: st.warning("Ziyaret planı bulunamadı.")
 
-    with tab2: st.dataframe(processed_df[["Klinik Adı", "İlçe", "Lead Status", "Gidildi mi?"]], use_container_width=True)
+    with tabs[1]:
+        st.dataframe(processed_df[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Gidildi mi?"]], use_container_width=True, hide_index=True)
 
-    if st.session_state.role == "Yönetici":
-        with tab3:
-            st.subheader("Yeni Personel Ekle")
-            with st.form("ekle"):
-                rn, ru, re, rp = st.text_input("Ad Soyad"), st.text_input("Kullanıcı Adı"), st.text_input("E-Posta"), st.text_input("Şifre", type="password")
+    with tabs[2]:
+        if user_lat: st.dataframe(processed_df[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], use_container_width=True, hide_index=True)
+        else: st.info("GPS izni gereklidir.")
+
+    with tabs[3]:
+        selected = st.selectbox("Klinik Seç:", processed_df["Klinik Adı"].tolist())
+        if selected:
+            row = processed_df[processed_df["Klinik Adı"] == selected].iloc[0]
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.markdown("### 🛠️ Operasyon")
+                raw_p = str(row.get("İletişim", ""))
+                clean_p = re.sub(r"\D", "", raw_p)
+                if len(clean_p) >= 10:
+                    wa = f"https://api.whatsapp.com/send?phone=90{clean_p[-10:]}&text=Merhaba"
+                    st.link_button("📲 WhatsApp Mesajı", url=wa, use_container_width=True)
+                
+                if st.button("▶️ Ziyareti Başlat"): st.session_state.timer_start = time.time()
+            with col_b:
+                st.markdown("### 🤖 Strateji")
+                msg = "Kritik Fırsat! 🔥 Hemen satışı kapat!" if "hot" in str(row["Lead Status"]).lower() else "Tanışma hedefli git."
+                with st.chat_message("assistant"): st.write_stream(typewriter_effect(msg))
+
+    with tabs[4]:
+        if st.session_state.role == "Yönetici":
+            st.subheader("Personel Yönetimi")
+            with st.form("yeni_p"):
+                rn, ru, re, rp = st.text_input("Ad Soyad"), st.text_input("Kullanıcı Adı"), st.text_input("E-Posta"), st.text_input("Parola", type="password")
                 if st.form_submit_button("Kaydet"):
                     if add_user_to_db(ru, rp, re, "Saha Personeli", rn): st.success("Eklendi!")
                     else: st.error("Hata!")
+        else: st.error("Yetkiniz yok.")
 else:
-    st.info("Planlanmış bir göreviniz bulunmuyor.")
+    st.warning("⚠️ Planlanmış ziyaretiniz bulunmuyor.")
+
+st.markdown(f"<div style='text-align:center; margin-top:50px; opacity:0.5;'>Designed by <a href='{MY_LINKEDIN_URL}' target='_blank'>Doğukan</a></div>", unsafe_allow_html=True)
