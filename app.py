@@ -140,7 +140,7 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
         <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <h2 style="color: #2563EB;">Hoş Geldin, {user_name}! 🚀</h2>
+            <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
             <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
             
             <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
@@ -154,7 +154,7 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
             <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
             
             <br><br><br>
-            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px;">İyi çalışmalar dileriz,<br><b>SahaBulut Yönetim Ekibi</b></p>
+            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px;">İyi çalışmalar dileriz,<br><b>MediBulut Yönetim Ekibi</b></p>
         </div>
     </body>
     </html>
