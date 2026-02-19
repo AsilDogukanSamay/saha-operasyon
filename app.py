@@ -66,14 +66,10 @@ def init_db():
 def add_user_to_db(username, password, email, role, real_name):
     init_db()
     df = pd.read_csv(USER_DB_FILE)
-    
-    # HATA ÇÖZÜMÜ: Eğer eski veritabanında 'email' sütunu yoksa, otomatik olarak ekle
     if 'email' not in df.columns:
         df['email'] = "veri_yok@mail.com"
-        
     if username in df['username'].values or email in df['email'].values: 
         return False
-        
     new_row = pd.DataFrame([{"username": username, "password": make_hashes(password), "email": email, "role": role, "real_name": real_name, "points": 0}])
     pd.concat([df, new_row], ignore_index=True).to_csv(USER_DB_FILE, index=False)
     return True
@@ -123,17 +119,17 @@ def typewriter_effect(text):
         yield word + " "
         time.sleep(0.04)
 
-# --- MAİL GÖNDERME FONKSİYONU ---
-def send_welcome_email(receiver_email, user_name):
-    # BURAYI KENDİ BİLGİLERİNLE DOLDUR (Uygulama şifresini boşluksuz yaz)
-    sender_email = "asildogukansamay@gmail.com" 
-    app_password = "codgkulmjapjlvsw" 
+# --- KURUMSAL MAİL GÖNDERME FONKSİYONU ---
+def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
+    # ⚠️ BURAYI KENDİ BİLGİLERİNLE DOLDUR
+    sender_email = "senin_gmail_adresin@gmail.com" 
+    app_password = "onaltihanelisifre" 
     
     if sender_email == "senin_gmail_adresin@gmail.com":
         return False
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "SahaBulut'a Hoş Geldiniz! 🚀"
+    msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
     msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
     msg["To"] = receiver_email
 
@@ -142,12 +138,20 @@ def send_welcome_email(receiver_email, user_name):
     <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
         <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
             <h2 style="color: #2563EB;">Hoş Geldin, {user_name}! 🚀</h2>
-            <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabın başarıyla oluşturuldu.</p>
-            <p style="color: #555; font-size: 15px;">Artık sahada gücüne güç katmaya hazırsın. Sisteme giriş yaparak akıllı rotanı oluşturabilir, yapay zeka destekli satış stratejilerini kullanmaya başlayabilirsin.</p>
-            <br>
-            <a href="https://saha-operasyon.streamlit.app" style="background: #2563EB; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Sisteme Giriş Yap</a>
+            <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
+            
+            <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
+                <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
+                <p style="margin: 0 0 8px 0; font-size: 16px;">Kullanıcı Adı: <span style="color: #2563EB; font-weight: bold;">{user_login}</span></p>
+                <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
+            </div>
+            
+            <p style="color: #555; font-size: 15px; margin-bottom: 25px;">Uygulamaya giderek akıllı rotanızı görüntüleyebilir ve sahada işlemlere başlayabilirsiniz.</p>
+            
+            <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
+            
             <br><br><br>
-            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 10px;">İyi çalışmalar dileriz,<br><b>SahaBulut Yönetim Ekibi</b></p>
+            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px;">İyi çalışmalar dileriz,<br><b>SahaBulut Yönetim Ekibi</b></p>
         </div>
     </body>
     </html>
@@ -195,7 +199,7 @@ if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
 # ==============================================================================
-# 4. GİRİŞ EKRANI
+# 4. GİRİŞ EKRANI (KAYIT OL KALDIRILDI, SADECE GİRİŞ VAR)
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -209,17 +213,13 @@ if not st.session_state.auth:
         .login-footer-wrapper { text-align: center; margin-top: 60px; font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; border-top: 1px solid #F3F4F6; padding-top: 25px; width: 100%; max-width: 300px; margin-left: auto; margin-right: auto; }
         .login-footer-wrapper a { color: #2563EB; text-decoration: none; font-weight: 800; }
         @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
-        /* TAB TASARIMI */
-        .stTabs [data-baseweb="tab-list"] { gap: 20px; border-bottom: 2px solid #F3F4F6; }
-        .stTabs [data-baseweb="tab"] { background: transparent; color: #6B7280; border:none; padding-bottom: 10px; }
-        .stTabs [aria-selected="true"] { color: #2563EB; font-weight: 800; border-bottom: 2px solid #2563EB; }
     </style>
     """, unsafe_allow_html=True)
 
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
 
     with col_left_form:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 30px; flex-wrap: nowrap;">
             <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
@@ -229,42 +229,20 @@ if not st.session_state.auth:
         </div>
         """, unsafe_allow_html=True)
         
-        tab_login, tab_signup = st.tabs(["🔑 Giriş Yap", "📝 Kayıt Ol"])
-
-        with tab_login:
-            auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
-            auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
-            if st.button("Güvenli Giriş Yap"):
-                user_info = authenticate_user(auth_u, auth_p)
-                if user_info is not None:
-                    st.session_state.role = user_info['role']
-                    st.session_state.user = user_info['real_name']
-                    st.session_state.auth = True
-                    st.rerun()
-                else: st.error("Giriş bilgileri hatalı.")
-
-        with tab_signup:
-            rn = st.text_input("Ad Soyad", key="r_n")
-            ru = st.text_input("Kullanıcı Adı Seç", key="r_u")
-            re = st.text_input("E-Posta Adresi (Mail için)", key="r_e")
-            rp = st.text_input("Parola Belirle", type="password", key="r_p")
-            rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"], key="r_r")
-            
-            if st.button("Kayıt Ol"):
-                if ru and rp and rn and re:
-                    if add_user_to_db(ru, rp, re, rr, rn):
-                        st.success("Kayıt başarılı! Hoş geldin maili gönderiliyor...")
-                        # Maili Gönder
-                        mail_gitti_mi = send_welcome_email(re, rn)
-                        if mail_gitti_mi:
-                            st.toast("✅ Mail başarıyla gönderildi!", icon="📧")
-                        else:
-                            st.toast("⚠️ Kayıt tamamlandı ancak mail gönderilemedi (Mail ayarlarını kontrol et).", icon="⚠️")
-                        st.balloons()
-                    else: 
-                        st.error("Kullanıcı adı veya E-Posta zaten kullanımda.")
-                else:
-                    st.warning("Lütfen tüm alanları doldurunuz.")
+        st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
+        st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği bilgilerle giriş yapın.</p>""", unsafe_allow_html=True)
+        
+        auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
+        auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
+        
+        if st.button("Güvenli Giriş Yap"):
+            user_info = authenticate_user(auth_u, auth_p)
+            if user_info is not None:
+                st.session_state.role = user_info['role']
+                st.session_state.user = user_info['real_name']
+                st.session_state.auth = True
+                st.rerun()
+            else: st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
 
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 
@@ -335,13 +313,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# KONUM ALMA
 loc_data = None
 try: loc_data = get_geolocation()
 except: pass
 user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longitude']) if loc_data and 'coords' in loc_data else (None, None)
 
-# VERİ ÇEKME
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
 if st.session_state.role == "Yönetici":
@@ -357,7 +333,6 @@ with st.sidebar:
     st.caption(f"Rol: {st.session_state.role}")
     st.divider()
     
-    # GAMIFICATION (SADECE YÖNETİCİYE GÖZÜKSÜN)
     if st.session_state.role == "Yönetici":
         st.markdown("##### 🏆 GÜNÜN LİDERLERİ")
         if not main_df.empty:
@@ -409,10 +384,9 @@ if not view_df.empty:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # DİNAMİK SEKME YAPISI
     tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
     if st.session_state.role == "Yönetici":
-        tab_titles += ["📊 Analiz", "🔥 Yoğunluk", "⚙️ Personel Yönetimi"] # Admin Tablosu Eklendi
+        tab_titles += ["📊 Analiz", "🔥 Yoğunluk", "⚙️ Personel Yönetimi"] 
         
     dashboard_tabs = st.tabs(tab_titles)
 
@@ -478,7 +452,7 @@ if not view_df.empty:
                     wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
                     st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
                 else:
-                    st.error("⚠️ İletişim numarası hatalı.")
+                    st.error("⚠️ İletişim numarası hatalı veya kayıtlı değil.")
                 
                 st.markdown("#### ⏱️ Ziyaret Süresi")
                 c_t1, c_t2 = st.columns(2)
@@ -520,7 +494,7 @@ if not view_df.empty:
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                     st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-    # YÖNETİCİ SEKMELERİ (Analiz, Isı Haritası, Personel Yönetimi)
+    # YÖNETİCİ SEKMELERİ
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
         # TAB 5: ANALİZ
         with dashboard_tabs[4]:
@@ -559,40 +533,62 @@ if not view_df.empty:
                 st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             except: st.error("Excel modülü eksik.")
 
-        # TAB 7: PERSONEL YÖNETİMİ (YENİ EKLENDİ)
+        # TAB 7: PERSONEL YÖNETİMİ
         with dashboard_tabs[6]:
-            st.subheader("⚙️ Personel Yönetimi (Veritabanı)")
-            st.info("Sisteme kayıtlı kullanıcıları buradan görebilir ve silebilirsiniz. (Silinen kullanıcılar sisteme tekrar giriş yapamazlar.)")
+            st.subheader("⚙️ Personel Yönetimi")
             
-            try:
-                # Veritabanını Oku
-                user_db_df = pd.read_csv(USER_DB_FILE)
+            col_ekle, col_sil = st.columns(2, gap="large")
+            
+            with col_ekle:
+                st.markdown("#### ➕ Yeni Personel Ekle")
+                st.info("Kayıt işlemi sonrası personele otomatik bilgilendirme maili gönderilir.")
                 
-                # Güvenlik: Şifreleri ekranda gösterme
-                display_df = user_db_df[['username', 'real_name', 'email', 'role', 'points']]
-                st.dataframe(display_df, use_container_width=True, hide_index=True)
-                
-                st.divider()
+                with st.form("yeni_personel_formu"):
+                    rn = st.text_input("Ad Soyad")
+                    ru = st.text_input("Kullanıcı Adı")
+                    re = st.text_input("E-Posta Adresi")
+                    rp = st.text_input("Geçici Parola", type="password")
+                    rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
+                    
+                    # ⚠️ BURAYA SENİN STREAMLIT APP LİNKİNİ YAZ
+                    app_link = "https://senin-uygulamanin-gercek-linki.streamlit.app" 
+                    
+                    submit_button = st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True)
+                    
+                    if submit_button:
+                        if ru and rp and rn and re:
+                            if add_user_to_db(ru, rp, re, rr, rn):
+                                mail_durumu = send_welcome_email(re, rn, ru, rp, app_link)
+                                if mail_durumu:
+                                    st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
+                                else:
+                                    st.warning("Personel başarıyla kaydedildi ancak Mail GÖNDERİLEMEDİ.")
+                            else:
+                                st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
+                        else:
+                            st.warning("Lütfen tüm alanları doldurun.")
+                            
+            with col_sil:
                 st.markdown("#### 🗑️ Kullanıcı Sil")
-                
-                # Admin kendi kendini silemesin diye listeyi filtrele
-                silinebilir_kullanicilar = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
-                
-                kullanici_sec = st.selectbox("Silinecek Personeli Seçiniz:", ["Seçiniz..."] + silinebilir_kullanicilar)
-                
-                if st.button("❌ Personeli Sistemden Kalıcı Olarak Sil", type="primary"):
-                    if kullanici_sec != "Seçiniz...":
-                        # Seçilen kullanıcıyı veritabanından çıkar ve dosyayı tekrar kaydet
-                        user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
-                        user_db_df.to_csv(USER_DB_FILE, index=False)
-                        st.success(f"'{kullanici_sec}' başarıyla sistemden silindi!")
-                        time.sleep(1)
-                        st.rerun() # Sayfayı yenile ki tablo güncellensin
-                    else:
-                        st.warning("Lütfen silmek için bir personel seçin.")
-                        
-            except Exception as e:
-                st.warning(f"Kullanıcı veritabanı okunurken bir hata oluştu: {e}")
+                try:
+                    user_db_df = pd.read_csv(USER_DB_FILE)
+                    display_df = user_db_df[['username', 'real_name', 'email', 'role']]
+                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    
+                    silinebilir_kullanicilar = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
+                    kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir_kullanicilar)
+                    
+                    if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
+                        if kullanici_sec != "Seçiniz...":
+                            user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
+                            user_db_df.to_csv(USER_DB_FILE, index=False)
+                            st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
+                            time.sleep(1.5)
+                            st.rerun()
+                        else:
+                            st.warning("Silmek için bir personel seçmelisiniz.")
+                except Exception as e:
+                    st.error(f"Veritabanı okunamadı: {e}")
 
     st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 else:
