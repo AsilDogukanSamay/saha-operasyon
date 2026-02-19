@@ -323,12 +323,14 @@ user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longit
 
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
+# YENİ (İSTEDİĞİN) KOD:
 if st.session_state.role == "Yönetici":
     view_df = main_df
 else:
-    u_norm = normalize_text(st.session_state.user)
+    # Kullanıcının "Ad Soyad"ını değil, giriş yaptığı "Kullanıcı Adı"nı alıyoruz
+    current_username = st.session_state.auth_user_info['username'] # Bu satıra dikkat
+    u_norm = normalize_text(current_username)
     view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
