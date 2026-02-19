@@ -126,8 +126,9 @@ def typewriter_effect(text):
 # --- MAİL GÖNDERME FONKSİYONU ---
 def send_welcome_email(receiver_email, user_name):
     # BURAYI KENDİ BİLGİLERİNLE DOLDUR (Uygulama şifresini boşluksuz yaz)
-    sender_email = "senin_gmail_adresin@gmail.com" 
-    app_password = "onaltihanelisifre" 
+    sender_email = "asildogukansamay@gmail.com" 
+    app_password = "codgkulmjapjlvsw
+" 
     
     if sender_email == "senin_gmail_adresin@gmail.com":
         return False
