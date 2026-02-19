@@ -551,7 +551,7 @@ if not view_df.empty:
                     rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
                     
                     # ⚠️ BURAYA SENİN STREAMLIT APP LİNKİNİ YAZ
-                    app_link = "https://senin-uygulamanin-gercek-linki.streamlit.app" 
+                    app_link = "https://saha-operasyon-aukrmhjzhjkrcbgx5u7iiv.streamlit.app/?embed=true" 
                     
                     submit_button = st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True)
                     
