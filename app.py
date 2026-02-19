@@ -397,16 +397,46 @@ if not view_df.empty:
         
     dashboard_tabs = st.tabs(tab_titles)
 
-    # TAB 1: HARİTA
-    with dashboard_tabs[0]:
+   # --- HARİTA ÇİZİM VE KORUMA BLOKU ---
+with dashboard_tabs[0]:
+    if not processed_df.empty:
         col_ctrl, col_leg = st.columns([1, 2])
         with col_leg:
-            legend_html = ""
-            if "Ziyaret" in map_view_mode:
-                legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
-            else:
-                legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+            # Legend HTML kodların burada kalsın...
             st.markdown(legend_html, unsafe_allow_html=True)
+
+        def get_pt_color(r):
+            if "Ziyaret" in map_view_mode: 
+                return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
+            s = str(r["Lead Status"]).lower()
+            return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
+        
+        processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
+        
+        # Harita Katmanları
+        layers = [
+            pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)
+        ]
+        
+        if user_lat: 
+            layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+        
+        # Haritayı Çiz
+        st.pydeck_chart(pdk.Deck(
+            map_style=pdk.map_styles.CARTO_DARK, 
+            initial_view_state=pdk.ViewState(
+                latitude=processed_df["lat"].mean(), 
+                longitude=processed_df["lon"].mean(), 
+                zoom=12, 
+                pitch=45
+            ), 
+            layers=layers, 
+            tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
+        ))
+    else:
+        # VERİ YOKSA SİYAH EKRAN YERİNE BU ÇIKAR:
+        st.warning(f"⚠️ **{st.session_state.user}**, haritada gösterilecek size özel bir plan bulunamadı.")
+        st.info("💡 **İpucu:** Excel'deki 'Personel' sütununda kullanıcı adınızın (**burak**) doğru yazıldığından ve 'Bugünün Planı' filtresinin açık/kapalı olduğundan emin olun.")
 
         def get_pt_color(r):
             if "Ziyaret" in map_view_mode: return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
