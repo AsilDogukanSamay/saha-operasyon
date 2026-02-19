@@ -326,10 +326,12 @@ if st.session_state.auth:
     else:
         # ARTIK KULLANICI ADINA (Username) GÖRE FİLTRELİYORUZ
         current_username = st.session_state.auth_user_info['username']
-        u_norm = normalize_text(current_username)
-        view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
-else:
-    view_df = pd.DataFrame()
+        
+        # BOŞLUKLARI VE HARF FARKLARINI SIFIRLAYALIM
+        u_norm = str(current_username).strip().lower()
+        
+        # Excel'deki Personel sütununu da aynı şekilde temizleyip karşılaştıralım
+        view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
 
 # --- SIDEBAR ---
 with st.sidebar:
