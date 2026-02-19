@@ -98,11 +98,16 @@ APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data e
 
 def clean_coord(val):
     try:
-        s_val = str(val).replace(",", ".")
+        # Gelen veriyi metne çevir ve tüm boşlukları, virgülleri temizle
+        s_val = str(val).replace(",", ".").strip()
+        # Sadece sayı ve nokta kalsın
         raw = re.sub(r"[^\d.]", "", s_val)
         if not raw: return None
         num = float(raw)
-        if num == 0: return None
+        # Koordinat Türkiye sınırları içinde mi kontrolü (Opsiyonel ama güvenli)
+        if 25 < num < 46: # Enlem ve boylam aralığı
+            return num
+        # Eğer sayı çok büyükse küçültme mantığı (Nokta kayması varsa)
         while num > 180: num /= 10
         return num
     except: return None
