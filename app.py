@@ -122,10 +122,10 @@ def typewriter_effect(text):
 # --- KURUMSAL MAİL GÖNDERME FONKSİYONU ---
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
     # ⚠️ BURAYI KENDİ BİLGİLERİNLE DOLDUR
-    sender_email = "senin_gmail_adresin@gmail.com" 
-    app_password = "onaltihanelisifre" 
+    sender_email = "asildogukansamay@gmail.com" 
+    app_password = "codgkulmjapjlvsw" 
     
-    if sender_email == "senin_gmail_adresin@gmail.com":
+    if sender_email == "asildogukansamay@gmail.com":
         return False
 
     msg = MIMEMultipart("alternative")
