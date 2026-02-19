@@ -209,19 +209,24 @@ if not st.session_state.auth:
 # ==============================================================================
 # 4. GİRİŞ EKRANI
 # ==============================================================================
-if not st.session_state.auth:
-    st.markdown("""
-    <style>
-        .stApp { background-color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] { display: none !important; }
-        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 14px !important; }
-        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB !important; border-radius: 10px !important; padding: 12px 15px !important; }
-        div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
-        div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
-        .login-footer-wrapper { text-align: center; margin-top: 60px; font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; border-top: 1px solid #F3F4F6; padding-top: 25px; width: 100%; max-width: 300px; margin-left: auto; margin-right: auto; }
-        .login-footer-wrapper a { color: #2563EB; text-decoration: none; font-weight: 800; }
-        @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
-    </style>
+if st.button("Güvenli Giriş Yap"):
+            user_info = authenticate_user(auth_u, auth_p)
+            if user_info is not None:
+                # 1. Mevcut session_state atamaları
+                st.session_state.role = user_info['role']
+                st.session_state.user = user_info['real_name']
+                st.session_state.auth_user_info = user_info 
+                st.session_state.auth = True
+                
+                # 2. F5 KORUMASI İÇİN URL'YE BİLGİLERİ YAZIYORUZ
+                # Bu satırlar tarayıcı yenilendiğinde kim olduğunu hatırlar
+                st.query_params["u"] = user_info['username']
+                st.query_params["r"] = user_info['role']
+                st.query_params["n"] = user_info['real_name']
+                
+                st.rerun()
+            else:
+                st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
     """, unsafe_allow_html=True)
 
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
