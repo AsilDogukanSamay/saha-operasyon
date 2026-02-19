@@ -124,13 +124,6 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
     sender_email = "asildogukansamay@gmail.com" 
     app_password = "codgkulmjapjlvsw" 
     
-    # İF BLOĞUNU BURADAN TAMAMEN SİLDİK!
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
-    msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
-    msg["To"] = receiver_email
-
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
     msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
@@ -142,24 +135,19 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
             <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
             <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
-            
             <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
                 <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
                 <p style="margin: 0 0 8px 0; font-size: 16px;">Kullanıcı Adı: <span style="color: #2563EB; font-weight: bold;">{user_login}</span></p>
                 <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
             </div>
-            
             <p style="color: #555; font-size: 15px; margin-bottom: 25px;">Uygulamaya giderek akıllı rotanızı görüntüleyebilir ve sahada işlemlere başlayabilirsiniz.</p>
-            
             <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
-            
             <br><br><br>
             <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px;">İyi çalışmalar dileriz,<br><b>MediBulut Yönetim Ekibi</b></p>
         </div>
     </body>
     </html>
     """
-    
     part = MIMEText(html_content, "html")
     msg.attach(part)
 
@@ -197,12 +185,13 @@ if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
 if "role" not in st.session_state: st.session_state.role = None
 if "user" not in st.session_state: st.session_state.user = None
+if "auth_user_info" not in st.session_state: st.session_state.auth_user_info = None
 if "timer_start" not in st.session_state: st.session_state.timer_start = None
 if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
 # ==============================================================================
-# 4. GİRİŞ EKRANI (KAYIT OL KALDIRILDI, SADECE GİRİŞ VAR)
+# 4. GİRİŞ EKRANI
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -238,17 +227,16 @@ if not st.session_state.auth:
         auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
         auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
-      # Giriş butonunun olduğu blokta şu hizalamaya dikkat et:
-if st.button("Güvenli Giriş Yap"):
-    user_info = authenticate_user(auth_u, auth_p)
-    if user_info is not None:
-        st.session_state.role = user_info['role']
-        st.session_state.user = user_info['real_name']
-        st.session_state.auth_user_info = user_info    # Yeni eklediğimiz satır
-        st.session_state.auth = True
-        st.rerun()
-    else: # Bu 'else' üstteki 'if user_info is not None' ile AYNI HİZADA olmalı
-        st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
+        if st.button("Güvenli Giriş Yap"):
+            user_info = authenticate_user(auth_u, auth_p)
+            if user_info is not None:
+                st.session_state.role = user_info['role']
+                st.session_state.user = user_info['real_name']
+                st.session_state.auth_user_info = user_info 
+                st.session_state.auth = True
+                st.rerun()
+            else:
+                st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
 
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 
@@ -326,14 +314,18 @@ user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longit
 
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
-# YENİ (İSTEDİĞİN) KOD:
-if st.session_state.role == "Yönetici":
-    view_df = main_df
+# --- VERİ FİLTRELEME BÖLÜMÜ ---
+if st.session_state.auth: 
+    if st.session_state.role == "Yönetici":
+        view_df = main_df
+    else:
+        # ARTIK KULLANICI ADINA (Username) GÖRE FİLTRELİYORUZ
+        current_username = st.session_state.auth_user_info['username']
+        u_norm = normalize_text(current_username)
+        view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
 else:
-    # Kullanıcının "Ad Soyad"ını değil, giriş yaptığı "Kullanıcı Adı"nı alıyoruz
-    current_username = st.session_state.auth_user_info['username'] # Bu satıra dikkat
-    u_norm = normalize_text(current_username)
-    view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
+    view_df = pd.DataFrame()
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
@@ -544,25 +536,18 @@ if not view_df.empty:
         # TAB 7: PERSONEL YÖNETİMİ
         with dashboard_tabs[6]:
             st.subheader("⚙️ Personel Yönetimi")
-            
             col_ekle, col_sil = st.columns(2, gap="large")
-            
             with col_ekle:
                 st.markdown("#### ➕ Yeni Personel Ekle")
                 st.info("Kayıt işlemi sonrası personele otomatik bilgilendirme maili gönderilir.")
-                
                 with st.form("yeni_personel_formu"):
                     rn = st.text_input("Ad Soyad")
                     ru = st.text_input("Kullanıcı Adı")
                     re = st.text_input("E-Posta Adresi")
                     rp = st.text_input("Geçici Parola", type="password")
                     rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
-                    
-                    # ⚠️ BURAYA SENİN STREAMLIT APP LİNKİNİ YAZ
                     app_link = "https://saha-operasyon-aukrmhjzhjkrcbgx5u7iiv.streamlit.app/" 
-                    
                     submit_button = st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True)
-                    
                     if submit_button:
                         if ru and rp and rn and re:
                             if add_user_to_db(ru, rp, re, rr, rn):
@@ -575,17 +560,14 @@ if not view_df.empty:
                                 st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
                         else:
                             st.warning("Lütfen tüm alanları doldurun.")
-                            
             with col_sil:
                 st.markdown("#### 🗑️ Kullanıcı Sil")
                 try:
                     user_db_df = pd.read_csv(USER_DB_FILE)
                     display_df = user_db_df[['username', 'real_name', 'email', 'role']]
                     st.dataframe(display_df, use_container_width=True, hide_index=True)
-                    
                     silinebilir_kullanicilar = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
                     kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir_kullanicilar)
-                    
                     if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
                         if kullanici_sec != "Seçiniz...":
                             user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
@@ -600,4 +582,4 @@ if not view_df.empty:
 
     st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 else:
-    st.warning("Veriler yükleniyor...")
+    st.warning("Lütfen giriş yapın.")
