@@ -98,16 +98,12 @@ APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data e
 
 def clean_coord(val):
     try:
-        # Gelen veriyi metne çevir ve tüm boşlukları, virgülleri temizle
         s_val = str(val).replace(",", ".").strip()
-        # Sadece sayı ve nokta kalsın
         raw = re.sub(r"[^\d.]", "", s_val)
         if not raw: return None
         num = float(raw)
-        # Koordinat Türkiye sınırları içinde mi kontrolü (Opsiyonel ama güvenli)
-        if 25 < num < 46: # Enlem ve boylam aralığı
+        if 25 < num < 46 or 25 < num < 46: # Genel TR koordinat kontrolü
             return num
-        # Eğer sayı çok büyükse küçültme mantığı (Nokta kayması varsa)
         while num > 180: num /= 10
         return num
     except: return None
@@ -324,13 +320,8 @@ if st.session_state.auth:
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        # ARTIK KULLANICI ADINA (Username) GÖRE FİLTRELİYORUZ
         current_username = st.session_state.auth_user_info['username']
-        
-        # BOŞLUKLARI VE HARF FARKLARINI SIFIRLAYALIM
         u_norm = str(current_username).strip().lower()
-        
-        # Excel'deki Personel sütununu da aynı şekilde temizleyip karşılaştıralım
         view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
 
 # --- SIDEBAR ---
@@ -373,7 +364,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- İÇERİK ---
-if not view_df.empty:
+if st.session_state.auth and not view_df.empty:
     processed_df = view_df.copy()
     if filter_today:
         processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
@@ -397,70 +388,51 @@ if not view_df.empty:
         
     dashboard_tabs = st.tabs(tab_titles)
 
-   # --- HARİTA ÇİZİM VE KORUMA BLOKU ---
-with dashboard_tabs[0]:
-    if not processed_df.empty:
-        col_ctrl, col_leg = st.columns([1, 2])
-        with col_leg:
-            # Legend HTML kodların burada kalsın...
-            st.markdown(legend_html, unsafe_allow_html=True)
+    # --- TAB 1: HARİTA ---
+    with dashboard_tabs[0]:
+        if not processed_df.empty:
+            col_ctrl, col_leg = st.columns([1, 2])
+            with col_leg:
+                if "Ziyaret" in map_view_mode:
+                    legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+                else:
+                    legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+                st.markdown(legend_html, unsafe_allow_html=True)
 
-        def get_pt_color(r):
-            if "Ziyaret" in map_view_mode: 
-                return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
-            s = str(r["Lead Status"]).lower()
-            return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
-        
-        processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-        
-        # Harita Katmanları
-        layers = [
-            pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)
-        ]
-        
-        if user_lat: 
-            layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-        
-        # Haritayı Çiz
-        st.pydeck_chart(pdk.Deck(
-            map_style=pdk.map_styles.CARTO_DARK, 
-            initial_view_state=pdk.ViewState(
-                latitude=processed_df["lat"].mean(), 
-                longitude=processed_df["lon"].mean(), 
-                zoom=12, 
-                pitch=45
-            ), 
-            layers=layers, 
-            tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
-        ))
-    else:
-        # VERİ YOKSA SİYAH EKRAN YERİNE BU ÇIKAR:
-        st.warning(f"⚠️ **{st.session_state.user}**, haritada gösterilecek size özel bir plan bulunamadı.")
-        st.info("💡 **İpucu:** Excel'deki 'Personel' sütununda kullanıcı adınızın (**burak**) doğru yazıldığından ve 'Bugünün Planı' filtresinin açık/kapalı olduğundan emin olun.")
+            def get_pt_color(r):
+                if "Ziyaret" in map_view_mode: 
+                    return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
+                s = str(r["Lead Status"]).lower()
+                return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
+            
+            processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
+            layers = [pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)]
+            if user_lat: 
+                layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+            
+            st.pydeck_chart(pdk.Deck(
+                map_style=pdk.map_styles.CARTO_DARK, 
+                initial_view_state=pdk.ViewState(latitude=processed_df["lat"].mean(), longitude=processed_df["lon"].mean(), zoom=12, pitch=45), 
+                layers=layers, 
+                tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
+            ))
+        else:
+            st.warning(f"⚠️ **{st.session_state.user}**, haritada gösterilecek size özel bir plan bulunamadı.")
+            st.info("💡 **İpucu:** Excel'deki 'Personel' sütununda kullanıcı adınızın doğru yazıldığından emin olun.")
 
-        def get_pt_color(r):
-            if "Ziyaret" in map_view_mode: return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
-            s = str(r["Lead Status"]).lower()
-            return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
-        
-        processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-        layers = [pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)]
-        if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-        st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=user_lat or processed_df["lat"].mean(), longitude=user_lon or processed_df["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
-
-    # TAB 2: LİSTE
+    # --- TAB 2: LİSTE ---
     with dashboard_tabs[1]:
         sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
         fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
         fdf["Nav"] = fdf.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
-    # TAB 3: ROTA
+    # --- TAB 3: ROTA ---
     with dashboard_tabs[2]:
         st.info("📍 **Akıllı Rota:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
         st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
-    # TAB 4: İŞLEM & AI
+    # --- TAB 4: İŞLEM & AI ---
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         default_idx = 0
@@ -474,23 +446,19 @@ with dashboard_tabs[0]:
         if selected_clinic_ai:
             clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
             col_op, col_ai = st.columns(2)
-            
             with col_op:
                 st.markdown("### 🛠️ Operasyon Paneli")
                 st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                
                 raw_phone = str(clinic_row.get("İletişim", ""))
                 clean_phone = re.sub(r"\D", "", raw_phone)
                 if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
                 if len(clean_phone) == 10: clean_phone = "90" + clean_phone
-                
                 msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
                 if len(clean_phone) >= 10:
                     wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
                     st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
                 else:
                     st.error("⚠️ İletişim numarası hatalı veya kayıtlı değil.")
-                
                 st.markdown("#### ⏱️ Ziyaret Süresi")
                 c_t1, c_t2 = st.columns(2)
                 if st.session_state.timer_start is None:
@@ -507,7 +475,6 @@ with dashboard_tabs[0]:
                         st.session_state.timer_start = None
                         st.success("Ziyaret süresi kaydedildi!")
                         st.rerun()
-
             with col_ai:
                 st.markdown("### 🤖 Saha Stratejisti")
                 lead_stat = str(clinic_row["Lead Status"]).lower()
@@ -515,7 +482,6 @@ with dashboard_tabs[0]:
                 if "hot" in lead_stat: ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
                 elif "warm" in lead_stat: ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
                 else: ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git."
-                
                 with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
                 st.markdown("---")
                 existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
@@ -523,7 +489,6 @@ with dashboard_tabs[0]:
                 if st.button("💾 Notu Kaydet", use_container_width=True):
                     st.session_state.notes[selected_clinic_ai] = new_note_val
                     st.toast("Not başarıyla kaydedildi!", icon="✅")
-                
                 if st.session_state.notes:
                     notes_data = [{"Klinik": k, "Alınan Not": v, "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")} for k, v in st.session_state.notes.items()]
                     df_notes = pd.DataFrame(notes_data)
@@ -531,34 +496,26 @@ with dashboard_tabs[0]:
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                     st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-    # YÖNETİCİ SEKMELERİ
+    # --- YÖNETİCİ SEKMELERİ ---
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
-        # TAB 5: ANALİZ
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
             ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
             secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
             map_df = main_df.copy() if secilen_personel == "Tüm Ekip" else main_df[main_df["Personel"] == secilen_personel]
-            
             def get_status_color(r):
                 s = str(r["Lead Status"]).lower()
-                if "hot" in s: return [239, 68, 68]
-                if "warm" in s: return [245, 158, 11]
-                return [59, 130, 246]
+                return [239, 68, 68] if "hot" in s else [245, 158, 11] if "warm" in s else [59, 130, 246]
             map_df["color"] = map_df.apply(get_status_color, axis=1)
-            
             st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df["lat"].mean() if not map_df.empty else 41.0, longitude=map_df["lon"].mean() if not map_df.empty else 29.0, zoom=8), layers=[pdk.Layer("ScatterplotLayer", data=map_df, get_position='[lon, lat]', get_color='color', get_radius=150, radius_min_pixels=6, pickable=True)], tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}))
             st.divider()
             perf_stats = main_df.groupby("Personel").agg(H_Adet=('Klinik Adı','count'), Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()), S_Toplam=('Skor','sum')).reset_index().sort_values("S_Toplam", ascending=False)
             gc1, gc2 = st.columns([2,1])
             with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
             with gc2: st.altair_chart(alt.Chart(main_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
-            
             for _, r in perf_stats.iterrows():
                 rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                 st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
-
-        # TAB 6: ISI HARİTASI
         with dashboard_tabs[5]:
             st.subheader("🔥 Saha Yoğunluk Haritası")
             heat_layer = pdk.Layer("HeatmapLayer", data=main_df, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
@@ -569,54 +526,39 @@ with dashboard_tabs[0]:
                 with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
                 st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             except: st.error("Excel modülü eksik.")
-
-        # TAB 7: PERSONEL YÖNETİMİ
         with dashboard_tabs[6]:
             st.subheader("⚙️ Personel Yönetimi")
             col_ekle, col_sil = st.columns(2, gap="large")
             with col_ekle:
                 st.markdown("#### ➕ Yeni Personel Ekle")
-                st.info("Kayıt işlemi sonrası personele otomatik bilgilendirme maili gönderilir.")
                 with st.form("yeni_personel_formu"):
-                    rn = st.text_input("Ad Soyad")
-                    ru = st.text_input("Kullanıcı Adı")
-                    re = st.text_input("E-Posta Adresi")
-                    rp = st.text_input("Geçici Parola", type="password")
+                    rn, ru, re, rp = st.text_input("Ad Soyad"), st.text_input("Kullanıcı Adı"), st.text_input("E-Posta Adresi"), st.text_input("Geçici Parola", type="password")
                     rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
                     app_link = "https://saha-operasyon-aukrmhjzhjkrcbgx5u7iiv.streamlit.app/" 
-                    submit_button = st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True)
-                    if submit_button:
+                    if st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True):
                         if ru and rp and rn and re:
                             if add_user_to_db(ru, rp, re, rr, rn):
-                                mail_durumu = send_welcome_email(re, rn, ru, rp, app_link)
-                                if mail_durumu:
-                                    st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
-                                else:
-                                    st.warning("Personel başarıyla kaydedildi ancak Mail GÖNDERİLEMEDİ.")
-                            else:
-                                st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
-                        else:
-                            st.warning("Lütfen tüm alanları doldurun.")
+                                if send_welcome_email(re, rn, ru, rp, app_link): st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
+                                else: st.warning("Personel başarıyla kaydedildi ancak Mail GÖNDERİLEMEDİ.")
+                            else: st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
+                        else: st.warning("Lütfen tüm alanları doldurun.")
             with col_sil:
                 st.markdown("#### 🗑️ Kullanıcı Sil")
                 try:
                     user_db_df = pd.read_csv(USER_DB_FILE)
-                    display_df = user_db_df[['username', 'real_name', 'email', 'role']]
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    st.dataframe(user_db_df[['username', 'real_name', 'email', 'role']], use_container_width=True, hide_index=True)
                     silinebilir_kullanicilar = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
                     kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir_kullanicilar)
-                    if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
-                        if kullanici_sec != "Seçiniz...":
-                            user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
-                            user_db_df.to_csv(USER_DB_FILE, index=False)
-                            st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
-                            time.sleep(1.5)
-                            st.rerun()
-                        else:
-                            st.warning("Silmek için bir personel seçmelisiniz.")
-                except Exception as e:
-                    st.error(f"Veritabanı okunamadı: {e}")
+                    if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True) and kullanici_sec != "Seçiniz...":
+                        user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
+                        user_db_df.to_csv(USER_DB_FILE, index=False)
+                        st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
+                        time.sleep(1.5)
+                        st.rerun()
+                except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
     st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
+elif st.session_state.auth:
+    st.warning("⚠️ Planlanmış ziyaretiniz bulunmuyor.")
 else:
     st.warning("Lütfen giriş yapın.")
