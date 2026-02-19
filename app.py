@@ -191,6 +191,21 @@ if "timer_start" not in st.session_state: st.session_state.timer_start = None
 if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
+# --- F5 / YENİLEME KORUMASI (QUERY PARAMS) ---
+if not st.session_state.auth:
+    # URL'de kullanıcı bilgisi var mı kontrol et
+    params = st.query_params
+    if "u" in params and "r" in params and "n" in params:
+        st.session_state.auth = True
+        st.session_state.user = params["n"]
+        st.session_state.role = params["r"]
+        # Buraya auth_user_info paketini de tekrar oluşturuyoruz ki harita patlamasın
+        st.session_state.auth_user_info = {
+            'username': params["u"],
+            'role': params["r"],
+            'real_name': params["n"]
+        }
+
 # ==============================================================================
 # 4. GİRİŞ EKRANI
 # ==============================================================================
