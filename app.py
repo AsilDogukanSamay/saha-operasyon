@@ -11,6 +11,9 @@ import streamlit.components.v1 as components
 import base64 
 import os
 import hashlib
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from io import BytesIO
 from datetime import datetime
 
@@ -25,14 +28,12 @@ EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/ed
 USER_DB_FILE = "users.csv"
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
 
-# Kütüphane Kontrolü
 try:
     from streamlit_js_eval import get_geolocation
 except ImportError:
     st.error("Lütfen gerekli kütüphaneyi yükleyin: pip install streamlit_js_eval")
     st.stop()
 
-# Sayfa Config
 try:
     st.set_page_config(
         page_title="Medibulut Saha Operasyon Sistemi",
@@ -44,7 +45,7 @@ except Exception:
     pass
 
 # ==============================================================================
-# 2. YARDIMCI FONKSİYONLAR & GÜVENLİK
+# 2. YARDIMCI FONKSİYONLAR & GÜVENLİK & MAİL SİSTEMİ
 # ==============================================================================
 
 def make_hashes(password):
@@ -55,18 +56,19 @@ def check_hashes(password, hashed_text):
 
 def init_db():
     if not os.path.exists(USER_DB_FILE):
-        df = pd.DataFrame(columns=["username", "password", "role", "real_name", "points"])
+        df = pd.DataFrame(columns=["username", "password", "email", "role", "real_name", "points"])
         data = [
-            {"username": "admin", "password": make_hashes("Medibulut.2026!"), "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
-            {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
+            {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
+            {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
         ]
         pd.concat([df, pd.DataFrame(data)], ignore_index=True).to_csv(USER_DB_FILE, index=False)
 
-def add_user_to_db(username, password, role, real_name):
+def add_user_to_db(username, password, email, role, real_name):
     init_db()
     df = pd.read_csv(USER_DB_FILE)
-    if username in df['username'].values: return False
-    new_row = pd.DataFrame([{"username": username, "password": make_hashes(password), "role": role, "real_name": real_name, "points": 0}])
+    if username in df['username'].values or email in df['email'].values: 
+        return False
+    new_row = pd.DataFrame([{"username": username, "password": make_hashes(password), "email": email, "role": role, "real_name": real_name, "points": 0}])
     pd.concat([df, new_row], ignore_index=True).to_csv(USER_DB_FILE, index=False)
     return True
 
@@ -114,6 +116,50 @@ def typewriter_effect(text):
     for word in text.split(" "):
         yield word + " "
         time.sleep(0.04)
+
+# --- MAİL GÖNDERME FONKSİYONU ---
+def send_welcome_email(receiver_email, user_name):
+    # BURAYI KENDİ BİLGİLERİNLE DOLDUR (Uygulama şifresini boşluksuz yaz)
+    sender_email = "senin_gmail_adresin@gmail.com" 
+    app_password = "onaltihanelisifre" 
+    
+    # Şifre girilmemişse kodu patlatmasın, direkt geçsin diye kontrol
+    if sender_email == "senin_gmail_adresin@gmail.com":
+        return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "SahaBulut'a Hoş Geldiniz! 🚀"
+    msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
+    msg["To"] = receiver_email
+
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <h2 style="color: #2563EB;">Hoş Geldin, {user_name}! 🚀</h2>
+            <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabın başarıyla oluşturuldu.</p>
+            <p style="color: #555; font-size: 15px;">Artık sahada gücüne güç katmaya hazırsın. Sisteme giriş yaparak akıllı rotanı oluşturabilir, yapay zeka destekli satış stratejilerini kullanmaya başlayabilirsin.</p>
+            <br>
+            <a href="https://saha-operasyon.streamlit.app" style="background: #2563EB; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Sisteme Giriş Yap</a>
+            <br><br><br>
+            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 10px;">İyi çalışmalar dileriz,<br><b>SahaBulut Yönetim Ekibi</b></p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    part = MIMEText(html_content, "html")
+    msg.attach(part)
+
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print("Mail Gönderim Hatası:", e)
+        return False
 
 @st.cache_data(ttl=60)
 def fetch_operational_data(sheet_id):
@@ -168,9 +214,9 @@ if not st.session_state.auth:
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
 
     with col_left_form:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(f"""
-        <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 40px; flex-wrap: nowrap;">
+        <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 30px; flex-wrap: nowrap;">
             <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
             <div style="line-height: 1; white-space: nowrap;">
                 <div style="color:#2563EB; font-weight:900; font-size: 36px; letter-spacing:-1px;">Saha<span style="color:#6B7280; font-weight:300;">Bulut</span></div>
@@ -181,7 +227,6 @@ if not st.session_state.auth:
         tab_login, tab_signup = st.tabs(["🔑 Giriş Yap", "📝 Kayıt Ol"])
 
         with tab_login:
-            st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
             auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
             auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
             if st.button("Güvenli Giriş Yap"):
@@ -194,14 +239,27 @@ if not st.session_state.auth:
                 else: st.error("Giriş bilgileri hatalı.")
 
         with tab_signup:
-            st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Hesap Oluştur</h2>""", unsafe_allow_html=True)
-            ru = st.text_input("Kullanıcı Adı Seç", key="r_u")
             rn = st.text_input("Ad Soyad", key="r_n")
+            ru = st.text_input("Kullanıcı Adı Seç", key="r_u")
+            re = st.text_input("E-Posta Adresi (Mail için)", key="r_e")
             rp = st.text_input("Parola Belirle", type="password", key="r_p")
             rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"], key="r_r")
+            
             if st.button("Kayıt Ol"):
-                if add_user_to_db(ru, rp, rr, rn): st.success("Kayıt başarılı! Giriş yapabilirsiniz.")
-                else: st.error("Kullanıcı adı kullanımda.")
+                if ru and rp and rn and re:
+                    if add_user_to_db(ru, rp, re, rr, rn):
+                        st.success("Kayıt başarılı! Hoş geldin maili gönderiliyor...")
+                        # Maili Gönder
+                        mail_gitti_mi = send_welcome_email(re, rn)
+                        if mail_gitti_mi:
+                            st.toast("✅ Mail başarıyla gönderildi!", icon="📧")
+                        else:
+                            st.toast("⚠️ Kayıt tamamlandı ancak mail gönderilemedi (Mail ayarlarını kontrol et).", icon="⚠️")
+                        st.balloons()
+                    else: 
+                        st.error("Kullanıcı adı veya E-Posta zaten kullanımda.")
+                else:
+                    st.warning("Lütfen tüm alanları doldurunuz.")
 
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 
@@ -289,7 +347,7 @@ else:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown(f'<img src="{APP_LOGO_HTML}" class="hd-sidebar-logo">', unsafe_allow_html=True)
+    st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
     st.caption(f"Rol: {st.session_state.role}")
     st.divider()
@@ -405,40 +463,18 @@ if not view_df.empty:
                 st.markdown("### 🛠️ Operasyon Paneli")
                 st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
                 
-               # --- TELEFON NUMARASI DÜZELTME BLOĞU (BAŞLANGIÇ) ---
                 raw_phone = str(clinic_row.get("İletişim", ""))
-                
-                # 1. Sadece rakamları al
                 clean_phone = re.sub(r"\D", "", raw_phone)
+                if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
+                if len(clean_phone) == 10: clean_phone = "90" + clean_phone
                 
-                # 2. Eğer numara '0' ile başlıyorsa, o sıfırı at (Örn: 0532 -> 532)
-                if clean_phone.startswith("0"):
-                    clean_phone = clean_phone[1:]
-                
-                # 3. Eğer numara 10 haneli kaldıysa (532xxxxxxx), başına '90' ekle
-                if len(clean_phone) == 10:
-                    clean_phone = "90" + clean_phone
-                
-                # Mesaj içeriği
                 msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                
-                # Linki Oluştur
-                if len(clean_phone) >= 10: # En az 10 hane olmalı
-                    # api.whatsapp.com kullanmak bazen daha kararlıdır
+                if len(clean_phone) >= 10:
                     wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
-                    
-                    st.markdown(f"""
-                    <a href="{wa_link}" target="_blank" style="text-decoration:none;">
-                        <div style="background:#25D366; color:white; padding:12px; border-radius:10px; text-align:center; margin-bottom:15px; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2);">
-                            📲 WhatsApp Mesajı Gönder ({raw_phone})
-                        </div>
-                    </a>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
                 else:
-                    st.error("⚠️ İletişim numarası formatı hatalı.")
-                # --- TELEFON NUMARASI DÜZELTME BLOĞU (BİTİŞ) ---
+                    st.error("⚠️ İletişim numarası hatalı.")
                 
-                # Kronometre
                 st.markdown("#### ⏱️ Ziyaret Süresi")
                 c_t1, c_t2 = st.columns(2)
                 if st.session_state.timer_start is None:
@@ -449,38 +485,37 @@ if not view_df.empty:
                 else:
                     elapsed = int(time.time() - st.session_state.timer_start)
                     mins, secs = divmod(elapsed, 60)
-                    st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d} ({st.session_state.timer_clinic})")
+                    st.warning(f"⏳ Süre: {mins:02d}:{secs:02d} ({st.session_state.timer_clinic})")
                     if c_t2.button("⏹️ Bitir"):
                         st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
                         st.session_state.timer_start = None
-                        st.success("Ziyaret süresi kaydedildi!")
+                        st.success("Kaydedildi!")
                         st.rerun()
 
             with col_ai:
                 st.markdown("### 🤖 Saha Stratejisti")
                 lead_stat = str(clinic_row["Lead Status"]).lower()
                 ai_msg = ""
-                if "hot" in lead_stat: ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Önerim: %10 İndirim kozunu hemen masaya koy ve satışı kapat!"
-                elif "warm" in lead_stat: ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. Bölgedeki diğer mutlu müşterilerimizden (referanslardan) bahsederek güven kazanabilirsin."
-                else: ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} şu an 'COLD'. Henüz bizi tanımıyorlar. Sadece tanışma ve broşür bırakma hedefli git."
+                if "hot" in lead_stat: ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} şu an 'HOT' statüsünde. Önerim: %10 İndirim kozunu masaya koy ve kapat!"
+                elif "warm" in lead_stat: ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} 'WARM' durumda. Bölgedeki diğer mutlu müşterilerimizden bahsederek güven kazan."
+                else: ai_msg = f"Bilgi. 🔵 {selected_clinic_ai} şu an 'COLD'. Sadece tanışma ve broşür bırakma hedefli git."
                 
                 with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
                 st.markdown("---")
-                existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
+                new_note_val = st.text_area("Not Ekle:", value=st.session_state.notes.get(selected_clinic_ai, ""))
                 if st.button("💾 Notu Kaydet", use_container_width=True):
                     st.session_state.notes[selected_clinic_ai] = new_note_val
-                    st.toast("Not başarıyla kaydedildi!", icon="✅")
+                    st.toast("Kaydedildi!", icon="✅")
                 
                 if st.session_state.notes:
                     notes_data = [{"Klinik": k, "Alınan Not": v, "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")} for k, v in st.session_state.notes.items()]
                     df_notes = pd.DataFrame(notes_data)
                     buffer = BytesIO()
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                    st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Ziyaret_Notlari_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                    st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name=f"Notlar_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
     # TAB 5 & 6 (SADECE YÖNETİCİ GÖRÜR)
-    if st.session_state.role == "Yönetici":
+    if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
             ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
