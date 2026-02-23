@@ -316,9 +316,23 @@ if not st.session_state.auth:
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
         
-        # BİRİNCİ İMZA (Giriş Ekranı) - Artık otomatik olarak en alta itilecek
+       # BİRİNCİ İMZA (Giriş Ekranı) - Modern Çok Satırlı Tasarım
         current_year = datetime.now().year
-        st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <style>
+            .modern-footer-light {{ display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: auto; padding: 25px 0 15px 0; border-top: 1px solid #E5E7EB; font-family: 'Inter', sans-serif; width: 100%; }}
+            .m-brand-l {{ font-weight: 800; font-size: 15px; color: #111827; letter-spacing: 0.5px; }}
+            .m-dev-l {{ font-size: 13px; color: #6B7280; }}
+            .m-dev-l a {{ color: #2563EB; text-decoration: none; font-weight: 700; transition: color 0.2s; }}
+            .m-dev-l a:hover {{ color: #1D4ED8; }}
+            .m-copy-l {{ font-size: 11px; color: #9CA3AF; margin-top: 4px; }}
+        </style>
+        <div class="modern-footer-light">
+            <div class="m-brand-l">SahaBulut</div>
+            <div class="m-dev-l">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
+            <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır • v1.0.0</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col_right_showcase:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
@@ -706,9 +720,23 @@ if st.session_state.auth and not view_df.empty:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
-    # İKİNCİ İMZA (Ana Dashboard Ekranı) - Artık içerikten uzak ve en altta
+   # İKİNCİ İMZA (Ana Dashboard Ekranı) - Modern Çok Satırlı Tasarım
     current_year = datetime.now().year
-    st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <style>
+        .modern-footer-dark {{ display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(255, 255, 255, 0.05); font-family: 'Inter', sans-serif; width: 100%; }}
+        .m-brand-d {{ font-weight: 800; font-size: 15px; color: #E5E7EB; letter-spacing: 0.5px; }}
+        .m-dev-d {{ font-size: 13px; color: #9CA3AF; }}
+        .m-dev-d a {{ color: #3B82F6; text-decoration: none; font-weight: 700; transition: color 0.2s; }}
+        .m-dev-d a:hover {{ color: #60A5FA; }}
+        .m-copy-d {{ font-size: 11px; color: #6B7280; margin-top: 4px; }}
+    </style>
+    <div class="modern-footer-dark">
+        <div class="m-brand-d">SahaBulut</div>
+        <div class="m-dev-d">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
+        <div class="m-copy-d">© {current_year} Tüm Hakları Saklıdır • v1.0.0</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # else bloğu en sola yaslı (0 boşluk) kalacak
 else:
