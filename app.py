@@ -91,7 +91,7 @@ def authenticate_user(email, password):
     except Exception as e:
         st.error(f"🚨 GİRİŞ HATASI: {e}")
         return None
-def add_user_to_db(username, password, , role, real_name):
+def add_user_to_db(username, password, role, real_name):
     # Yeni personeli buluta ekliyoruz
     try:
         res_user = supabase.table("users").select("*").eq("username", username).execute()
