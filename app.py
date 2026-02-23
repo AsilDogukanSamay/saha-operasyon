@@ -159,7 +159,7 @@ def typewriter_effect(text):
 
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
     sender_email = "asildogukansamay@gmail.com" 
-    app_password = "codgkulmjapjlvsw" 
+    app_password = st.secrets["EMAIL_PASS"] # ŞİFREYİ GİZLEDİK! 
     
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
