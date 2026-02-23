@@ -69,8 +69,8 @@ def init_db():
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
             default_users = [
-                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
-                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
+                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
+                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
             ]
             supabase.table("users").insert(default_users).execute()
     except Exception as e:
@@ -91,7 +91,8 @@ def authenticate_user(email, password):
     except Exception as e:
         st.error(f"🚨 GİRİŞ HATASI: {e}")
         return None
-def add_user_to_db(username, password, role, real_name):
+
+def add_user_to_db(username, password, email, role, real_name):
     # Yeni personeli buluta ekliyoruz
     try:
         res_user = supabase.table("users").select("*").eq("username", username).execute()
@@ -278,11 +279,10 @@ if not st.session_state.auth:
         st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
         st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği e-posta ve parola ile giriş yapın.</p>""", unsafe_allow_html=True)
         
-        # İŞTE EKSİK OLAN KISIM BURASI: Hem auth_u (E-posta) hem de auth_p (Parola) tanımlı olmak zorunda!
         auth_u = st.text_input("E-Posta Adresi", placeholder="Örn: dogukan@medibulut.com")
         auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
-      if st.button("Güvenli Giriş Yap"):
+        if st.button("Güvenli Giriş Yap"):
             user_info = authenticate_user(auth_u, auth_p)
             if user_info is not None:
                 st.session_state.role = user_info['role']
@@ -299,12 +299,9 @@ if not st.session_state.auth:
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
         
-        # BİRİNCİ İMZA BURAYA (Hizalamaya dikkat kanka)
+        # BİRİNCİ İMZA BURADA (Giriş Ekranı)
         current_year = datetime.now().year
         st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
-
-    with col_right_showcase:
-        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
 
     with col_right_showcase:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
@@ -389,6 +386,7 @@ if st.session_state.auth:
         current_realname = st.session_state.auth_user_info['real_name']
         u_norm = str(current_realname).strip().lower()
         view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
@@ -675,9 +673,8 @@ if st.session_state.auth and not view_df.empty:
                     else:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
-except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
-    # İKİNCİ İMZA BURAYA (Önünde 4 boşluk var, 'else:' ile aynı hizada DEĞİL)
+    # İKİNCİ İMZA BURADA (Ana Dashboard Ekranı)
     current_year = datetime.now().year
     st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
 
