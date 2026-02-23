@@ -55,24 +55,40 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 def init_db():
-    if not os.path.exists(USER_DB_FILE):
-        df = pd.DataFrame(columns=["username", "password", "email", "role", "real_name", "points"])
-        data = [
-            {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
-            {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
-        ]
-        pd.concat([df, pd.DataFrame(data)], ignore_index=True).to_csv(USER_DB_FILE, index=False)
+    try:
+        res = supabase.table("users").select("username").limit(1).execute()
+        if len(res.data) == 0:
+            default_users = [
+                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
+                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
+            ]
+            supabase.table("users").insert(default_users).execute()
+            st.success("✅ Başlangıç hesapları Supabase'e başarıyla yazıldı!")
+    except Exception as e:
+        st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
 
 def add_user_to_db(username, password, email, role, real_name):
-    init_db()
-    df = pd.read_csv(USER_DB_FILE)
-    if 'email' not in df.columns:
-        df['email'] = "veri_yok@mail.com"
-    if username in df['username'].values or email in df['email'].values: 
+    try:
+        res_user = supabase.table("users").select("*").eq("username", username).execute()
+        res_mail = supabase.table("users").select("*").eq("email", email).execute()
+        
+        if len(res_user.data) > 0 or len(res_mail.data) > 0:
+            st.warning("Bu kullanıcı zaten kayıtlı.")
+            return False
+
+        new_user = {
+            "username": username,
+            "password": make_hashes(password),
+            "email": email,
+            "role": role,
+            "real_name": real_name,
+            "points": 0
+        }
+        supabase.table("users").insert(new_user).execute()
+        return True
+    except Exception as e:
+        st.error(f"🚨 KULLANICI EKLEME HATASI: {e}")
         return False
-    new_row = pd.DataFrame([{"username": username, "password": make_hashes(password), "email": email, "role": role, "real_name": real_name, "points": 0}])
-    pd.concat([df, new_row], ignore_index=True).to_csv(USER_DB_FILE, index=False)
-    return True
 
 def authenticate_user(username, password):
     init_db()
