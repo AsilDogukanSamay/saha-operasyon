@@ -16,6 +16,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from io import BytesIO
 from datetime import datetime
+from supabase import create_client, Client # SUPABASE KÜTÜPHANESİ
 
 # ==============================================================================
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
@@ -25,7 +26,6 @@ MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 LOCAL_LOGO_PATH = "SahaBulut.jpg"
 SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
-USER_DB_FILE = "users.csv"
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
 
 try:
@@ -45,8 +45,17 @@ except Exception:
     pass
 
 # ==============================================================================
-# 2. YARDIMCI FONKSİYONLAR & GÜVENLİK & MAİL SİSTEMİ
+# 2. SUPABASE BAĞLANTISI VE BULUT VERİTABANI YÖNETİMİ
 # ==============================================================================
+
+# Streamlit Secrets'ten bilgileri güvenle alıyoruz
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"⚠️ Supabase bağlantı hatası! Lütfen Streamlit ayarlarından 'Secrets' kısmını kontrol edin. Detay: {e}")
+    st.stop()
 
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -55,6 +64,7 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 def init_db():
+    # Tablo tamamen boşsa, varsayılan Yönetici ve Doğukan hesaplarını buluta (Supabase) ekler
     try:
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
@@ -63,17 +73,32 @@ def init_db():
                 {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
             ]
             supabase.table("users").insert(default_users).execute()
-            st.success("✅ Başlangıç hesapları Supabase'e başarıyla yazıldı!")
     except Exception as e:
         st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
 
+# Sistemi başlarken Supabase tablosunu kontrol et
+init_db()
+
+def authenticate_user(username, password):
+    # CSV'yi unut, sadece Supabase'e soruyoruz!
+    try:
+        res = supabase.table("users").select("*").eq("username", username).execute()
+        if len(res.data) > 0:
+            user_data = res.data[0]
+            if check_hashes(password, user_data['password']):
+                return user_data
+        return None
+    except Exception as e:
+        st.error(f"🚨 GİRİŞ HATASI: {e}")
+        return None
+
 def add_user_to_db(username, password, email, role, real_name):
+    # Yeni personeli buluta ekliyoruz
     try:
         res_user = supabase.table("users").select("*").eq("username", username).execute()
         res_mail = supabase.table("users").select("*").eq("email", email).execute()
         
         if len(res_user.data) > 0 or len(res_mail.data) > 0:
-            st.warning("Bu kullanıcı zaten kayıtlı.")
             return False
 
         new_user = {
@@ -90,13 +115,9 @@ def add_user_to_db(username, password, email, role, real_name):
         st.error(f"🚨 KULLANICI EKLEME HATASI: {e}")
         return False
 
-def authenticate_user(username, password):
-    init_db()
-    df = pd.read_csv(USER_DB_FILE)
-    user = df[df['username'] == username]
-    if not user.empty and check_hashes(password, user.iloc[0]['password']):
-        return user.iloc[0]
-    return None
+# ==============================================================================
+# 3. YARDIMCI FONKSİYONLAR & MAİL SİSTEMİ
+# ==============================================================================
 
 def normalize_text(text):
     if pd.isna(text): return ""
@@ -136,7 +157,6 @@ def typewriter_effect(text):
         yield word + " "
         time.sleep(0.04)
 
-# --- KURUMSAL MAİL GÖNDERME FONKSİYONU (ESKİ ŞIK TASARIM) ---
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
     sender_email = "asildogukansamay@gmail.com" 
     app_password = "codgkulmjapjlvsw" 
@@ -201,7 +221,7 @@ def fetch_operational_data(sheet_id):
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 3. OTURUM BAŞLATMA & F5 KORUMASI
+# 4. OTURUM BAŞLATMA & F5 KORUMASI
 # ==============================================================================
 if "notes" not in st.session_state: st.session_state.notes = {}
 if "auth" not in st.session_state: st.session_state.auth = False
@@ -224,17 +244,9 @@ if not st.session_state.auth:
             'role': params["r"],
             'real_name': params["n"]
         }
-#  --- SUPABASE BAĞLANTI TEST BUTONU ---
-        if st.button("🔧 Supabase Bağlantısını Test Et"):
-            try:
-                # Rastgele bir veri atmayı deneyelim
-                test_veri = {"username": "test_kanka", "password": "123", "email": "kanka@test.com", "role": "Test", "real_name": "Test Kanka"}
-                res = supabase.table("users").insert(test_veri).execute()
-                st.success(f"✅ SÜPER! Veri Supabase'e Gitti: {res.data}")
-            except Exception as e:
-                st.error(f"🛑 HATA VAR KANKA! Detay: {e}")
+
 # ==============================================================================
-# 4. GİRİŞ EKRANI
+# 5. GİRİŞ EKRANI
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -332,7 +344,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 5. DASHBOARD (KOYU TEMA & DETAYLI CSS)
+# 6. DASHBOARD (KOYU TEMA & DETAYLI CSS)
 # ==============================================================================
 st.markdown("""
 <style>
@@ -515,7 +527,7 @@ if st.session_state.auth and not view_df.empty:
                     mins, secs = divmod(elapsed, 60)
                     st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
                     if c_t2.button("⏹️ Bitir"):
-                        st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk", "Tarih": datetime.now().strftime("%H:%M")})
+                        st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
                         st.session_state.timer_start = None
                         st.success("Ziyaret süresi kaydedildi!")
                         st.rerun()
@@ -642,18 +654,21 @@ if st.session_state.auth and not view_df.empty:
             with col_sil:
                 st.markdown("#### 🗑️ Kullanıcı Sil")
                 try:
-                    user_db_df = pd.read_csv(USER_DB_FILE)
-                    st.dataframe(user_db_df[['username', 'real_name', 'email', 'role']], use_container_width=True, hide_index=True)
-                    silinebilir = user_db_df[user_db_df['username'] != 'admin']['username'].tolist()
-                    kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir)
-                    if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
-                        if kullanici_sec != "Seçiniz...":
-                            user_db_df = user_db_df[user_db_df['username'] != kullanici_sec]
-                            user_db_df.to_csv(USER_DB_FILE, index=False)
-                            st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
-                            time.sleep(1.5)
-                            st.rerun()
-                        else: st.warning("Silmek için bir personel seçmelisiniz.")
+                    res = supabase.table("users").select("username, real_name, email, role").execute()
+                    if res.data:
+                        user_db_df = pd.DataFrame(res.data)
+                        st.dataframe(user_db_df, use_container_width=True, hide_index=True)
+                        silinebilir = [u for u in user_db_df['username'].tolist() if u != 'admin']
+                        kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir)
+                        if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
+                            if kullanici_sec != "Seçiniz...":
+                                supabase.table("users").delete().eq("username", kullanici_sec).execute()
+                                st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
+                                time.sleep(1.5)
+                                st.rerun()
+                            else: st.warning("Silmek için bir personel seçmelisiniz.")
+                    else:
+                        st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
     st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
