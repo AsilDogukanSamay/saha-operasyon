@@ -175,7 +175,7 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
             
             <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
                 <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
-                <p style="margin: 0 0 8px 0; font-size: 16px;">Kullanıcı Adı: <span style="color: #2563EB; font-weight: bold;">{user_login}</span></p>
+                <p style="margin: 0 0 8px 0; font-size: 16px;">E-Posta: <span style="color: #2563EB; font-weight: bold;">{receiver_email}</span></p>
                 <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
             </div>
             
@@ -688,10 +688,15 @@ if st.session_state.auth and not view_df.empty:
                     re = st.text_input("E-Posta Adresi")
                     rp = st.text_input("Geçici Parola", type="password")
                     rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
-                    app_link = "app_link = "https://saha-operasyon.streamlit.app/?from=mail"" 
+                    
                     if st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True):
                         if ru and rp and rn and re:
                             if add_user_to_db(ru, rp, re, rr, rn):
+                                try:
+                                    app_link = st.secrets["APP_URL"] + "?from=mail"
+                                except:
+                                    app_link = "https://saha-operasyon.streamlit.app/?from=mail"
+                                    
                                 mail_durumu = send_welcome_email(re, rn, ru, rp, app_link)
                                 if mail_durumu:
                                     st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
@@ -741,4 +746,3 @@ if st.session_state.auth and not view_df.empty:
 # else bloğu en sola yaslı (0 boşluk) kalacak
 else:
     st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
-    #en son olan
