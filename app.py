@@ -379,10 +379,10 @@ if st.session_state.auth:
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        current_username = st.session_state.auth_user_info['username']
-        u_norm = str(current_username).strip().lower()
+        # Eski sistemde username ile eşleşiyordu, artık real_name (Ad Soyad) ile eşleşecek!
+        current_realname = st.session_state.auth_user_info['real_name']
+        u_norm = str(current_realname).strip().lower()
         view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
