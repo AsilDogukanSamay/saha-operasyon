@@ -276,10 +276,11 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
         
         st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
-        st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği bilgilerle giriş yapın.</p>""", unsafe_allow_html=True)
+        st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği e-posta ve parola ile giriş yapın.</p>""", unsafe_allow_html=True)
         
-        # Eski: auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
+        # İŞTE EKSİK OLAN KISIM BURASI: Hem auth_u (E-posta) hem de auth_p (Parola) tanımlı olmak zorunda!
         auth_u = st.text_input("E-Posta Adresi", placeholder="Örn: dogukan@medibulut.com")
+        auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
         if st.button("Güvenli Giriş Yap"):
             user_info = authenticate_user(auth_u, auth_p)
@@ -297,7 +298,6 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
-
         st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
 
     with col_right_showcase:
