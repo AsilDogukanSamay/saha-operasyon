@@ -330,7 +330,7 @@ if not st.session_state.auth:
         <div class="modern-footer-light">
             <div class="m-brand-l">SahaBulut</div>
             <div class="m-dev-l">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
-            <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır • v1.0.0</div>
+            <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır /div>
         </div>
         """, unsafe_allow_html=True)
 
