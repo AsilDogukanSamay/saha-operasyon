@@ -257,16 +257,33 @@ if not st.session_state.auth:
         div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB !important; border-radius: 10px !important; padding: 12px 15px !important; }
         div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
         div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
-        .login-footer-wrapper { text-align: center; margin-top: 60px; font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; border-top: 1px solid #F3F4F6; padding-top: 25px; width: 100%; max-width: 300px; margin-left: auto; margin-right: auto; }
-        .login-footer-wrapper a { color: #2563EB; text-decoration: none; font-weight: 800; }
         @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
+
+        /* --- GİRİŞ EKRANI İMZA DÜZENLEMESİ --- */
+        /* Sol kolonu dikey olarak esnek yapıyoruz ki imza en alta itilebilsin */
+        [data-testid="column"]:first-child > div {
+            display: flex;
+            flex-direction: column;
+            min-height: 85vh; /* Ekranın %85'i kadar yer kaplasın */
+        }
+        .login-footer-wrapper {
+            text-align: center;
+            font-size: 12px;
+            color: #6B7280;
+            font-family: 'Inter', sans-serif;
+            padding: 20px 0;
+            border-top: 1px solid #F3F4F6;
+            width: 100%;
+            margin-top: auto; /* Sihirli dokunuş: En alta it */
+        }
     </style>
     """, unsafe_allow_html=True)
 
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
 
     with col_left_form:
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+        # Üstteki boşluğu biraz azalttım, daha dengeli duracak.
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 30px; flex-wrap: nowrap;">
             <img src="{APP_LOGO_HTML}" style="height: 60px; margin-right: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-shrink: 0;">
@@ -299,7 +316,7 @@ if not st.session_state.auth:
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
         
-        # BİRİNCİ İMZA BURADA (Giriş Ekranı)
+        # BİRİNCİ İMZA (Giriş Ekranı) - Artık otomatik olarak en alta itilecek
         current_year = datetime.now().year
         st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
 
@@ -365,7 +382,22 @@ st.markdown("""
     .admin-perf-card { background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid rgba(255, 255, 255, 0.05); }
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
-    .dashboard-signature { text-align: center; margin-top: 60px; padding: 30px; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #4B5563; font-family: 'Inter', sans-serif; }
+    
+    /* --- ANA PANO İMZA DÜZENLEMESİ --- */
+    /* Sayfanın alt kısmına ekstra boşluk bırakıyoruz */
+    .main .block-container {
+        padding-bottom: 5rem; 
+    }
+    .dashboard-signature {
+        text-align: center;
+        padding: 2rem 0; /* Daha geniş iç boşluk */
+        margin-top: 4rem; /* Üstteki içerikten iyice uzaklaşsın */
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 13px;
+        color: #6B7280;
+        font-family: 'Inter', sans-serif;
+        width: 100%;
+    }
     .dashboard-signature a { color: #3B82F6; text-decoration: none; font-weight: 700; }
 </style>
 """, unsafe_allow_html=True)
@@ -674,7 +706,7 @@ if st.session_state.auth and not view_df.empty:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
-    # İKİNCİ İMZA BURADA (Ana Dashboard Ekranı)
+    # İKİNCİ İMZA (Ana Dashboard Ekranı) - Artık içerikten uzak ve en altta
     current_year = datetime.now().year
     st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
 
