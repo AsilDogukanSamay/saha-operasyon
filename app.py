@@ -734,7 +734,7 @@ if st.session_state.auth and not view_df.empty:
     <div class="modern-footer-dark">
         <div class="m-brand-d">SahaBulut</div>
         <div class="m-dev-d">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
-        <div class="m-copy-d">© {current_year} Tüm Hakları Saklıdır • v1.0.0</div>
+        <div class="m-copy-d">© {current_year} Tüm Hakları Saklıdır</div>
     </div>
     """, unsafe_allow_html=True)
 
