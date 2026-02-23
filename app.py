@@ -688,7 +688,7 @@ if st.session_state.auth and not view_df.empty:
                     re = st.text_input("E-Posta Adresi")
                     rp = st.text_input("Geçici Parola", type="password")
                     rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
-                    app_link = "https://saha-operasyon.streamlit.app/" 
+                    app_link = "app_link = "https://saha-operasyon.streamlit.app/?from=mail"" 
                     if st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True):
                         if ru and rp and rn and re:
                             if add_user_to_db(ru, rp, re, rr, rn):
