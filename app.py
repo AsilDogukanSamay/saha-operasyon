@@ -278,8 +278,8 @@ if not st.session_state.auth:
         st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
         st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği bilgilerle giriş yapın.</p>""", unsafe_allow_html=True)
         
-        auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
-        auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
+        # Eski: auth_u = st.text_input("Kullanıcı Adı", placeholder="Örn: dogukan")
+        auth_u = st.text_input("E-Posta Adresi", placeholder="Örn: dogukan@medibulut.com")
         
         if st.button("Güvenli Giriş Yap"):
             user_info = authenticate_user(auth_u, auth_p)
