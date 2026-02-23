@@ -282,7 +282,7 @@ if not st.session_state.auth:
         auth_u = st.text_input("E-Posta Adresi", placeholder="Örn: dogukan@medibulut.com")
         auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
         
-        if st.button("Güvenli Giriş Yap"):
+      if st.button("Güvenli Giriş Yap"):
             user_info = authenticate_user(auth_u, auth_p)
             if user_info is not None:
                 st.session_state.role = user_info['role']
@@ -298,8 +298,13 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
-       current_year = datetime.now().year
-st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+        
+        # BİRİNCİ İMZA BURAYA (Hizalamaya dikkat kanka)
+        current_year = datetime.now().year
+        st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+
+    with col_right_showcase:
+        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
 
     with col_right_showcase:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
@@ -670,8 +675,12 @@ if st.session_state.auth and not view_df.empty:
                     else:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
+except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
+    # İKİNCİ İMZA BURAYA (Önünde 4 boşluk var, 'else:' ile aynı hizada DEĞİL)
     current_year = datetime.now().year
-st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
+
+# else bloğu en sola yaslı (0 boşluk) kalacak
 else:
     st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
