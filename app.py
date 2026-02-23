@@ -298,7 +298,8 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
-        st.markdown(f"""<div class="login-footer-wrapper">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
+       current_year = datetime.now().year
+st.markdown(f"""<div class="login-footer-wrapper">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
 
     with col_right_showcase:
         st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
@@ -670,6 +671,7 @@ if st.session_state.auth and not view_df.empty:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
-    st.markdown(f"""<div class="dashboard-signature">Designed & Developed by <br> <a href="{MY_LINKEDIN_URL}" target="_blank">Doğukan</a></div>""", unsafe_allow_html=True)
+    current_year = datetime.now().year
+st.markdown(f"""<div class="dashboard-signature">© {current_year} SahaBulut | Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>""", unsafe_allow_html=True)
 else:
     st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
