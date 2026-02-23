@@ -208,7 +208,15 @@ if not st.session_state.auth:
             'role': params["r"],
             'real_name': params["n"]
         }
-
+#  --- SUPABASE BAĞLANTI TEST BUTONU ---
+        if st.button("🔧 Supabase Bağlantısını Test Et"):
+            try:
+                # Rastgele bir veri atmayı deneyelim
+                test_veri = {"username": "test_kanka", "password": "123", "email": "kanka@test.com", "role": "Test", "real_name": "Test Kanka"}
+                res = supabase.table("users").insert(test_veri).execute()
+                st.success(f"✅ SÜPER! Veri Supabase'e Gitti: {res.data}")
+            except Exception as e:
+                st.error(f"🛑 HATA VAR KANKA! Detay: {e}")
 # ==============================================================================
 # 4. GİRİŞ EKRANI
 # ==============================================================================
