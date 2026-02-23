@@ -69,8 +69,8 @@ def init_db():
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
             default_users = [
-                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
-                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
+                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
+                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
             ]
             supabase.table("users").insert(default_users).execute()
     except Exception as e:
@@ -79,10 +79,10 @@ def init_db():
 # Sistemi başlarken Supabase tablosunu kontrol et
 init_db()
 
-def authenticate_user(username, password):
-    # CSV'yi unut, sadece Supabase'e soruyoruz!
+def authenticate_user(email, password):
+    # Artık 'username' sütununa değil, 'email' sütununa bakıyoruz!
     try:
-        res = supabase.table("users").select("*").eq("username", username).execute()
+        res = supabase.table("users").select("*").eq("email", email).execute()
         if len(res.data) > 0:
             user_data = res.data[0]
             if check_hashes(password, user_data['password']):
@@ -91,8 +91,7 @@ def authenticate_user(username, password):
     except Exception as e:
         st.error(f"🚨 GİRİŞ HATASI: {e}")
         return None
-
-def add_user_to_db(username, password, email, role, real_name):
+def add_user_to_db(username, password, , role, real_name):
     # Yeni personeli buluta ekliyoruz
     try:
         res_user = supabase.table("users").select("*").eq("username", username).execute()
