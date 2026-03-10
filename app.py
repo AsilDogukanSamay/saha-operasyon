@@ -195,16 +195,28 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         return False
 
 # ==============================================================================
-# --- VERİ ÇEKME (KURŞUN GEÇİRMEZ HARİTALANDIRMA) ---
+# --- VERİ ÇEKME VE SERKAN BEY'İN SÜTUNLARINI EŞLEŞTİRME ---
 # ==============================================================================
 @st.cache_data(ttl=60)
 def fetch_operational_data(sheet_id):
     try:
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&tq&t={time.time()}"
         df = pd.read_csv(url)
-        df.columns = [c.strip() for c in df.columns]
+        df.columns = [str(c).strip() for c in df.columns] # Tüm boşlukları zorla siler
         
-        # 1. AKILLI BAŞLIK EŞLEŞTİRME (Büyük/Küçük harf fark etmeksizin bulur)
+        all_serkan_cols = [
+            "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
+            "Branş", "Potansiyel Kullanıcı Sayısı", "Potansiyel ANA Ürün", "Ziyaret Durumu", 
+            "İtiraz Nedeni", "Telefon", "Mail", "Açıklama/Notlar", "Satış Durumu", "Satış Tipi", 
+            "Kampanya Bilgisi", "Satışı Yapılan ANA Ürün", "Satışı Yapılan EK Ürün", 
+            "e-Nabız Paketi", "Gelişmiş Paket", "Lisans Sayısı", "Lisans Süresi", 
+            "Satış Bedeli(KDV Hariç)", "KDV Dahil Tutar", "Ödeme Kanalı", "Taksit"
+        ]
+        
+        for col in all_serkan_cols:
+            if col not in df.columns:
+                df[col] = "Belirtilmemiş"
+
         renames_lower = {
             "müşteri bilgisi": "Klinik Adı",
             "bölge": "İlçe",
@@ -216,12 +228,13 @@ def fetch_operational_data(sheet_id):
         
         actual_renames = {}
         for col in df.columns:
-            if col.lower() in renames_lower:
-                actual_renames[col] = renames_lower[col.lower()]
+            cleaned_col = str(col).strip().lower()
+            if cleaned_col in renames_lower:
+                actual_renames[col] = renames_lower[cleaned_col]
         df.rename(columns=actual_renames, inplace=True)
         
-        # 2. AKILLI KONUM ALGILAMA (konum, Konum, KONUM hepsini kabul eder)
-        konum_col = next((c for c in df.columns if c.lower() == 'konum'), None)
+        # --- TEK SÜTUN KONUM (HARİTADAN KOPYALA YAPIŞTIR) MANTIĞI ---
+        konum_col = next((c for c in df.columns if 'konum' in str(c).strip().lower()), None)
         
         if konum_col:
             def extract_lat(val):
@@ -238,9 +251,10 @@ def fetch_operational_data(sheet_id):
         else:
             df["lat"] = None
             df["lon"] = None
+        # -------------------------------------------------------------
 
-        # 3. AKILLI BUGÜNÜN PLANI ALGILAMA
-        bp_col = next((c for c in df.columns if c.lower() == 'bugünün planı'), None)
+        # Bugünün planı kısmı da akıllı hale getirildi
+        bp_col = next((c for c in df.columns if 'bugünün planı' in str(c).strip().lower()), None)
         if bp_col:
             df.rename(columns={bp_col: "Bugünün Planı"}, inplace=True)
         else:
@@ -250,8 +264,24 @@ def fetch_operational_data(sheet_id):
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
             
-        df["Skor"] = df.apply(lambda r: (25 if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet", "tamam"]) else 0) + 
-                                        (15 if "hot" in str(r["Lead Status"]).lower() else 5 if "warm" in str(r["Lead Status"]).lower() else 0), axis=1)
+        # --- SERKAN BEY'İN KELİMELERİNE ÖZEL SKOR VE RENK HESAPLAMA ---
+        def calc_score(r):
+            score = 0
+            gidildi = str(r.get("Gidildi mi?", "")).lower()
+            # Excel'de "Yapıldı" yazarsa ziyaret edilmiş sayar
+            if any(x in gidildi for x in ["evet", "tamam", "yapıldı"]):
+                score += 25
+                
+            lead = str(r.get("Lead Status", "")).lower()
+            # Excel'de "Sıcak" veya "Hot" yazarsa kırmızı yapar
+            if any(x in lead for x in ["hot", "sıcak"]):
+                score += 15
+            # Excel'de "Takip Edilecek" veya "Warm" yazarsa turuncu yapar
+            elif any(x in lead for x in ["warm", "ılık", "takip"]):
+                score += 5
+            return score
+            
+        df["Skor"] = df.apply(calc_score, axis=1)
         return df
     except Exception as e: 
         print(f"Veri çekme hatası: {e}")
@@ -487,8 +517,8 @@ if st.session_state.auth and not view_df.empty:
     col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
     
     toplam_hedef = len(processed_df)
-    nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
-    tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])])
+    nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.lower().str.contains("hot|sıcak", regex=True, na=False)])
+    tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
     
     col_kpi1.metric("Toplam Plan", toplam_hedef)
     col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
@@ -528,19 +558,24 @@ if st.session_state.auth and not view_df.empty:
                 st.markdown(legend_html, unsafe_allow_html=True)
 
             def get_pt_color(r):
-                if "Ziyaret" in map_view_mode: return [16,185,129] if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet","tamam"]) else [220,38,38]
-                s = str(r["Lead Status"]).lower()
-                return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
+                if "Ziyaret" in map_view_mode:
+                    gidildi = str(r["Gidildi mi?"]).lower()
+                    return [16,185,129] if any(x in gidildi for x in ["evet","tamam","yapıldı"]) else [220,38,38]
+                else:
+                    lead = str(r["Lead Status"]).lower()
+                    if any(x in lead for x in ["hot", "sıcak"]): return [239,68,68]
+                    if any(x in lead for x in ["warm", "ılık", "takip"]): return [245,158,11]
+                    return [59,130,246]
             
             processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
             map_df_valid = processed_df.dropna(subset=["lat", "lon"])
             
             if not map_df_valid.empty:
-                layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)]
+                layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=100, radius_min_pixels=5, pickable=True)]
                 if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
+                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=10, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
             else:
-                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip doldurun.")
+                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
         else:
             st.warning("Görüntülenecek plan bulunamadı.")
 
@@ -621,7 +656,15 @@ if st.session_state.auth and not view_df.empty:
             with col_ai:
                 st.markdown("### 🤖 Saha Stratejisti")
                 lead_stat = str(clinic_row["Lead Status"]).lower()
-                ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" if "hot" in lead_stat else "Tanışma hedefli ilerle."
+                
+                # Yeni statülere göre strateji tavsiyesi
+                if any(x in lead_stat for x in ["hot", "sıcak"]):
+                    ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
+                elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
+                    ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
+                else:
+                    ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
+                    
                 with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
                 st.markdown("---")
                 existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
@@ -655,8 +698,8 @@ if st.session_state.auth and not view_df.empty:
                 if not map_df_valid_admin.empty:
                     def get_status_color(r):
                         s = str(r["Lead Status"]).lower()
-                        if "hot" in s: return [239, 68, 68]
-                        if "warm" in s: return [245, 158, 11]
+                        if any(x in s for x in ["hot", "sıcak"]): return [239, 68, 68]
+                        if any(x in s for x in ["warm", "ılık", "takip"]): return [245, 158, 11]
                         return [59, 130, 246]
                     
                     map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
@@ -690,7 +733,12 @@ if st.session_state.auth and not view_df.empty:
                     
                 st.divider()
                 
-                perf_stats = main_df.groupby("Personel").agg(H_Adet=('Klinik Adı','count'), Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()), S_Toplam=('Skor','sum')).reset_index().sort_values("S_Toplam", ascending=False)
+                perf_stats = main_df.groupby("Personel").agg(
+                    H_Adet=('Klinik Adı','count'), 
+                    Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False).sum()), 
+                    S_Toplam=('Skor','sum')
+                ).reset_index().sort_values("S_Toplam", ascending=False)
+                
                 gc1, gc2 = st.columns([2,1])
                 with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
                 with gc2: st.altair_chart(alt.Chart(main_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
