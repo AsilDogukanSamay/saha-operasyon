@@ -195,14 +195,13 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         return False
 
 # ==============================================================================
-# --- VERİ ÇEKME (SAYFA AVCISI VE KUSURSUZ KONUM) ---
+# --- VERİ ÇEKME (ÖNBELLEK KIRICI & CANLI BAĞLANTI) ---
 # ==============================================================================
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=5) # Süreyi 5 saniyeye düşürdük, anında günceller!
 def fetch_operational_data(sheet_id):
     try:
-        # GID yerine doğrudan "Saha Lead list" isimli sayfayı okumaya zorluyoruz. 
-        # Bu sayede diğer boş sayfalar sistemi kandıramaz!
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&sheet=Saha%20Lead%20list"
+        # Önbelleği (cache) kırmak için URL sonuna anlık zaman damgası ekliyoruz
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&nocache={time.time()}"
         df = pd.read_csv(url)
         df.columns = [str(c).strip().replace("\n", " ") for c in df.columns]
         
@@ -502,312 +501,315 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.session_state.auth and not view_df.empty:
-    processed_df = view_df.copy()
-    if filter_today:
-        processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam', na=False)]
-    
-    if user_lat:
-        processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
-        processed_df = processed_df.sort_values(by="Mesafe_km")
-    else: processed_df["Mesafe_km"] = 0
-
-    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-    
-    toplam_hedef = len(processed_df)
-    nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.lower().str.contains("hot|sıcak", regex=True, na=False)])
-    tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
-    
-    col_kpi1.metric("Toplam Plan", toplam_hedef)
-    col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
-    col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
-    col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("#### 🎯 Günlük Hedef Takibi")
-    
-    hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100) if toplam_hedef > 0 else 0
-    hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100) if toplam_hedef > 0 else 0
-    
-    st.markdown(f"""
-    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-        <div class="goal-label"><span>🚗 Ziyaret Hedefi (Min: 8)</span><span>{tamamlanan_ziyaret} / 8</span></div>
-        <div class="goal-track"><div class="goal-fill-visit" style="width: {hedef_ziyaret_oran}%;"></div></div>
+if st.session_state.auth:
+    if view_df.empty:
+        st.warning("⚠️ Görüntülenecek veri bulunamadı! Lütfen Excel dosyasının 'Bağlantıya sahip olan herkes' olarak paylaşıma açık olduğundan ve listede size atanmış görevler olduğundan emin olun.")
+    else:
+        processed_df = view_df.copy()
+        if filter_today:
+            processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam', na=False)]
         
-        <div class="goal-label" style="margin-top: 15px;"><span>🔥 Nitelikli / Demo Hedefi (Min: 4)</span><span>{nitelikli_hot} / 4</span></div>
-        <div class="goal-track"><div class="goal-fill-demo" style="width: {hedef_demo_oran}%;"></div></div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
-    if st.session_state.role == "Yönetici":
-        tab_titles += ["📊 Analiz", "🔥 Yoğunluk", "⚙️ Personel Yönetimi"] 
-        
-    dashboard_tabs = st.tabs(tab_titles)
-
-    with dashboard_tabs[0]:
-        if not processed_df.empty:
-            col_ctrl, col_leg = st.columns([1, 2])
-            with col_leg:
-                if "Ziyaret" in map_view_mode:
-                    legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
-                else:
-                    legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
-                st.markdown(legend_html, unsafe_allow_html=True)
-
-            def get_pt_color(r):
-                if "Ziyaret" in map_view_mode:
-                    gidildi = str(r["Gidildi mi?"]).lower()
-                    return [16,185,129] if any(x in gidildi for x in ["evet","tamam","yapıldı"]) else [220,38,38]
-                else:
-                    lead = str(r["Lead Status"]).lower()
-                    if any(x in lead for x in ["hot", "sıcak"]): return [239,68,68]
-                    if any(x in lead for x in ["warm", "ılık", "takip"]): return [245,158,11]
-                    return [59,130,246]
-            
-            processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-            map_df_valid = processed_df.dropna(subset=["lat", "lon"])
-            
-            if not map_df_valid.empty:
-                layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=100, radius_min_pixels=5, pickable=True)]
-                if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=10, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
-            else:
-                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
-        else:
-            st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' düğmesini kapatın veya Excel tablosuna veri girin.")
-
-    with dashboard_tabs[1]:
-        sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
-        fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
-        fdf["Nav"] = fdf.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
-        st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
-
-    with dashboard_tabs[2]:
-        st.info("📍 **Akıllı Rota:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
-        st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
-
-    with dashboard_tabs[3]:
-        all_clinics = processed_df["Klinik Adı"].tolist()
-        default_idx = 0
         if user_lat:
-            nearby = processed_df[processed_df["Mesafe_km"] <= 1.5]
-            if not nearby.empty:
-                default_idx = all_clinics.index(nearby.iloc[0]["Klinik Adı"])
-                st.success(f"📍 Konumunuza en yakın klinik ({nearby.iloc[0]['Klinik Adı']}) otomatik seçildi.")
+            processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
+            processed_df = processed_df.sort_values(by="Mesafe_km")
+        else: processed_df["Mesafe_km"] = 0
+
+        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
         
-        if all_clinics:
-            selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
-            if selected_clinic_ai:
-                clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
-                
-                with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
-                    c_det1, c_det2, c_det3 = st.columns(3)
-                    c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
-                    c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
-                    c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
-                    
-                    c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
-                    c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
-                    c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
-                    
-                    c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
-                    c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
-                    c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
-                    
-                    st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
-                    st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
-                
-                col_op, col_ai = st.columns(2)
-                
-                with col_op:
-                    st.markdown("### 🛠️ Operasyon Paneli")
-                    st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                    raw_phone = str(clinic_row.get("İletişim", ""))
-                    clean_phone = re.sub(r"\D", "", raw_phone)
-                    if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
-                    if len(clean_phone) == 10: clean_phone = "90" + clean_phone
-                    
-                    msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                    if len(clean_phone) >= 10:
-                        wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
-                        st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
-                    else:
-                        st.error("⚠️ İletişim numarası hatalı.")
-                    
-                    st.markdown("#### ⏱️ Ziyaret Süresi")
-                    c_t1, c_t2 = st.columns(2)
-                    if st.session_state.timer_start is None:
-                        if c_t1.button("▶️ Başlat"):
-                            st.session_state.timer_start = time.time()
-                            st.session_state.timer_clinic = selected_clinic_ai
-                            st.rerun()
-                    else:
-                        elapsed = int(time.time() - st.session_state.timer_start)
-                        mins, secs = divmod(elapsed, 60)
-                        st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
-                        if c_t2.button("⏹️ Bitir"):
-                            st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
-                            st.session_state.timer_start = None
-                            st.success("Ziyaret süresi kaydedildi!")
-                            st.rerun()
-
-                with col_ai:
-                    st.markdown("### 🤖 Saha Stratejisti")
-                    lead_stat = str(clinic_row["Lead Status"]).lower()
-                    
-                    if any(x in lead_stat for x in ["hot", "sıcak"]):
-                        ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
-                    elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
-                        ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
-                    else:
-                        ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
-                        
-                    with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
-                    st.markdown("---")
-                    existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                    new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-                    if st.button("💾 Notu Kaydet", use_container_width=True):
-                        st.session_state.notes[selected_clinic_ai] = new_note_val
-                        st.toast("Not kaydedildi!", icon="✅")
-                    
-                    if st.session_state.notes:
-                        notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
-                        df_notes = pd.DataFrame(notes_data)
-                        buffer = BytesIO()
-                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                        st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
-
-    if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
-        with dashboard_tabs[4]:
-            st.subheader("📊 Ekip Performans ve Saha Analizi")
+        toplam_hedef = len(processed_df)
+        nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.lower().str.contains("hot|sıcak", regex=True, na=False)])
+        tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
+        
+        col_kpi1.metric("Toplam Plan", toplam_hedef)
+        col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
+        col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
+        col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("#### 🎯 Günlük Hedef Takibi")
+        
+        hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100) if toplam_hedef > 0 else 0
+        hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100) if toplam_hedef > 0 else 0
+        
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+            <div class="goal-label"><span>🚗 Ziyaret Hedefi (Min: 8)</span><span>{tamamlanan_ziyaret} / 8</span></div>
+            <div class="goal-track"><div class="goal-fill-visit" style="width: {hedef_ziyaret_oran}%;"></div></div>
             
-            if not main_df.empty:
-                ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
-                secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
-                
-                if secilen_personel == "Tüm Ekip":
-                    map_df = main_df.copy()
-                else:
-                    map_df = main_df[main_df["Personel"] == secilen_personel]
-                
-                map_df_valid_admin = map_df.dropna(subset=["lat", "lon"])
-                
-                if not map_df_valid_admin.empty:
-                    def get_status_color(r):
-                        s = str(r["Lead Status"]).lower()
-                        if any(x in s for x in ["hot", "sıcak"]): return [239, 68, 68]
-                        if any(x in s for x in ["warm", "ılık", "takip"]): return [245, 158, 11]
-                        return [59, 130, 246]
-                    
-                    map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
-                    
-                    avg_lat = map_df_valid_admin["lat"].mean()
-                    avg_lon = map_df_valid_admin["lon"].mean()
+            <div class="goal-label" style="margin-top: 15px;"><span>🔥 Nitelikli / Demo Hedefi (Min: 4)</span><span>{nitelikli_hot} / 4</span></div>
+            <div class="goal-track"><div class="goal-fill-demo" style="width: {hedef_demo_oran}%;"></div></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
+        if st.session_state.role == "Yönetici":
+            tab_titles += ["📊 Analiz", "🔥 Yoğunluk", "⚙️ Personel Yönetimi"] 
+            
+        dashboard_tabs = st.tabs(tab_titles)
 
-                    st.pydeck_chart(pdk.Deck(
-                        map_style=pdk.map_styles.CARTO_DARK, 
-                        initial_view_state=pdk.ViewState(
-                            latitude=avg_lat, 
-                            longitude=avg_lon, 
-                            zoom=8,
-                            pitch=45
-                        ), 
-                        layers=[
-                            pdk.Layer(
-                                "ScatterplotLayer", 
-                                data=map_df_valid_admin, 
-                                get_position='[lon, lat]',
-                                get_color='color', 
-                                get_radius=200, 
-                                radius_min_pixels=6, 
-                                pickable=True
-                            )
-                        ], 
-                        tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
-                    ))
-                else:
-                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
-                    
-                st.divider()
-                
-                perf_stats = main_df.groupby("Personel").agg(
-                    H_Adet=('Klinik Adı','count'), 
-                    Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False).sum()), 
-                    S_Toplam=('Skor','sum')
-                ).reset_index().sort_values("S_Toplam", ascending=False)
-                
-                gc1, gc2 = st.columns([2,1])
-                with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
-                with gc2: st.altair_chart(alt.Chart(main_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
-                
-                for _, r in perf_stats.iterrows():
-                    rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
-                    st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
-
-        with dashboard_tabs[5]:
-            st.subheader("🔥 Saha Yoğunluk Haritası")
-            heat_map_data = main_df.dropna(subset=["lat", "lon"])
-            if not heat_map_data.empty:
-                heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
-                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
-            else:
-                st.warning("⚠️ Yoğunluk haritası için koordinat verisi bulunamadı.")
-            st.divider()
-            try:
-                buf = BytesIO()
-                with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
-                st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            except: st.error("Excel modülü eksik.")
-
-        with dashboard_tabs[6]:
-            st.subheader("⚙️ Personel Yönetimi")
-            col_ekle, col_sil = st.columns(2, gap="large")
-            with col_ekle:
-                st.markdown("#### ➕ Yeni Personel Ekle")
-                st.info("Kayıt işlemi sonrası personele otomatik bilgilendirme maili gönderilir.")
-                with st.form("yeni_personel_formu"):
-                    rn = st.text_input("Ad Soyad")
-                    ru = st.text_input("Kullanıcı Adı")
-                    re = st.text_input("E-Posta Adresi")
-                    rp = st.text_input("Geçici Parola", type="password")
-                    rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
-                    
-                    if st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True):
-                        if ru and rp and rn and re:
-                            if add_user_to_db(ru, rp, re, rr, rn):
-                                try:
-                                    app_link = st.secrets["APP_URL"] + "?from=mail"
-                                except:
-                                    app_link = "https://saha-operasyon.streamlit.app/?from=mail"
-                                    
-                                mail_durumu = send_welcome_email(re, rn, ru, rp, app_link)
-                                if mail_durumu:
-                                    st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
-                                else:
-                                    st.warning("Personel başarıyla kaydedildi ancak Mail GÖNDERİLEMEDİ.")
-                            else: st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
-                        else: st.warning("Lütfen tüm alanları doldurun.")
-
-            with col_sil:
-                st.markdown("#### 🗑️ Kullanıcı Sil")
-                try:
-                    res = supabase.table("users").select("username, real_name, email, role").execute()
-                    if res.data:
-                        user_db_df = pd.DataFrame(res.data)
-                        st.dataframe(user_db_df, use_container_width=True, hide_index=True)
-                        silinebilir = [u for u in user_db_df['username'].tolist() if u != 'admin']
-                        kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir)
-                        if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
-                            if kullanici_sec != "Seçiniz...":
-                                supabase.table("users").delete().eq("username", kullanici_sec).execute()
-                                st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
-                                time.sleep(1.5)
-                                st.rerun()
-                            else: st.warning("Silmek için bir personel seçmelisiniz.")
+        with dashboard_tabs[0]:
+            if not processed_df.empty:
+                col_ctrl, col_leg = st.columns([1, 2])
+                with col_leg:
+                    if "Ziyaret" in map_view_mode:
+                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
                     else:
-                        st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
-                except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
+                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+                    st.markdown(legend_html, unsafe_allow_html=True)
+
+                def get_pt_color(r):
+                    if "Ziyaret" in map_view_mode:
+                        gidildi = str(r["Gidildi mi?"]).lower()
+                        return [16,185,129] if any(x in gidildi for x in ["evet","tamam","yapıldı"]) else [220,38,38]
+                    else:
+                        lead = str(r["Lead Status"]).lower()
+                        if any(x in lead for x in ["hot", "sıcak"]): return [239,68,68]
+                        if any(x in lead for x in ["warm", "ılık", "takip"]): return [245,158,11]
+                        return [59,130,246]
+                
+                processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
+                map_df_valid = processed_df.dropna(subset=["lat", "lon"])
+                
+                if not map_df_valid.empty:
+                    layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=100, radius_min_pixels=5, pickable=True)]
+                    if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=10, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
+                else:
+                    st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
+            else:
+                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' düğmesini kapatın veya Excel tablosuna veri girin.")
+
+        with dashboard_tabs[1]:
+            sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
+            fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
+            fdf["Nav"] = fdf.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
+            st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
+
+        with dashboard_tabs[2]:
+            st.info("📍 **Akıllı Rota:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
+            st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
+
+        with dashboard_tabs[3]:
+            all_clinics = processed_df["Klinik Adı"].tolist()
+            default_idx = 0
+            if user_lat:
+                nearby = processed_df[processed_df["Mesafe_km"] <= 1.5]
+                if not nearby.empty:
+                    default_idx = all_clinics.index(nearby.iloc[0]["Klinik Adı"])
+                    st.success(f"📍 Konumunuza en yakın klinik ({nearby.iloc[0]['Klinik Adı']}) otomatik seçildi.")
+            
+            if all_clinics:
+                selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
+                if selected_clinic_ai:
+                    clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
+                    
+                    with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
+                        c_det1, c_det2, c_det3 = st.columns(3)
+                        c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
+                        c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
+                        c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
+                        
+                        c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
+                        c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
+                        c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
+                        
+                        c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
+                        c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
+                        c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
+                        
+                        st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
+                        st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
+                    
+                    col_op, col_ai = st.columns(2)
+                    
+                    with col_op:
+                        st.markdown("### 🛠️ Operasyon Paneli")
+                        st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
+                        raw_phone = str(clinic_row.get("İletişim", ""))
+                        clean_phone = re.sub(r"\D", "", raw_phone)
+                        if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
+                        if len(clean_phone) == 10: clean_phone = "90" + clean_phone
+                        
+                        msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
+                        if len(clean_phone) >= 10:
+                            wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
+                            st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
+                        else:
+                            st.error("⚠️ İletişim numarası hatalı.")
+                        
+                        st.markdown("#### ⏱️ Ziyaret Süresi")
+                        c_t1, c_t2 = st.columns(2)
+                        if st.session_state.timer_start is None:
+                            if c_t1.button("▶️ Başlat"):
+                                st.session_state.timer_start = time.time()
+                                st.session_state.timer_clinic = selected_clinic_ai
+                                st.rerun()
+                        else:
+                            elapsed = int(time.time() - st.session_state.timer_start)
+                            mins, secs = divmod(elapsed, 60)
+                            st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
+                            if c_t2.button("⏹️ Bitir"):
+                                st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
+                                st.session_state.timer_start = None
+                                st.success("Ziyaret süresi kaydedildi!")
+                                st.rerun()
+
+                    with col_ai:
+                        st.markdown("### 🤖 Saha Stratejisti")
+                        lead_stat = str(clinic_row["Lead Status"]).lower()
+                        
+                        if any(x in lead_stat for x in ["hot", "sıcak"]):
+                            ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
+                        elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
+                            ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
+                        else:
+                            ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
+                            
+                        with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
+                        st.markdown("---")
+                        existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
+                        new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
+                        if st.button("💾 Notu Kaydet", use_container_width=True):
+                            st.session_state.notes[selected_clinic_ai] = new_note_val
+                            st.toast("Not kaydedildi!", icon="✅")
+                        
+                        if st.session_state.notes:
+                            notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
+                            df_notes = pd.DataFrame(notes_data)
+                            buffer = BytesIO()
+                            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
+                            st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+
+        if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
+            with dashboard_tabs[4]:
+                st.subheader("📊 Ekip Performans ve Saha Analizi")
+                
+                if not main_df.empty:
+                    ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
+                    secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
+                    
+                    if secilen_personel == "Tüm Ekip":
+                        map_df = main_df.copy()
+                    else:
+                        map_df = main_df[main_df["Personel"] == secilen_personel]
+                    
+                    map_df_valid_admin = map_df.dropna(subset=["lat", "lon"])
+                    
+                    if not map_df_valid_admin.empty:
+                        def get_status_color(r):
+                            s = str(r["Lead Status"]).lower()
+                            if any(x in s for x in ["hot", "sıcak"]): return [239, 68, 68]
+                            if any(x in s for x in ["warm", "ılık", "takip"]): return [245, 158, 11]
+                            return [59, 130, 246]
+                        
+                        map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
+                        
+                        avg_lat = map_df_valid_admin["lat"].mean()
+                        avg_lon = map_df_valid_admin["lon"].mean()
+
+                        st.pydeck_chart(pdk.Deck(
+                            map_style=pdk.map_styles.CARTO_DARK, 
+                            initial_view_state=pdk.ViewState(
+                                latitude=avg_lat, 
+                                longitude=avg_lon, 
+                                zoom=8,
+                                pitch=45
+                            ), 
+                            layers=[
+                                pdk.Layer(
+                                    "ScatterplotLayer", 
+                                    data=map_df_valid_admin, 
+                                    get_position='[lon, lat]',
+                                    get_color='color', 
+                                    get_radius=200, 
+                                    radius_min_pixels=6, 
+                                    pickable=True
+                                )
+                            ], 
+                            tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
+                        ))
+                    else:
+                        st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
+                        
+                    st.divider()
+                    
+                    perf_stats = main_df.groupby("Personel").agg(
+                        H_Adet=('Klinik Adı','count'), 
+                        Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False).sum()), 
+                        S_Toplam=('Skor','sum')
+                    ).reset_index().sort_values("S_Toplam", ascending=False)
+                    
+                    gc1, gc2 = st.columns([2,1])
+                    with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
+                    with gc2: st.altair_chart(alt.Chart(main_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
+                    
+                    for _, r in perf_stats.iterrows():
+                        rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
+                        st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
+
+            with dashboard_tabs[5]:
+                st.subheader("🔥 Saha Yoğunluk Haritası")
+                heat_map_data = main_df.dropna(subset=["lat", "lon"])
+                if not heat_map_data.empty:
+                    heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
+                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
+                else:
+                    st.warning("⚠️ Yoğunluk haritası için koordinat verisi bulunamadı.")
+                st.divider()
+                try:
+                    buf = BytesIO()
+                    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
+                    st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                except: st.error("Excel modülü eksik.")
+
+            with dashboard_tabs[6]:
+                st.subheader("⚙️ Personel Yönetimi")
+                col_ekle, col_sil = st.columns(2, gap="large")
+                with col_ekle:
+                    st.markdown("#### ➕ Yeni Personel Ekle")
+                    st.info("Kayıt işlemi sonrası personele otomatik bilgilendirme maili gönderilir.")
+                    with st.form("yeni_personel_formu"):
+                        rn = st.text_input("Ad Soyad")
+                        ru = st.text_input("Kullanıcı Adı")
+                        re = st.text_input("E-Posta Adresi")
+                        rp = st.text_input("Geçici Parola", type="password")
+                        rr = st.selectbox("Rol", ["Saha Personeli", "Yönetici"])
+                        
+                        if st.form_submit_button("Kaydet ve Mail Gönder", type="primary", use_container_width=True):
+                            if ru and rp and rn and re:
+                                if add_user_to_db(ru, rp, re, rr, rn):
+                                    try:
+                                        app_link = st.secrets["APP_URL"] + "?from=mail"
+                                    except:
+                                        app_link = "https://saha-operasyon.streamlit.app/?from=mail"
+                                        
+                                    mail_durumu = send_welcome_email(re, rn, ru, rp, app_link)
+                                    if mail_durumu:
+                                        st.success(f"Personel eklendi ve giriş bilgileri {re} adresine iletildi!")
+                                    else:
+                                        st.warning("Personel başarıyla kaydedildi ancak Mail GÖNDERİLEMEDİ.")
+                                else: st.error("Bu kullanıcı adı veya e-posta zaten kullanımda.")
+                            else: st.warning("Lütfen tüm alanları doldurun.")
+
+                with col_sil:
+                    st.markdown("#### 🗑️ Kullanıcı Sil")
+                    try:
+                        res = supabase.table("users").select("username, real_name, email, role").execute()
+                        if res.data:
+                            user_db_df = pd.DataFrame(res.data)
+                            st.dataframe(user_db_df, use_container_width=True, hide_index=True)
+                            silinebilir = [u for u in user_db_df['username'].tolist() if u != 'admin']
+                            kullanici_sec = st.selectbox("Sistemden Silinecek Personel:", ["Seçiniz..."] + silinebilir)
+                            if st.button("❌ Seçili Personeli Kalıcı Olarak Sil", use_container_width=True):
+                                if kullanici_sec != "Seçiniz...":
+                                    supabase.table("users").delete().eq("username", kullanici_sec).execute()
+                                    st.success(f"'{kullanici_sec}' sistemden silindi. Sayfa yenileniyor...")
+                                    time.sleep(1.5)
+                                    st.rerun()
+                                else: st.warning("Silmek için bir personel seçmelisiniz.")
+                        else:
+                            st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
+                    except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
     current_year = datetime.now().year
     st.markdown(f"""
