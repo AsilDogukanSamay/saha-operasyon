@@ -446,9 +446,6 @@ if st.session_state.auth:
         col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
         col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
         
-        # ==============================================================================
-        # YENİ KURUMSAL HEDEF TAKİBİ (NATIVE STREAMLIT)
-        # ==============================================================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### 🎯 Günlük Hedef Takibi")
         
@@ -467,8 +464,6 @@ if st.session_state.auth:
             
         st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # ==============================================================================
         
         tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
         if st.session_state.role == "Yönetici":
@@ -497,11 +492,23 @@ if st.session_state.auth:
                         return [59,130,246]
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-                map_df_valid = processed_df.dropna(subset=["lat", "lon"])
+                
+                # PYDECK BOŞLUK (NAN) KORUMASI EKLENDİ!
+                map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
+                map_df_valid.fillna("Bilinmiyor", inplace=True)
                 
                 if not map_df_valid.empty:
-                    layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=100, radius_min_pixels=5, pickable=True)]
-                    if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+                    layers = [pdk.Layer(
+                        "ScatterplotLayer", 
+                        data=map_df_valid, 
+                        get_position='[lon, lat]', 
+                        get_color='color', 
+                        get_radius=200, 
+                        radius_min_pixels=8, 
+                        pickable=True
+                    )]
+                    if user_lat: 
+                        layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
                     st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=10, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
                 else:
                     st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
@@ -511,7 +518,7 @@ if st.session_state.auth:
         with dashboard_tabs[1]:
             sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
             fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
-            fdf["Nav"] = fdf.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
+            fdf["Nav"] = fdf.apply(lambda x: f"http://maps.google.com/?q={x['lat']},{x['lon']}" if pd.notnull(x['lat']) else "", axis=1)
             st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
         with dashboard_tabs[2]:
@@ -622,7 +629,9 @@ if st.session_state.auth:
                     else:
                         map_df = main_df[main_df["Personel"] == secilen_personel]
                     
-                    map_df_valid_admin = map_df.dropna(subset=["lat", "lon"])
+                    # YÖNETİCİ HARİTASINA DA KORUMA EKLENDİ!
+                    map_df_valid_admin = map_df.dropna(subset=["lat", "lon"]).copy()
+                    map_df_valid_admin.fillna("Bilinmiyor", inplace=True)
                     
                     if not map_df_valid_admin.empty:
                         def get_status_color(r):
@@ -651,7 +660,7 @@ if st.session_state.auth:
                                     get_position='[lon, lat]',
                                     get_color='color', 
                                     get_radius=200, 
-                                    radius_min_pixels=6, 
+                                    radius_min_pixels=8, 
                                     pickable=True
                                 )
                             ], 
