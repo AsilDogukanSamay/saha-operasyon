@@ -133,6 +133,7 @@ APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data e
 
 def clean_coord(val):
     try:
+        if pd.isna(val): return None
         s_val = str(val).replace(",", ".").strip()
         raw = re.sub(r"[^\d.]", "", s_val)
         if not raw: return None
@@ -145,10 +146,11 @@ def clean_coord(val):
 
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     try:
+        if pd.isna(lat2) or pd.isna(lon2): return 9999
         R, dlat, dlon = 6371, math.radians(lat2-lat1), math.radians(lon2-lon1)
         a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    except: return 0
+    except: return 9999
 
 def typewriter_effect(text):
     for word in text.split(" "):
@@ -170,19 +172,12 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
             <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
             <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
-            
             <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
                 <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
                 <p style="margin: 0 0 8px 0; font-size: 16px;">E-Posta: <span style="color: #2563EB; font-weight: bold;">{receiver_email}</span></p>
                 <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
             </div>
-            
-            <p style="color: #555; font-size: 15px; margin-bottom: 25px;">Uygulamaya giderek akıllı rotanızı görüntüleyebilir ve sahada işlemlere başlayabilirsiniz.</p>
-            
             <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
-            
-            <br><br><br>
-            <p style="color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px;">İyi çalışmalar dileriz,<br><b>MediBulut Yönetim Ekibi</b></p>
         </div>
     </body>
     </html>
@@ -190,7 +185,6 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
     
     part = MIMEText(html_content, "html")
     msg.attach(part)
-
     try:
         server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
         server.login(sender_email, app_password)
@@ -201,23 +195,59 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         print("Mail Gönderim Hatası:", e)
         return False
 
+# ==============================================================================
+# --- VERİ ÇEKME VE SERKAN BEY'İN SÜTUNLARINI EŞLEŞTİRME ---
+# ==============================================================================
 @st.cache_data(ttl=60)
 def fetch_operational_data(sheet_id):
     try:
-        # SERKAN BEY'İN GID PARAMETRESİ EKLENDİ
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&tq&t={time.time()}"
         df = pd.read_csv(url)
         df.columns = [c.strip() for c in df.columns]
+        
+        # SERKAN BEY'İN İSTEDİĞİ TÜM SÜTUNLARI GARANTİYE ALIYORUZ
+        all_serkan_cols = [
+            "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
+            "Branş", "Potansiyel Kullanıcı Sayısı", "Potansiyel ANA Ürün", "Ziyaret Durumu", 
+            "İtiraz Nedeni", "Telefon", "Mail", "Açıklama/Notlar", "Satış Durumu", "Satış Tipi", 
+            "Kampanya Bilgisi", "Satışı Yapılan ANA Ürün", "Satışı Yapılan EK Ürün", 
+            "e-Nabız Paketi", "Gelişmiş Paket", "Lisans Sayısı", "Lisans Süresi", 
+            "Satış Bedeli(KDV Hariç)", "KDV Dahil Tutar", "Ödeme Kanalı", "Taksit"
+        ]
+        
+        for col in all_serkan_cols:
+            if col not in df.columns:
+                df[col] = "Belirtilmemiş"
+
+        # Sistemdeki iç algoritmalar için isim haritalandırması (Mapping)
+        renames = {
+            "Müşteri Bilgisi": "Klinik Adı",
+            "Bölge": "İlçe",
+            "Lead Sahibi": "Personel",
+            "Satış Durumu": "Lead Status", 
+            "Ziyaret Durumu": "Gidildi mi?",
+            "Telefon": "İletişim",
+            "Mail": "Atanan Mail"
+        }
+        df.rename(columns=renames, inplace=True)
+        
+        if "lat" not in df.columns: df["lat"] = None
+        if "lon" not in df.columns: df["lon"] = None
+        if "Bugünün Planı" not in df.columns: df["Bugünün Planı"] = "Evet"
+        
         df["lat"] = df["lat"].apply(clean_coord)
         df["lon"] = df["lon"].apply(clean_coord)
-        df = df.dropna(subset=["lat", "lon"])
-        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
+        
+        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim", "Atanan Mail"]
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
+            
         df["Skor"] = df.apply(lambda r: (25 if any(x in str(r["Gidildi mi?"]).lower() for x in ["evet", "tamam"]) else 0) + 
                                         (15 if "hot" in str(r["Lead Status"]).lower() else 5 if "warm" in str(r["Lead Status"]).lower() else 0), axis=1)
         return df
-    except: return pd.DataFrame()
+    except Exception as e: 
+        print(f"Veri çekme hatası: {e}")
+        return pd.DataFrame()
 
 # ==============================================================================
 # 4. OTURUM BAŞLATMA & F5 KORUMASI
@@ -231,7 +261,6 @@ if "timer_start" not in st.session_state: st.session_state.timer_start = None
 if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
-# --- F5 / YENİLEME KORUMASI ---
 if not st.session_state.auth:
     params = st.query_params
     if "u" in params and "r" in params and "n" in params:
@@ -286,6 +315,7 @@ if not st.session_state.auth:
             if user_info is not None:
                 st.session_state.role = user_info['role']
                 st.session_state.user = user_info['real_name']
+                st.session_state.email = user_info['email']
                 st.session_state.auth_user_info = user_info 
                 st.session_state.auth = True
                 
@@ -370,7 +400,7 @@ st.markdown("""
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
     
-    /* --- YENİ EKLENEN KPI BAR TASARIMI --- */
+    /* --- HEDEF BARLARI --- */
     .goal-track { background: rgba(255,255,255,0.1); border-radius: 10px; height: 16px; width: 100%; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
     .goal-fill-visit { background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
     .goal-fill-demo { background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
@@ -389,16 +419,17 @@ user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longit
 
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
-# --- VERİ FİLTRELEME BÖLÜMÜ ---
 if st.session_state.auth: 
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        current_realname = st.session_state.auth_user_info['real_name']
-        u_norm = str(current_realname).strip().lower()
-        view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
+        user_email = str(st.session_state.auth_user_info['email']).strip().lower()
+        if "Atanan Mail" in main_df.columns:
+            view_df = main_df[main_df["Atanan Mail"].astype(str).str.strip().str.lower() == user_email]
+        else:
+            st.error("⚠️ Excel tablosunda 'Atanan Mail' (önceki adıyla Mail) sütunu bulunamadı!")
+            view_df = pd.DataFrame() 
 
-# --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -427,7 +458,6 @@ with st.sidebar:
         st.query_params.clear()
         st.rerun()
 
-# --- HEADER ---
 location_text = f"📍 Konum: {user_lat:.4f}, {user_lon:.4f}" if user_lat else "📍 GPS Aranıyor... (İzin Verin)"
 st.markdown(f"""
 <div class="header-master-wrapper">
@@ -439,7 +469,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- İÇERİK ---
 if st.session_state.auth and not view_df.empty:
     processed_df = view_df.copy()
     if filter_today:
@@ -461,7 +490,6 @@ if st.session_state.auth and not view_df.empty:
     col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
     col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
     
-    # --- SERKAN BEY'İN GÜNLÜK HEDEF TAKİBİ (YENİ) ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### 🎯 Günlük Hedef Takibi")
     
@@ -501,9 +529,14 @@ if st.session_state.auth and not view_df.empty:
                 return [239,68,68] if "hot" in s else [245,158,11] if "warm" in s else [59,130,246]
             
             processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-            layers = [pdk.Layer("ScatterplotLayer", data=processed_df, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)]
-            if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=processed_df["lat"].mean(), longitude=processed_df["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
+            map_df_valid = processed_df.dropna(subset=["lat", "lon"])
+            
+            if not map_df_valid.empty:
+                layers = [pdk.Layer("ScatterplotLayer", data=map_df_valid, get_position='[lon, lat]', get_color='color', get_radius=50, radius_min_pixels=5, pickable=True)]
+                if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
+            else:
+                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'lat' ve 'lon' sütunlarını ekleyip doldurun.")
         else:
             st.warning("Görüntülenecek plan bulunamadı.")
 
@@ -532,6 +565,26 @@ if st.session_state.auth and not view_df.empty:
         selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
         if selected_clinic_ai:
             clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
+            
+            # --- YENİ EKLENEN ŞOV KISMI (SERKAN BEY'İN MÜŞTERİ DETAYLARI) ---
+            with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
+                c_det1, c_det2, c_det3 = st.columns(3)
+                c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
+                c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
+                c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
+                
+                c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
+                c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
+                c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
+                
+                c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
+                c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
+                c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
+                
+                st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
+                st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
+            # ----------------------------------------------------------------
+            
             col_op, col_ai = st.columns(2)
             
             with col_op:
@@ -599,17 +652,19 @@ if st.session_state.auth and not view_df.empty:
                 else:
                     map_df = main_df[main_df["Personel"] == secilen_personel]
                 
-                if not map_df.empty:
+                map_df_valid_admin = map_df.dropna(subset=["lat", "lon"])
+                
+                if not map_df_valid_admin.empty:
                     def get_status_color(r):
                         s = str(r["Lead Status"]).lower()
                         if "hot" in s: return [239, 68, 68]
                         if "warm" in s: return [245, 158, 11]
                         return [59, 130, 246]
                     
-                    map_df["color"] = map_df.apply(get_status_color, axis=1)
+                    map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
                     
-                    avg_lat = map_df["lat"].mean()
-                    avg_lon = map_df["lon"].mean()
+                    avg_lat = map_df_valid_admin["lat"].mean()
+                    avg_lon = map_df_valid_admin["lon"].mean()
 
                     st.pydeck_chart(pdk.Deck(
                         map_style=pdk.map_styles.CARTO_DARK, 
@@ -622,7 +677,7 @@ if st.session_state.auth and not view_df.empty:
                         layers=[
                             pdk.Layer(
                                 "ScatterplotLayer", 
-                                data=map_df, 
+                                data=map_df_valid_admin, 
                                 get_position='[lon, lat]',
                                 get_color='color', 
                                 get_radius=200, 
@@ -633,7 +688,7 @@ if st.session_state.auth and not view_df.empty:
                         tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
                     ))
                 else:
-                    st.warning("⚠️ Seçilen personel için haritada gösterilecek kordinatlı veri bulunamadı.")
+                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
                     
                 st.divider()
                 
@@ -648,8 +703,12 @@ if st.session_state.auth and not view_df.empty:
 
         with dashboard_tabs[5]:
             st.subheader("🔥 Saha Yoğunluk Haritası")
-            heat_layer = pdk.Layer("HeatmapLayer", data=main_df, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
-            st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=main_df["lat"].mean(), longitude=main_df["lon"].mean(), zoom=10), layers=[heat_layer]))
+            heat_map_data = main_df.dropna(subset=["lat", "lon"])
+            if not heat_map_data.empty:
+                heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
+                st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
+            else:
+                st.warning("⚠️ Yoğunluk haritası için koordinat verisi bulunamadı.")
             st.divider()
             try:
                 buf = BytesIO()
