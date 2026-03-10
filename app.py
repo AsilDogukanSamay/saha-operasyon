@@ -157,7 +157,7 @@ def typewriter_effect(text):
         time.sleep(0.04)
 
 # ==============================================================================
-# --- VERİ ÇEKME (ÖNBELLEK KIRICI & CANLI BAĞLANTI) ---
+# --- VERİ ÇEKME VE KUSURSUZ KONUM TEMİZLİĞİ ---
 # ==============================================================================
 @st.cache_data(ttl=5)
 def fetch_operational_data(sheet_id):
@@ -216,6 +216,9 @@ def fetch_operational_data(sheet_id):
             
             df["lat"] = df[konum_col].apply(extract_lat)
             df["lon"] = df[konum_col].apply(extract_lon)
+            # Sayısal veriye zorla (Hata varsa NaN yap)
+            df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
+            df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
         else:
             df["lat"] = None
             df["lon"] = None
@@ -493,7 +496,7 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # PYDECK BOŞLUK (NAN) KORUMASI EKLENDİ!
+                # PYDECK BOŞLUK (NAN) KORUMASI
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 map_df_valid.fillna("Bilinmiyor", inplace=True)
                 
@@ -509,7 +512,22 @@ if st.session_state.auth:
                     )]
                     if user_lat: 
                         layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
-                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=10, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
+                    
+                    # Matematiksel Ortalama Koruması (Kamera Uzaya Gitmesin Diye)
+                    avg_lat = map_df_valid["lat"].mean() if not map_df_valid["lat"].isna().all() else (user_lat or 39.0)
+                    avg_lon = map_df_valid["lon"].mean() if not map_df_valid["lon"].isna().all() else (user_lon or 35.0)
+
+                    # map_style Kaldırıldı, artık Streamlit'in çökme korumalı doğal temasını kullanacak!
+                    st.pydeck_chart(pdk.Deck(
+                        initial_view_state=pdk.ViewState(
+                            latitude=avg_lat, 
+                            longitude=avg_lon, 
+                            zoom=10, 
+                            pitch=45
+                        ), 
+                        layers=layers, 
+                        tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
+                    ))
                 else:
                     st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
             else:
@@ -629,7 +647,6 @@ if st.session_state.auth:
                     else:
                         map_df = main_df[main_df["Personel"] == secilen_personel]
                     
-                    # YÖNETİCİ HARİTASINA DA KORUMA EKLENDİ!
                     map_df_valid_admin = map_df.dropna(subset=["lat", "lon"]).copy()
                     map_df_valid_admin.fillna("Bilinmiyor", inplace=True)
                     
@@ -642,11 +659,10 @@ if st.session_state.auth:
                         
                         map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
                         
-                        avg_lat = map_df_valid_admin["lat"].mean()
-                        avg_lon = map_df_valid_admin["lon"].mean()
+                        avg_lat = map_df_valid_admin["lat"].mean() if not map_df_valid_admin["lat"].isna().all() else 39.0
+                        avg_lon = map_df_valid_admin["lon"].mean() if not map_df_valid_admin["lon"].isna().all() else 35.0
 
                         st.pydeck_chart(pdk.Deck(
-                            map_style=pdk.map_styles.CARTO_DARK, 
                             initial_view_state=pdk.ViewState(
                                 latitude=avg_lat, 
                                 longitude=avg_lon, 
@@ -690,7 +706,7 @@ if st.session_state.auth:
                 heat_map_data = main_df.dropna(subset=["lat", "lon"])
                 if not heat_map_data.empty:
                     heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
-                    st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
+                    st.pydeck_chart(pdk.Deck(initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
                 else:
                     st.warning("⚠️ Yoğunluk haritası için koordinat verisi bulunamadı.")
                 st.divider()
