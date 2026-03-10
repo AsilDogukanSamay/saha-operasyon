@@ -156,51 +156,12 @@ def typewriter_effect(text):
         yield word + " "
         time.sleep(0.04)
 
-def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
-    sender_email = "asildogukansamay@gmail.com" 
-    app_password = st.secrets["EMAIL_PASS"] 
-    
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
-    msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
-    msg["To"] = receiver_email
-
-    html_content = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-        <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
-            <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
-            <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
-                <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
-                <p style="margin: 0 0 8px 0; font-size: 16px;">E-Posta: <span style="color: #2563EB; font-weight: bold;">{receiver_email}</span></p>
-                <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
-            </div>
-            <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
-        </div>
-    </body>
-    </html>
-    """
-    
-    part = MIMEText(html_content, "html")
-    msg.attach(part)
-    try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.login(sender_email, app_password)
-        server.sendmail(sender_email, receiver_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print("Mail Gönderim Hatası:", e)
-        return False
-
 # ==============================================================================
 # --- VERİ ÇEKME (ÖNBELLEK KIRICI & CANLI BAĞLANTI) ---
 # ==============================================================================
-@st.cache_data(ttl=5) # Süreyi 5 saniyeye düşürdük, anında günceller!
+@st.cache_data(ttl=5)
 def fetch_operational_data(sheet_id):
     try:
-        # Önbelleği (cache) kırmak için URL sonuna anlık zaman damgası ekliyoruz
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&nocache={time.time()}"
         df = pd.read_csv(url)
         df.columns = [str(c).strip().replace("\n", " ") for c in df.columns]
@@ -234,7 +195,6 @@ def fetch_operational_data(sheet_id):
                 actual_renames[col] = renames_lower[cleaned_col]
         df.rename(columns=actual_renames, inplace=True)
         
-        # --- KUSURSUZ KONUM AYIRICI ---
         konum_col = next((c for c in df.columns if 'konum' in str(c).strip().lower()), None)
         
         if konum_col:
@@ -379,40 +339,6 @@ if not st.session_state.auth:
             <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır</div>
         </div>
         """, unsafe_allow_html=True)
-
-    with col_right_showcase:
-        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
-        dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
-        diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
-        kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
-        medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
-        
-        showcase_html = f"""
-        <html><head><style>
-            body {{ margin:0; font-family:'Inter', sans-serif; }}
-            .hero-card {{ background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 45px; padding: 60px 50px; color: white; height: 620px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.4); }}
-            .panel-title {{ font-size: 52px; font-weight: 800; margin: 0; line-height: 1.1; letter-spacing: -2px; }}
-            .panel-subtitle {{ font-size: 20px; margin-top: 20px; color: #DBEAFE; opacity: 0.9; }}
-            .product-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 50px; }}
-            .product-card {{ background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px; display: flex; align-items: center; gap: 15px; transition: transform 0.3s ease; cursor: pointer; text-decoration: none; color: white; }}
-            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.2); }}
-            .icon-wrapper {{ width: 50px; height: 50px; border-radius: 12px; background: white; padding: 7px; display: flex; align-items: center; justify-content: center; }}
-            .icon-wrapper img {{ width: 100%; height: 100%; object-fit: contain; }}
-            a {{ text-decoration: none; color: inherit; }}
-        </style></head><body>
-            <div class="hero-card">
-                <div class="panel-title">Tek Platform,<br>Bütün Operasyon.</div>
-                <div class="panel-subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
-                <div class="product-grid">
-                    <a href="https://www.dentalbulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{dental_img}"></div><div><h4 style="margin:0;">Dentalbulut</h4></div></div></a>
-                    <a href="https://www.medibulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{medibulut_logo_url}"></div><div><h4 style="margin:0;">Medibulut</h4></div></div></a>
-                    <a href="https://www.diyetbulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{diyet_img}"></div><div><h4 style="margin:0;">Diyetbulut</h4></div></div></a>
-                    <a href="https://kys.medibulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{kys_img}"></div><div><h4 style="margin:0;">Medibulut KYS</h4></div></div></a>
-                </div>
-            </div></body></html>
-        """
-        components.html(showcase_html, height=660)
-        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==============================================================================
@@ -435,11 +361,6 @@ st.markdown("""
     .admin-perf-card { background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid rgba(255, 255, 255, 0.05); }
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
-    
-    .goal-track { background: rgba(255,255,255,0.1); border-radius: 10px; height: 16px; width: 100%; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
-    .goal-fill-visit { background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
-    .goal-fill-demo { background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
-    .goal-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #E5E7EB; margin-bottom: 4px; }
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -503,7 +424,7 @@ st.markdown(f"""
 
 if st.session_state.auth:
     if view_df.empty:
-        st.warning("⚠️ Görüntülenecek veri bulunamadı! Lütfen Excel dosyasının 'Bağlantıya sahip olan herkes' olarak paylaşıma açık olduğundan ve listede size atanmış görevler olduğundan emin olun.")
+        st.warning("⚠️ Görüntülenecek veri bulunamadı! Lütfen Excel dosyasının paylaşıma açık olduğundan ve listede size atanmış görevler olduğundan emin olun.")
     else:
         processed_df = view_df.copy()
         if filter_today:
@@ -525,21 +446,29 @@ if st.session_state.auth:
         col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
         col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
         
+        # ==============================================================================
+        # YENİ KURUMSAL HEDEF TAKİBİ (NATIVE STREAMLIT)
+        # ==============================================================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### 🎯 Günlük Hedef Takibi")
         
-        hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100) if toplam_hedef > 0 else 0
-        hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100) if toplam_hedef > 0 else 0
+        hedef_ziyaret_oran = min(tamamlanan_ziyaret / 8.0, 1.0)
+        hedef_demo_oran = min(nitelikli_hot / 4.0, 1.0)
         
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-            <div class="goal-label"><span>🚗 Ziyaret Hedefi (Min: 8)</span><span>{tamamlanan_ziyaret} / 8</span></div>
-            <div class="goal-track"><div class="goal-fill-visit" style="width: {hedef_ziyaret_oran}%;"></div></div>
+        c_prog1, c_prog2 = st.columns(2, gap="large")
+        
+        with c_prog1:
+            st.markdown(f"**🚗 Ziyaret Hedefi ({tamamlanan_ziyaret} / 8)**")
+            st.progress(hedef_ziyaret_oran)
             
-            <div class="goal-label" style="margin-top: 15px;"><span>🔥 Nitelikli / Demo Hedefi (Min: 4)</span><span>{nitelikli_hot} / 4</span></div>
-            <div class="goal-track"><div class="goal-fill-demo" style="width: {hedef_demo_oran}%;"></div></div>
-        </div>
-        """, unsafe_allow_html=True)
+        with c_prog2:
+            st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot} / 4)**")
+            st.progress(hedef_demo_oran)
+            
+        st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # ==============================================================================
         
         tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
         if st.session_state.role == "Yönetici":
