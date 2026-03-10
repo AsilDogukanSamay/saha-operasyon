@@ -16,7 +16,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from io import BytesIO
 from datetime import datetime
-from supabase import create_client, Client # SUPABASE KÜTÜPHANESİ
+from supabase import create_client, Client
 
 # ==============================================================================
 # 1. SİSTEM YAPILANDIRMASI VE SABİTLER
@@ -24,8 +24,11 @@ from supabase import create_client, Client # SUPABASE KÜTÜPHANESİ
 
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 LOCAL_LOGO_PATH = "SahaBulut.jpg"
-SHEET_DATA_ID = "1300K6Ng941sgsiShQXML5-Wk6bR7ddrJ4mPyJNunj9o"
-EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit"
+
+# --- SERKAN BEY'İN YENİ EXCEL BİLGİLERİ BURAYA EKLENDİ ---
+SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
+SHEET_GID = "680076046"
+EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
 
 try:
@@ -48,7 +51,6 @@ except Exception:
 # 2. SUPABASE BAĞLANTISI VE BULUT VERİTABANI YÖNETİMİ
 # ==============================================================================
 
-# Streamlit Secrets'ten bilgileri güvenle alıyoruz
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -64,7 +66,6 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 def init_db():
-    # Tablo tamamen boşsa, varsayılan Yönetici ve Doğukan hesaplarını buluta (Supabase) ekler
     try:
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
@@ -76,11 +77,9 @@ def init_db():
     except Exception as e:
         st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
 
-# Sistemi başlarken Supabase tablosunu kontrol et
 init_db()
 
 def authenticate_user(email, password):
-    # Artık 'username' sütununa değil, 'email' sütununa bakıyoruz!
     try:
         res = supabase.table("users").select("*").eq("email", email).execute()
         if len(res.data) > 0:
@@ -93,7 +92,6 @@ def authenticate_user(email, password):
         return None
 
 def add_user_to_db(username, password, email, role, real_name):
-    # Yeni personeli buluta ekliyoruz
     try:
         res_user = supabase.table("users").select("*").eq("username", username).execute()
         res_mail = supabase.table("users").select("*").eq("email", email).execute()
@@ -159,7 +157,7 @@ def typewriter_effect(text):
 
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
     sender_email = "asildogukansamay@gmail.com" 
-    app_password = st.secrets["EMAIL_PASS"] # ŞİFREYİ GİZLEDİK! 
+    app_password = st.secrets["EMAIL_PASS"] 
     
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
@@ -206,7 +204,8 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
 @st.cache_data(ttl=60)
 def fetch_operational_data(sheet_id):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&tq&t={time.time()}"
+        # SERKAN BEY'İN GID PARAMETRESİ EKLENDİ
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&tq&t={time.time()}"
         df = pd.read_csv(url)
         df.columns = [c.strip() for c in df.columns]
         df["lat"] = df["lat"].apply(clean_coord)
@@ -258,31 +257,14 @@ if not st.session_state.auth:
         div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
         div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
         @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
-
-        /* --- GİRİŞ EKRANI İMZA DÜZENLEMESİ --- */
-        /* Sol kolonu dikey olarak esnek yapıyoruz ki imza en alta itilebilsin */
-        [data-testid="column"]:first-child > div {
-            display: flex;
-            flex-direction: column;
-            min-height: 85vh; /* Ekranın %85'i kadar yer kaplasın */
-        }
-        .login-footer-wrapper {
-            text-align: center;
-            font-size: 12px;
-            color: #6B7280;
-            font-family: 'Inter', sans-serif;
-            padding: 20px 0;
-            border-top: 1px solid #F3F4F6;
-            width: 100%;
-            margin-top: auto; /* Sihirli dokunuş: En alta it */
-        }
+        [data-testid="column"]:first-child > div { display: flex; flex-direction: column; min-height: 85vh; }
+        .login-footer-wrapper { text-align: center; font-size: 12px; color: #6B7280; font-family: 'Inter', sans-serif; padding: 20px 0; border-top: 1px solid #F3F4F6; width: 100%; margin-top: auto; }
     </style>
     """, unsafe_allow_html=True)
 
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
 
     with col_left_form:
-        # Üstteki boşluğu biraz azalttım, daha dengeli duracak.
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 30px; flex-wrap: nowrap;">
@@ -307,7 +289,6 @@ if not st.session_state.auth:
                 st.session_state.auth_user_info = user_info 
                 st.session_state.auth = True
                 
-                # F5 KORUMASI İÇİN URL'YE YAZIYORUZ:
                 st.query_params["u"] = user_info['username']
                 st.query_params["r"] = user_info['role']
                 st.query_params["n"] = user_info['real_name']
@@ -316,7 +297,6 @@ if not st.session_state.auth:
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
         
-       # BİRİNCİ İMZA (Giriş Ekranı) - Modern Çok Satırlı Tasarım
         current_year = datetime.now().year
         st.markdown(f"""
         <style>
@@ -342,10 +322,7 @@ if not st.session_state.auth:
         medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
         
         showcase_html = f"""
-        <html>
-        <head>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-        <style>
+        <html><head><style>
             body {{ margin:0; font-family:'Inter', sans-serif; }}
             .hero-card {{ background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 45px; padding: 60px 50px; color: white; height: 620px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.4); }}
             .panel-title {{ font-size: 52px; font-weight: 800; margin: 0; line-height: 1.1; letter-spacing: -2px; }}
@@ -356,9 +333,7 @@ if not st.session_state.auth:
             .icon-wrapper {{ width: 50px; height: 50px; border-radius: 12px; background: white; padding: 7px; display: flex; align-items: center; justify-content: center; }}
             .icon-wrapper img {{ width: 100%; height: 100%; object-fit: contain; }}
             a {{ text-decoration: none; color: inherit; }}
-        </style>
-        </head>
-        <body>
+        </style></head><body>
             <div class="hero-card">
                 <div class="panel-title">Tek Platform,<br>Bütün Operasyon.</div>
                 <div class="panel-subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
@@ -368,9 +343,7 @@ if not st.session_state.auth:
                     <a href="https://www.diyetbulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{diyet_img}"></div><div><h4 style="margin:0;">Diyetbulut</h4></div></div></a>
                     <a href="https://kys.medibulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{kys_img}"></div><div><h4 style="margin:0;">Medibulut KYS</h4></div></div></a>
                 </div>
-            </div>
-        </body>
-        </html>
+            </div></body></html>
         """
         components.html(showcase_html, height=660)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -383,7 +356,7 @@ st.markdown("""
 <style>
     .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
     section[data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.1); }
-    .header-master-wrapper { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .header-master-wrapper { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .location-status-badge { background: rgba(59, 130, 246, 0.1); color: #60A5FA; border: 1px solid #3B82F6; padding: 8px 18px; border-radius: 25px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     div[data-testid="stMetric"] { background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); border-radius: 16px; padding: 20px !important; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
     div[data-testid="stMetricValue"] { color: #FFFFFF !important; font-size: 28px !important; font-weight: 700 !important; }
@@ -397,21 +370,14 @@ st.markdown("""
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
     
-    /* --- ANA PANO İMZA DÜZENLEMESİ --- */
-    /* Sayfanın alt kısmına ekstra boşluk bırakıyoruz */
-    .main .block-container {
-        padding-bottom: 5rem; 
-    }
-    .dashboard-signature {
-        text-align: center;
-        padding: 2rem 0; /* Daha geniş iç boşluk */
-        margin-top: 4rem; /* Üstteki içerikten iyice uzaklaşsın */
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        font-size: 13px;
-        color: #6B7280;
-        font-family: 'Inter', sans-serif;
-        width: 100%;
-    }
+    /* --- YENİ EKLENEN KPI BAR TASARIMI --- */
+    .goal-track { background: rgba(255,255,255,0.1); border-radius: 10px; height: 16px; width: 100%; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+    .goal-fill-visit { background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
+    .goal-fill-demo { background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
+    .goal-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #E5E7EB; margin-bottom: 4px; }
+    
+    .main .block-container { padding-bottom: 5rem; }
+    .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
     .dashboard-signature a { color: #3B82F6; text-decoration: none; font-weight: 700; }
 </style>
 """, unsafe_allow_html=True)
@@ -428,7 +394,6 @@ if st.session_state.auth:
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        # Eski sistemde username ile eşleşiyordu, artık real_name (Ad Soyad) ile eşleşecek!
         current_realname = st.session_state.auth_user_info['real_name']
         u_norm = str(current_realname).strip().lower()
         view_df = main_df[main_df["Personel"].astype(str).str.strip().str.lower() == u_norm]
@@ -459,7 +424,7 @@ with st.sidebar:
     
     if st.button("🚪 Çıkış", type="primary", use_container_width=True):
         st.session_state.auth = False
-        st.query_params.clear() # URL'Yİ TEMİZLİYORUZ
+        st.query_params.clear()
         st.rerun()
 
 # --- HEADER ---
@@ -486,12 +451,32 @@ if st.session_state.auth and not view_df.empty:
     else: processed_df["Mesafe_km"] = 0
 
     col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-    col_kpi1.metric("Toplam Hedef", len(processed_df))
-    col_kpi2.metric("🔥 Hot Lead", len(processed_df[processed_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)]))
-    col_kpi3.metric("✅ Ziyaret", len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])]))
+    
+    toplam_hedef = len(processed_df)
+    nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.contains("Hot", case=False, na=False)])
+    tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().isin(["evet","tamam"])])
+    
+    col_kpi1.metric("Toplam Plan", toplam_hedef)
+    col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
+    col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
     col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
     
+    # --- SERKAN BEY'İN GÜNLÜK HEDEF TAKİBİ (YENİ) ---
     st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 🎯 Günlük Hedef Takibi")
+    
+    hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100)
+    hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100)
+    
+    st.markdown(f"""
+    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+        <div class="goal-label"><span>🚗 Ziyaret Hedefi (Min: 8)</span><span>{tamamlanan_ziyaret} / 8</span></div>
+        <div class="goal-track"><div class="goal-fill-visit" style="width: {hedef_ziyaret_oran}%;"></div></div>
+        
+        <div class="goal-label" style="margin-top: 15px;"><span>🔥 Nitelikli / Demo Hedefi (Min: 4)</span><span>{nitelikli_hot} / 4</span></div>
+        <div class="goal-track"><div class="goal-fill-demo" style="width: {hedef_demo_oran}%;"></div></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     tab_titles = ["🗺️ Harita", "📋 Liste", "📍 Rota", "✅ İşlem & AI"]
     if st.session_state.role == "Yönetici":
@@ -602,7 +587,6 @@ if st.session_state.auth and not view_df.empty:
 
     # YÖNETİCİ SEKMELERİ
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
-        # --- TAB 5: ANALİZ GÜNCELLEMESİ ---
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
             
@@ -610,7 +594,6 @@ if st.session_state.auth and not view_df.empty:
                 ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
                 secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
                 
-                # Filtreleme mantığını sağlamlaştıralım
                 if secilen_personel == "Tüm Ekip":
                     map_df = main_df.copy()
                 else:
@@ -625,7 +608,6 @@ if st.session_state.auth and not view_df.empty:
                     
                     map_df["color"] = map_df.apply(get_status_color, axis=1)
                     
-                    # Harita merkezi için güvenli ortalama alalım
                     avg_lat = map_df["lat"].mean()
                     avg_lon = map_df["lon"].mean()
 
@@ -655,7 +637,6 @@ if st.session_state.auth and not view_df.empty:
                     
                 st.divider()
                 
-                # Grafiklerin ve performans kartlarının olduğu kısım
                 perf_stats = main_df.groupby("Personel").agg(H_Adet=('Klinik Adı','count'), Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().isin(["evet","tamam"]).sum()), S_Toplam=('Skor','sum')).reset_index().sort_values("S_Toplam", ascending=False)
                 gc1, gc2 = st.columns([2,1])
                 with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
@@ -725,7 +706,6 @@ if st.session_state.auth and not view_df.empty:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
                 except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
 
-   # İKİNCİ İMZA (Ana Dashboard Ekranı) - Modern Çok Satırlı Tasarım
     current_year = datetime.now().year
     st.markdown(f"""
     <style>
@@ -743,6 +723,5 @@ if st.session_state.auth and not view_df.empty:
     </div>
     """, unsafe_allow_html=True)
 
-# else bloğu en sola yaslı (0 boşluk) kalacak
 else:
     st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
