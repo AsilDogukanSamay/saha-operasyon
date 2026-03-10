@@ -130,19 +130,6 @@ def get_img_as_base64(file_path):
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data else "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
-def clean_coord(val):
-    try:
-        if pd.isna(val): return None
-        s_val = str(val).replace(",", ".").strip()
-        raw = re.sub(r"[^\d.]", "", s_val)
-        if not raw: return None
-        num = float(raw)
-        if 25 < num < 46: 
-            return num
-        while num > 180: num /= 10
-        return num
-    except: return None
-
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     try:
         if pd.isna(lat2) or pd.isna(lon2): return 9999
@@ -227,12 +214,23 @@ def fetch_operational_data(sheet_id):
         }
         df.rename(columns=renames, inplace=True)
         
-        if "lat" not in df.columns: df["lat"] = None
-        if "lon" not in df.columns: df["lon"] = None
+        # --- TEK SÜTUN KONUM (HARİTADAN KOPYALA YAPIŞTIR) MANTIĞI ---
+        if "Konum" in df.columns:
+            def extract_lat(val):
+                try: return float(str(val).split(",")[0].strip())
+                except: return None
+            def extract_lon(val):
+                try: return float(str(val).split(",")[1].strip())
+                except: return None
+            
+            df["lat"] = df["Konum"].apply(extract_lat)
+            df["lon"] = df["Konum"].apply(extract_lon)
+        else:
+            df["lat"] = None
+            df["lon"] = None
+        # -------------------------------------------------------------
+
         if "Bugünün Planı" not in df.columns: df["Bugünün Planı"] = "Evet"
-        
-        df["lat"] = df["lat"].apply(clean_coord)
-        df["lon"] = df["lon"].apply(clean_coord)
         
         req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
@@ -311,6 +309,7 @@ if not st.session_state.auth:
             if user_info is not None:
                 st.session_state.role = user_info['role']
                 st.session_state.user = user_info['real_name']
+                st.session_state.email = user_info['email']
                 st.session_state.auth_user_info = user_info 
                 st.session_state.auth = True
                 
@@ -414,12 +413,10 @@ user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longit
 
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
-# --- VERİ FİLTRELEME (İSİM / LEAD SAHİBİ EŞLEŞMESİ) ---
 if st.session_state.auth: 
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        # Mükemmel Çözüm: Artık personelin adıyla "Lead Sahibi (Personel)" sütununu eşleştiriyoruz.
         current_realname = st.session_state.auth_user_info['real_name']
         u_norm = normalize_text(current_realname)
         view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
@@ -529,7 +526,7 @@ if st.session_state.auth and not view_df.empty:
                 if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
                 st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
             else:
-                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'lat' ve 'lon' sütunlarını ekleyin.")
+                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip doldurun.")
         else:
             st.warning("Görüntülenecek plan bulunamadı.")
 
@@ -675,7 +672,7 @@ if st.session_state.auth and not view_df.empty:
                         tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
                     ))
                 else:
-                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı.")
+                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
                     
                 st.divider()
                 
