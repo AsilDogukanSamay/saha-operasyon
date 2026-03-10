@@ -130,6 +130,19 @@ def get_img_as_base64(file_path):
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data else "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
+def clean_coord(val):
+    try:
+        if pd.isna(val): return None
+        s_val = str(val).replace(",", ".").strip()
+        raw = re.sub(r"[^\d.]", "", s_val)
+        if not raw: return None
+        num = float(raw)
+        if 25 < num < 46: 
+            return num
+        while num > 180: num /= 10
+        return num
+    except: return None
+
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     try:
         if pd.isna(lat2) or pd.isna(lon2): return 9999
@@ -144,7 +157,7 @@ def typewriter_effect(text):
         time.sleep(0.04)
 
 # ==============================================================================
-# --- VERİ ÇEKME 
+# --- VERİ ÇEKME
 # ==============================================================================
 @st.cache_data(ttl=5)
 def fetch_operational_data(sheet_id):
@@ -417,8 +430,11 @@ if st.session_state.auth:
         st.warning("⚠️ Görüntülenecek veri bulunamadı! Lütfen Excel dosyasının paylaşıma açık olduğundan ve listede size atanmış görevler olduğundan emin olun.")
     else:
         processed_df = view_df.copy()
+        
+        # --- YENİ CHECKBOX (TRUE/FALSE) UYUMLU FİLTRE ---
         if filter_today:
-            processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam', na=False)]
+            # Excel'deki Onay kutuları "TRUE" olarak gelir. "evet" veya "tamam" veya "true" arıyoruz.
+            processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
         if user_lat:
             processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
@@ -483,7 +499,6 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # SADECE HARİTAYA LAZIM OLAN VERİLERİ SÜZ (ÇÖKMEYİ ENGELLEMEK İÇİN)
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
                 if not map_df_valid.empty:
@@ -491,7 +506,6 @@ if st.session_state.auth:
                     map_df_valid["lon"] = map_df_valid["lon"].astype(float)
                     map_df_valid["coordinates"] = map_df_valid.apply(lambda r: [r["lon"], r["lat"]], axis=1)
                     
-                    # Harita motoruna sadece temizlenmiş, hatasız verileri gönderiyoruz!
                     plot_df = map_df_valid[['Klinik Adı', 'Personel', 'Lead Status', 'coordinates', 'color']].copy()
                     plot_df['Klinik Adı'] = plot_df['Klinik Adı'].astype(str).fillna("Bilinmiyor")
                     plot_df['Personel'] = plot_df['Personel'].astype(str).fillna("Bilinmiyor")
@@ -502,8 +516,8 @@ if st.session_state.auth:
                         data=plot_df, 
                         get_position='coordinates', 
                         get_fill_color='color',     
-                        get_radius=300,             # Noktalar kabak gibi parlasın diye büyütüldü
-                        radius_min_pixels=12,       
+                        get_radius=50,              # DEV BOYUT KÜÇÜLTÜLDÜ! Artık zarif iğneler.
+                        radius_min_pixels=6,        # Çıplak gözle yorulmadan görülecek optimum boyut.
                         pickable=True
                     )]
                     
@@ -679,8 +693,8 @@ if st.session_state.auth:
                                     data=plot_df_admin, 
                                     get_position='coordinates',
                                     get_fill_color='color', 
-                                    get_radius=300, 
-                                    radius_min_pixels=12, 
+                                    get_radius=50,              # DEV BOYUT KÜÇÜLTÜLDÜ!
+                                    radius_min_pixels=6, 
                                     pickable=True
                                 )
                             ], 
