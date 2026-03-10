@@ -195,14 +195,16 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         return False
 
 # ==============================================================================
-# --- VERİ ÇEKME VE SERKAN BEY'İN SÜTUNLARINI EŞLEŞTİRME ---
+# --- VERİ ÇEKME (SAYFA AVCISI VE KUSURSUZ KONUM) ---
 # ==============================================================================
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def fetch_operational_data(sheet_id):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={SHEET_GID}&tq&t={time.time()}"
+        # GID yerine doğrudan "Saha Lead list" isimli sayfayı okumaya zorluyoruz. 
+        # Bu sayede diğer boş sayfalar sistemi kandıramaz!
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&sheet=Saha%20Lead%20list"
         df = pd.read_csv(url)
-        df.columns = [str(c).strip() for c in df.columns] # Tüm boşlukları zorla siler
+        df.columns = [str(c).strip().replace("\n", " ") for c in df.columns]
         
         all_serkan_cols = [
             "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
@@ -233,17 +235,24 @@ def fetch_operational_data(sheet_id):
                 actual_renames[col] = renames_lower[cleaned_col]
         df.rename(columns=actual_renames, inplace=True)
         
-        # --- TEK SÜTUN KONUM (HARİTADAN KOPYALA YAPIŞTIR) MANTIĞI ---
+        # --- KUSURSUZ KONUM AYIRICI ---
         konum_col = next((c for c in df.columns if 'konum' in str(c).strip().lower()), None)
         
         if konum_col:
             def extract_lat(val):
-                if pd.isna(val) or str(val).strip() == "": return None
-                try: return float(str(val).split(",")[0].strip())
+                try:
+                    if pd.isna(val): return None
+                    v = str(val).replace(" ", "").replace("\u200b", "")
+                    if not v: return None
+                    return float(v.split(",")[0])
                 except: return None
+                
             def extract_lon(val):
-                if pd.isna(val) or str(val).strip() == "": return None
-                try: return float(str(val).split(",")[1].strip())
+                try:
+                    if pd.isna(val): return None
+                    v = str(val).replace(" ", "").replace("\u200b", "")
+                    if not v: return None
+                    return float(v.split(",")[1])
                 except: return None
             
             df["lat"] = df[konum_col].apply(extract_lat)
@@ -251,9 +260,7 @@ def fetch_operational_data(sheet_id):
         else:
             df["lat"] = None
             df["lon"] = None
-        # -------------------------------------------------------------
 
-        # Bugünün planı kısmı da akıllı hale getirildi
         bp_col = next((c for c in df.columns if 'bugünün planı' in str(c).strip().lower()), None)
         if bp_col:
             df.rename(columns={bp_col: "Bugünün Planı"}, inplace=True)
@@ -264,21 +271,13 @@ def fetch_operational_data(sheet_id):
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
             
-        # --- SERKAN BEY'İN KELİMELERİNE ÖZEL SKOR VE RENK HESAPLAMA ---
         def calc_score(r):
             score = 0
             gidildi = str(r.get("Gidildi mi?", "")).lower()
-            # Excel'de "Yapıldı" yazarsa ziyaret edilmiş sayar
-            if any(x in gidildi for x in ["evet", "tamam", "yapıldı"]):
-                score += 25
-                
+            if any(x in gidildi for x in ["evet", "tamam", "yapıldı"]): score += 25
             lead = str(r.get("Lead Status", "")).lower()
-            # Excel'de "Sıcak" veya "Hot" yazarsa kırmızı yapar
-            if any(x in lead for x in ["hot", "sıcak"]):
-                score += 15
-            # Excel'de "Takip Edilecek" veya "Warm" yazarsa turuncu yapar
-            elif any(x in lead for x in ["warm", "ılık", "takip"]):
-                score += 5
+            if any(x in lead for x in ["hot", "sıcak"]): score += 15
+            elif any(x in lead for x in ["warm", "ılık", "takip"]): score += 5
             return score
             
         df["Skor"] = df.apply(calc_score, axis=1)
@@ -438,7 +437,6 @@ st.markdown("""
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
     
-    /* --- HEDEF BARLARI --- */
     .goal-track { background: rgba(255,255,255,0.1); border-radius: 10px; height: 16px; width: 100%; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
     .goal-fill-visit { background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
     .goal-fill-demo { background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%); height: 100%; border-radius: 10px; transition: width 0.8s ease-in-out; }
@@ -507,7 +505,7 @@ st.markdown(f"""
 if st.session_state.auth and not view_df.empty:
     processed_df = view_df.copy()
     if filter_today:
-        processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower() == 'evet']
+        processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam', na=False)]
     
     if user_lat:
         processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
@@ -528,8 +526,8 @@ if st.session_state.auth and not view_df.empty:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### 🎯 Günlük Hedef Takibi")
     
-    hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100)
-    hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100)
+    hedef_ziyaret_oran = min(int((tamamlanan_ziyaret / 8) * 100), 100) if toplam_hedef > 0 else 0
+    hedef_demo_oran = min(int((nitelikli_hot / 4) * 100), 100) if toplam_hedef > 0 else 0
     
     st.markdown(f"""
     <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
@@ -577,7 +575,7 @@ if st.session_state.auth and not view_df.empty:
             else:
                 st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
         else:
-            st.warning("Görüntülenecek plan bulunamadı.")
+            st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' düğmesini kapatın veya Excel tablosuna veri girin.")
 
     with dashboard_tabs[1]:
         sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
@@ -598,87 +596,87 @@ if st.session_state.auth and not view_df.empty:
                 default_idx = all_clinics.index(nearby.iloc[0]["Klinik Adı"])
                 st.success(f"📍 Konumunuza en yakın klinik ({nearby.iloc[0]['Klinik Adı']}) otomatik seçildi.")
         
-        selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
-        if selected_clinic_ai:
-            clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
-            
-            with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
-                c_det1, c_det2, c_det3 = st.columns(3)
-                c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
-                c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
-                c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
+        if all_clinics:
+            selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
+            if selected_clinic_ai:
+                clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
                 
-                c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
-                c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
-                c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
-                
-                c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
-                c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
-                c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
-                
-                st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
-                st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
-            
-            col_op, col_ai = st.columns(2)
-            
-            with col_op:
-                st.markdown("### 🛠️ Operasyon Paneli")
-                st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                raw_phone = str(clinic_row.get("İletişim", ""))
-                clean_phone = re.sub(r"\D", "", raw_phone)
-                if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
-                if len(clean_phone) == 10: clean_phone = "90" + clean_phone
-                
-                msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                if len(clean_phone) >= 10:
-                    wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
-                    st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
-                else:
-                    st.error("⚠️ İletişim numarası hatalı.")
-                
-                st.markdown("#### ⏱️ Ziyaret Süresi")
-                c_t1, c_t2 = st.columns(2)
-                if st.session_state.timer_start is None:
-                    if c_t1.button("▶️ Başlat"):
-                        st.session_state.timer_start = time.time()
-                        st.session_state.timer_clinic = selected_clinic_ai
-                        st.rerun()
-                else:
-                    elapsed = int(time.time() - st.session_state.timer_start)
-                    mins, secs = divmod(elapsed, 60)
-                    st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
-                    if c_t2.button("⏹️ Bitir"):
-                        st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
-                        st.session_state.timer_start = None
-                        st.success("Ziyaret süresi kaydedildi!")
-                        st.rerun()
-
-            with col_ai:
-                st.markdown("### 🤖 Saha Stratejisti")
-                lead_stat = str(clinic_row["Lead Status"]).lower()
-                
-                # Yeni statülere göre strateji tavsiyesi
-                if any(x in lead_stat for x in ["hot", "sıcak"]):
-                    ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
-                elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
-                    ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
-                else:
-                    ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
+                with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
+                    c_det1, c_det2, c_det3 = st.columns(3)
+                    c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
+                    c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
+                    c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
                     
-                with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
-                st.markdown("---")
-                existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-                if st.button("💾 Notu Kaydet", use_container_width=True):
-                    st.session_state.notes[selected_clinic_ai] = new_note_val
-                    st.toast("Not kaydedildi!", icon="✅")
+                    c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
+                    c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
+                    c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
+                    
+                    c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
+                    c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
+                    c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
+                    
+                    st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
+                    st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
                 
-                if st.session_state.notes:
-                    notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
-                    df_notes = pd.DataFrame(notes_data)
-                    buffer = BytesIO()
-                    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                    st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                col_op, col_ai = st.columns(2)
+                
+                with col_op:
+                    st.markdown("### 🛠️ Operasyon Paneli")
+                    st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
+                    raw_phone = str(clinic_row.get("İletişim", ""))
+                    clean_phone = re.sub(r"\D", "", raw_phone)
+                    if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
+                    if len(clean_phone) == 10: clean_phone = "90" + clean_phone
+                    
+                    msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
+                    if len(clean_phone) >= 10:
+                        wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
+                        st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
+                    else:
+                        st.error("⚠️ İletişim numarası hatalı.")
+                    
+                    st.markdown("#### ⏱️ Ziyaret Süresi")
+                    c_t1, c_t2 = st.columns(2)
+                    if st.session_state.timer_start is None:
+                        if c_t1.button("▶️ Başlat"):
+                            st.session_state.timer_start = time.time()
+                            st.session_state.timer_clinic = selected_clinic_ai
+                            st.rerun()
+                    else:
+                        elapsed = int(time.time() - st.session_state.timer_start)
+                        mins, secs = divmod(elapsed, 60)
+                        st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
+                        if c_t2.button("⏹️ Bitir"):
+                            st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
+                            st.session_state.timer_start = None
+                            st.success("Ziyaret süresi kaydedildi!")
+                            st.rerun()
+
+                with col_ai:
+                    st.markdown("### 🤖 Saha Stratejisti")
+                    lead_stat = str(clinic_row["Lead Status"]).lower()
+                    
+                    if any(x in lead_stat for x in ["hot", "sıcak"]):
+                        ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
+                    elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
+                        ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
+                    else:
+                        ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
+                        
+                    with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
+                    st.markdown("---")
+                    existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
+                    new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
+                    if st.button("💾 Notu Kaydet", use_container_width=True):
+                        st.session_state.notes[selected_clinic_ai] = new_note_val
+                        st.toast("Not kaydedildi!", icon="✅")
+                    
+                    if st.session_state.notes:
+                        notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
+                        df_notes = pd.DataFrame(notes_data)
+                        buffer = BytesIO()
+                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
+                        st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
         with dashboard_tabs[4]:
