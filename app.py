@@ -130,19 +130,6 @@ def get_img_as_base64(file_path):
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data else "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
-def clean_coord(val):
-    try:
-        if pd.isna(val): return None
-        s_val = str(val).replace(",", ".").strip()
-        raw = re.sub(r"[^\d.]", "", s_val)
-        if not raw: return None
-        num = float(raw)
-        if 25 < num < 46: 
-            return num
-        while num > 180: num /= 10
-        return num
-    except: return None
-
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     try:
         if pd.isna(lat2) or pd.isna(lon2): return 9999
@@ -157,7 +144,7 @@ def typewriter_effect(text):
         time.sleep(0.04)
 
 # ==============================================================================
-# --- VERİ ÇEKME (ÖNBELLEK KIRICI & CANLI BAĞLANTI) ---
+# --- VERİ ÇEKME 
 # ==============================================================================
 @st.cache_data(ttl=5)
 def fetch_operational_data(sheet_id):
@@ -217,7 +204,6 @@ def fetch_operational_data(sheet_id):
             df["lat"] = df[konum_col].apply(extract_lat)
             df["lon"] = df[konum_col].apply(extract_lon)
             
-            # Koordinatları kesinlikle float (sayı) tipine zorluyoruz. 
             df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
             df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
         else:
@@ -497,27 +483,27 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # PYDECK KUSURSUZ HARİTA VERİ HAZIRLIĞI
+                # SADECE HARİTAYA LAZIM OLAN VERİLERİ SÜZ (ÇÖKMEYİ ENGELLEMEK İÇİN)
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
                 if not map_df_valid.empty:
-                    # Enlem ve boylamı float tipine garanti olarak dönüştür.
                     map_df_valid["lat"] = map_df_valid["lat"].astype(float)
                     map_df_valid["lon"] = map_df_valid["lon"].astype(float)
-                    
-                    # PyDeck'in kafasının karışmaması için özel bir koordinat dizisi oluşturuyoruz.
                     map_df_valid["coordinates"] = map_df_valid.apply(lambda r: [r["lon"], r["lat"]], axis=1)
                     
-                    # Tooltip (İsimlerin görünmesi) için boş olanları dolduruyoruz.
-                    map_df_valid.fillna("Bilinmiyor", inplace=True)
+                    # Harita motoruna sadece temizlenmiş, hatasız verileri gönderiyoruz!
+                    plot_df = map_df_valid[['Klinik Adı', 'Personel', 'Lead Status', 'coordinates', 'color']].copy()
+                    plot_df['Klinik Adı'] = plot_df['Klinik Adı'].astype(str).fillna("Bilinmiyor")
+                    plot_df['Personel'] = plot_df['Personel'].astype(str).fillna("Bilinmiyor")
+                    plot_df['Lead Status'] = plot_df['Lead Status'].astype(str).fillna("Bilinmiyor")
                     
                     layers = [pdk.Layer(
                         "ScatterplotLayer", 
-                        data=map_df_valid, 
-                        get_position='coordinates', # Özel dizi kullanılıyor
-                        get_fill_color='color',     # get_color yerine get_fill_color kullanıldı
-                        get_radius=250,             # Yarıçap biraz büyütüldü
-                        radius_min_pixels=10,       # Ekranda daha net parlaması için artırıldı
+                        data=plot_df, 
+                        get_position='coordinates', 
+                        get_fill_color='color',     
+                        get_radius=300,             # Noktalar kabak gibi parlasın diye büyütüldü
+                        radius_min_pixels=12,       
                         pickable=True
                     )]
                     
@@ -532,7 +518,7 @@ if st.session_state.auth:
                         initial_view_state=pdk.ViewState(
                             latitude=avg_lat, 
                             longitude=avg_lon, 
-                            zoom=10, 
+                            zoom=11, 
                             pitch=45
                         ), 
                         layers=layers, 
@@ -663,7 +649,6 @@ if st.session_state.auth:
                         map_df_valid_admin["lat"] = map_df_valid_admin["lat"].astype(float)
                         map_df_valid_admin["lon"] = map_df_valid_admin["lon"].astype(float)
                         map_df_valid_admin["coordinates"] = map_df_valid_admin.apply(lambda r: [r["lon"], r["lat"]], axis=1)
-                        map_df_valid_admin.fillna("Bilinmiyor", inplace=True)
 
                         def get_status_color(r):
                             s = str(r["Lead Status"]).lower()
@@ -672,6 +657,11 @@ if st.session_state.auth:
                             return [59, 130, 246]
                         
                         map_df_valid_admin["color"] = map_df_valid_admin.apply(get_status_color, axis=1)
+                        
+                        plot_df_admin = map_df_valid_admin[['Klinik Adı', 'Personel', 'Lead Status', 'coordinates', 'color']].copy()
+                        plot_df_admin['Klinik Adı'] = plot_df_admin['Klinik Adı'].astype(str).fillna("Bilinmiyor")
+                        plot_df_admin['Personel'] = plot_df_admin['Personel'].astype(str).fillna("Bilinmiyor")
+                        plot_df_admin['Lead Status'] = plot_df_admin['Lead Status'].astype(str).fillna("Bilinmiyor")
                         
                         avg_lat = map_df_valid_admin["lat"].mean() if not map_df_valid_admin["lat"].isna().all() else 39.0
                         avg_lon = map_df_valid_admin["lon"].mean() if not map_df_valid_admin["lon"].isna().all() else 35.0
@@ -686,11 +676,11 @@ if st.session_state.auth:
                             layers=[
                                 pdk.Layer(
                                     "ScatterplotLayer", 
-                                    data=map_df_valid_admin, 
+                                    data=plot_df_admin, 
                                     get_position='coordinates',
                                     get_fill_color='color', 
-                                    get_radius=250, 
-                                    radius_min_pixels=10, 
+                                    get_radius=300, 
+                                    radius_min_pixels=12, 
                                     pickable=True
                                 )
                             ], 
