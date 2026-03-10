@@ -25,7 +25,6 @@ from supabase import create_client, Client
 MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 LOCAL_LOGO_PATH = "SahaBulut.jpg"
 
-# --- SERKAN BEY'İN YENİ EXCEL BİLGİLERİ BURAYA EKLENDİ ---
 SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
 SHEET_GID = "680076046"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
@@ -205,7 +204,6 @@ def fetch_operational_data(sheet_id):
         df = pd.read_csv(url)
         df.columns = [c.strip() for c in df.columns]
         
-        # SERKAN BEY'İN İSTEDİĞİ TÜM SÜTUNLARI GARANTİYE ALIYORUZ
         all_serkan_cols = [
             "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
             "Branş", "Potansiyel Kullanıcı Sayısı", "Potansiyel ANA Ürün", "Ziyaret Durumu", 
@@ -219,15 +217,13 @@ def fetch_operational_data(sheet_id):
             if col not in df.columns:
                 df[col] = "Belirtilmemiş"
 
-        # Sistemdeki iç algoritmalar için isim haritalandırması (Mapping)
         renames = {
             "Müşteri Bilgisi": "Klinik Adı",
             "Bölge": "İlçe",
             "Lead Sahibi": "Personel",
             "Satış Durumu": "Lead Status", 
             "Ziyaret Durumu": "Gidildi mi?",
-            "Telefon": "İletişim",
-            "Mail": "Atanan Mail"
+            "Telefon": "İletişim"
         }
         df.rename(columns=renames, inplace=True)
         
@@ -238,7 +234,7 @@ def fetch_operational_data(sheet_id):
         df["lat"] = df["lat"].apply(clean_coord)
         df["lon"] = df["lon"].apply(clean_coord)
         
-        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim", "Atanan Mail"]
+        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
             
@@ -315,7 +311,6 @@ if not st.session_state.auth:
             if user_info is not None:
                 st.session_state.role = user_info['role']
                 st.session_state.user = user_info['real_name']
-                st.session_state.email = user_info['email']
                 st.session_state.auth_user_info = user_info 
                 st.session_state.auth = True
                 
@@ -419,16 +414,15 @@ user_lat, user_lon = (loc_data['coords']['latitude'], loc_data['coords']['longit
 
 main_df = fetch_operational_data(SHEET_DATA_ID)
 
+# --- VERİ FİLTRELEME (İSİM / LEAD SAHİBİ EŞLEŞMESİ) ---
 if st.session_state.auth: 
     if st.session_state.role == "Yönetici":
         view_df = main_df
     else:
-        user_email = str(st.session_state.auth_user_info['email']).strip().lower()
-        if "Atanan Mail" in main_df.columns:
-            view_df = main_df[main_df["Atanan Mail"].astype(str).str.strip().str.lower() == user_email]
-        else:
-            st.error("⚠️ Excel tablosunda 'Atanan Mail' (önceki adıyla Mail) sütunu bulunamadı!")
-            view_df = pd.DataFrame() 
+        # Mükemmel Çözüm: Artık personelin adıyla "Lead Sahibi (Personel)" sütununu eşleştiriyoruz.
+        current_realname = st.session_state.auth_user_info['real_name']
+        u_norm = normalize_text(current_realname)
+        view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
 
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
@@ -512,7 +506,6 @@ if st.session_state.auth and not view_df.empty:
         
     dashboard_tabs = st.tabs(tab_titles)
 
-    # TAB 1: HARİTA
     with dashboard_tabs[0]:
         if not processed_df.empty:
             col_ctrl, col_leg = st.columns([1, 2])
@@ -536,23 +529,20 @@ if st.session_state.auth and not view_df.empty:
                 if user_lat: layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
                 st.pydeck_chart(pdk.Deck(map_style=pdk.map_styles.CARTO_DARK, initial_view_state=pdk.ViewState(latitude=map_df_valid["lat"].mean(), longitude=map_df_valid["lon"].mean(), zoom=12, pitch=45), layers=layers, tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}))
             else:
-                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'lat' ve 'lon' sütunlarını ekleyip doldurun.")
+                st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'lat' ve 'lon' sütunlarını ekleyin.")
         else:
             st.warning("Görüntülenecek plan bulunamadı.")
 
-    # TAB 2: LİSTE
     with dashboard_tabs[1]:
         sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
         fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
         fdf["Nav"] = fdf.apply(lambda x: f"https://www.google.com/maps/search/?api=1&query={x['lat']},{x['lon']}", axis=1)
         st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
-    # TAB 3: ROTA
     with dashboard_tabs[2]:
         st.info("📍 **Akıllı Rota:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
         st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
-    # TAB 4: İŞLEM & AI
     with dashboard_tabs[3]:
         all_clinics = processed_df["Klinik Adı"].tolist()
         default_idx = 0
@@ -566,7 +556,6 @@ if st.session_state.auth and not view_df.empty:
         if selected_clinic_ai:
             clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
             
-            # --- YENİ EKLENEN ŞOV KISMI (SERKAN BEY'İN MÜŞTERİ DETAYLARI) ---
             with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
                 c_det1, c_det2, c_det3 = st.columns(3)
                 c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
@@ -583,7 +572,6 @@ if st.session_state.auth and not view_df.empty:
                 
                 st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
                 st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
-            # ----------------------------------------------------------------
             
             col_op, col_ai = st.columns(2)
             
@@ -638,7 +626,6 @@ if st.session_state.auth and not view_df.empty:
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                     st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-    # YÖNETİCİ SEKMELERİ
     if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
         with dashboard_tabs[4]:
             st.subheader("📊 Ekip Performans ve Saha Analizi")
@@ -688,7 +675,7 @@ if st.session_state.auth and not view_df.empty:
                         tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
                     ))
                 else:
-                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
+                    st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı.")
                     
                 st.divider()
                 
