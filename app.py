@@ -157,7 +157,7 @@ def typewriter_effect(text):
         time.sleep(0.04)
 
 # ==============================================================================
-# --- VERİ ÇEKME VE KUSURSUZ KONUM TEMİZLİĞİ ---
+# --- VERİ ÇEKME (ÖNBELLEK KIRICI & CANLI BAĞLANTI) ---
 # ==============================================================================
 @st.cache_data(ttl=5)
 def fetch_operational_data(sheet_id):
@@ -216,7 +216,8 @@ def fetch_operational_data(sheet_id):
             
             df["lat"] = df[konum_col].apply(extract_lat)
             df["lon"] = df[konum_col].apply(extract_lon)
-            # Sayısal veriye zorla (Hata varsa NaN yap)
+            
+            # Koordinatları kesinlikle float (sayı) tipine zorluyoruz. 
             df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
             df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
         else:
@@ -496,28 +497,37 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # PYDECK BOŞLUK (NAN) KORUMASI
+                # PYDECK KUSURSUZ HARİTA VERİ HAZIRLIĞI
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
-                map_df_valid.fillna("Bilinmiyor", inplace=True)
                 
                 if not map_df_valid.empty:
+                    # Enlem ve boylamı float tipine garanti olarak dönüştür.
+                    map_df_valid["lat"] = map_df_valid["lat"].astype(float)
+                    map_df_valid["lon"] = map_df_valid["lon"].astype(float)
+                    
+                    # PyDeck'in kafasının karışmaması için özel bir koordinat dizisi oluşturuyoruz.
+                    map_df_valid["coordinates"] = map_df_valid.apply(lambda r: [r["lon"], r["lat"]], axis=1)
+                    
+                    # Tooltip (İsimlerin görünmesi) için boş olanları dolduruyoruz.
+                    map_df_valid.fillna("Bilinmiyor", inplace=True)
+                    
                     layers = [pdk.Layer(
                         "ScatterplotLayer", 
                         data=map_df_valid, 
-                        get_position='[lon, lat]', 
-                        get_color='color', 
-                        get_radius=200, 
-                        radius_min_pixels=8, 
+                        get_position='coordinates', # Özel dizi kullanılıyor
+                        get_fill_color='color',     # get_color yerine get_fill_color kullanıldı
+                        get_radius=250,             # Yarıçap biraz büyütüldü
+                        radius_min_pixels=10,       # Ekranda daha net parlaması için artırıldı
                         pickable=True
                     )]
-                    if user_lat: 
-                        layers.append(pdk.Layer("ScatterplotLayer", data=pd.DataFrame([{'lat': user_lat, 'lon': user_lon}]), get_position='[lon,lat]', get_color=[0, 255, 255], get_radius=35, radius_min_pixels=7, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
                     
-                    # Matematiksel Ortalama Koruması (Kamera Uzaya Gitmesin Diye)
-                    avg_lat = map_df_valid["lat"].mean() if not map_df_valid["lat"].isna().all() else (user_lat or 39.0)
-                    avg_lon = map_df_valid["lon"].mean() if not map_df_valid["lon"].isna().all() else (user_lon or 35.0)
+                    if user_lat: 
+                        user_coord = pd.DataFrame([{'coordinates': [user_lon, user_lat]}])
+                        layers.append(pdk.Layer("ScatterplotLayer", data=user_coord, get_position='coordinates', get_fill_color=[0, 255, 255], get_radius=50, radius_min_pixels=8, stroked=True, get_line_color=[255, 255, 255], get_line_width=20))
+                    
+                    avg_lat = map_df_valid["lat"].mean()
+                    avg_lon = map_df_valid["lon"].mean()
 
-                    # map_style Kaldırıldı, artık Streamlit'in çökme korumalı doğal temasını kullanacak!
                     st.pydeck_chart(pdk.Deck(
                         initial_view_state=pdk.ViewState(
                             latitude=avg_lat, 
@@ -648,9 +658,13 @@ if st.session_state.auth:
                         map_df = main_df[main_df["Personel"] == secilen_personel]
                     
                     map_df_valid_admin = map_df.dropna(subset=["lat", "lon"]).copy()
-                    map_df_valid_admin.fillna("Bilinmiyor", inplace=True)
                     
                     if not map_df_valid_admin.empty:
+                        map_df_valid_admin["lat"] = map_df_valid_admin["lat"].astype(float)
+                        map_df_valid_admin["lon"] = map_df_valid_admin["lon"].astype(float)
+                        map_df_valid_admin["coordinates"] = map_df_valid_admin.apply(lambda r: [r["lon"], r["lat"]], axis=1)
+                        map_df_valid_admin.fillna("Bilinmiyor", inplace=True)
+
                         def get_status_color(r):
                             s = str(r["Lead Status"]).lower()
                             if any(x in s for x in ["hot", "sıcak"]): return [239, 68, 68]
@@ -673,10 +687,10 @@ if st.session_state.auth:
                                 pdk.Layer(
                                     "ScatterplotLayer", 
                                     data=map_df_valid_admin, 
-                                    get_position='[lon, lat]',
-                                    get_color='color', 
-                                    get_radius=200, 
-                                    radius_min_pixels=8, 
+                                    get_position='coordinates',
+                                    get_fill_color='color', 
+                                    get_radius=250, 
+                                    radius_min_pixels=10, 
                                     pickable=True
                                 )
                             ], 
@@ -705,7 +719,11 @@ if st.session_state.auth:
                 st.subheader("🔥 Saha Yoğunluk Haritası")
                 heat_map_data = main_df.dropna(subset=["lat", "lon"])
                 if not heat_map_data.empty:
-                    heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='[lon, lat]', opacity=0.8, get_weight=1, radius_pixels=40)
+                    heat_map_data["lat"] = heat_map_data["lat"].astype(float)
+                    heat_map_data["lon"] = heat_map_data["lon"].astype(float)
+                    heat_map_data["coordinates"] = heat_map_data.apply(lambda r: [r["lon"], r["lat"]], axis=1)
+
+                    heat_layer = pdk.Layer("HeatmapLayer", data=heat_map_data, get_position='coordinates', opacity=0.8, get_weight=1, radius_pixels=40)
                     st.pydeck_chart(pdk.Deck(initial_view_state=pdk.ViewState(latitude=heat_map_data["lat"].mean(), longitude=heat_map_data["lon"].mean(), zoom=10), layers=[heat_layer]))
                 else:
                     st.warning("⚠️ Yoğunluk haritası için koordinat verisi bulunamadı.")
