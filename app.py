@@ -156,6 +156,44 @@ def typewriter_effect(text):
         yield word + " "
         time.sleep(0.04)
 
+def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
+    sender_email = "asildogukansamay@gmail.com" 
+    app_password = st.secrets["EMAIL_PASS"] 
+    
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "SahaBulut Hesabınız Oluşturuldu! 🚀"
+    msg["From"] = f"SahaBulut Yönetimi <{sender_email}>"
+    msg["To"] = receiver_email
+
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <h2 style="color: #2563EB;">Hoş Geldin, {user_name}!</h2>
+            <p style="color: #333; font-size: 16px;">Medibulut Saha Operasyon Sistemi (<b>SahaBulut</b>) hesabınız yöneticiniz tarafından başarıyla oluşturuldu.</p>
+            <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #E5E7EB;">
+                <p style="margin: 0 0 10px 0; font-size: 18px; color: #111827;"><b>🔑 Sisteme Giriş Bilgileriniz:</b></p>
+                <p style="margin: 0 0 8px 0; font-size: 16px;">E-Posta: <span style="color: #2563EB; font-weight: bold;">{receiver_email}</span></p>
+                <p style="margin: 0; font-size: 16px;">Parola: <span style="color: #2563EB; font-weight: bold;">{user_pass}</span></p>
+            </div>
+            <a href="{app_url}" style="background: #2563EB; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Sisteme Giriş Yap</a>
+        </div>
+    </body>
+    </html>
+    """
+    
+    part = MIMEText(html_content, "html")
+    msg.attach(part)
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print("Mail Gönderim Hatası:", e)
+        return False
+
 # ==============================================================================
 # --- VERİ ÇEKME
 # ==============================================================================
@@ -401,7 +439,9 @@ with st.sidebar:
         st.divider()
 
     map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=False) 
+    
+    # FİLTRE ARTIK OTOMATİK OLARAK "AÇIK" GELECEK (Sadece bugünü gösterecek)
+    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     st.divider()
     
     if st.button("🔄 Verileri Güncelle", use_container_width=True):
@@ -431,9 +471,8 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
-        # --- YENİ CHECKBOX (TRUE/FALSE) UYUMLU FİLTRE ---
+        # ONAY KUTUSU (CHECKBOX) UYUMLU FİLTRELEME
         if filter_today:
-            # Excel'deki Onay kutuları "TRUE" olarak gelir. "evet" veya "tamam" veya "true" arıyoruz.
             processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
         if user_lat:
@@ -498,7 +537,6 @@ if st.session_state.auth:
                         return [59,130,246]
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
-                
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
                 if not map_df_valid.empty:
@@ -516,8 +554,8 @@ if st.session_state.auth:
                         data=plot_df, 
                         get_position='coordinates', 
                         get_fill_color='color',     
-                        get_radius=50,              # DEV BOYUT KÜÇÜLTÜLDÜ! Artık zarif iğneler.
-                        radius_min_pixels=6,        # Çıplak gözle yorulmadan görülecek optimum boyut.
+                        get_radius=50,              # Noktalar zarif ve küçük hale getirildi.
+                        radius_min_pixels=6,        
                         pickable=True
                     )]
                     
@@ -539,9 +577,9 @@ if st.session_state.auth:
                         tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
                     ))
                 else:
-                    st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı. Lütfen Excel'e 'Konum' sütununu ekleyip, virgülle ayrılmış koordinat (Örn: 40.1622, 26.4287) girin.")
+                    st.warning("⚠️ Haritada gösterilecek bugüne ait geçerli koordinat bilgisi bulunamadı.")
             else:
-                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' düğmesini kapatın veya Excel tablosuna veri girin.")
+                st.warning("Bugüne ait bir plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'den plan ekleyin.")
 
         with dashboard_tabs[1]:
             sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
@@ -644,20 +682,19 @@ if st.session_state.auth:
                             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                             st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
+        # YÖNETİCİ HARİTALARI DA ARTIK FİLTREYE BAĞLI!
         if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
             with dashboard_tabs[4]:
                 st.subheader("📊 Ekip Performans ve Saha Analizi")
                 
-                if not main_df.empty:
-                    ekip_listesi = ["Tüm Ekip"] + list(main_df["Personel"].unique())
+                if not processed_df.empty:
+                    ekip_listesi = ["Tüm Ekip"] + list(processed_df["Personel"].unique())
                     secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
                     
                     if secilen_personel == "Tüm Ekip":
-                        map_df = main_df.copy()
+                        map_df_valid_admin = processed_df.dropna(subset=["lat", "lon"]).copy()
                     else:
-                        map_df = main_df[main_df["Personel"] == secilen_personel]
-                    
-                    map_df_valid_admin = map_df.dropna(subset=["lat", "lon"]).copy()
+                        map_df_valid_admin = processed_df[(processed_df["Personel"] == secilen_personel)].dropna(subset=["lat", "lon"]).copy()
                     
                     if not map_df_valid_admin.empty:
                         map_df_valid_admin["lat"] = map_df_valid_admin["lat"].astype(float)
@@ -693,7 +730,7 @@ if st.session_state.auth:
                                     data=plot_df_admin, 
                                     get_position='coordinates',
                                     get_fill_color='color', 
-                                    get_radius=50,              # DEV BOYUT KÜÇÜLTÜLDÜ!
+                                    get_radius=50, 
                                     radius_min_pixels=6, 
                                     pickable=True
                                 )
@@ -701,11 +738,11 @@ if st.session_state.auth:
                             tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Durum:</b> {Lead Status}<br><b>Personel:</b> {Personel}"}
                         ))
                     else:
-                        st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı. Koordinat sütunlarının dolu olduğundan emin olun.")
+                        st.warning("⚠️ Haritada gösterilecek kordinatlı veri bulunamadı.")
                         
                     st.divider()
                     
-                    perf_stats = main_df.groupby("Personel").agg(
+                    perf_stats = processed_df.groupby("Personel").agg(
                         H_Adet=('Klinik Adı','count'), 
                         Z_Adet=('Gidildi mi?', lambda x: x.astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False).sum()), 
                         S_Toplam=('Skor','sum')
@@ -713,15 +750,17 @@ if st.session_state.auth:
                     
                     gc1, gc2 = st.columns([2,1])
                     with gc1: st.altair_chart(alt.Chart(perf_stats).mark_bar(cornerRadiusTopLeft=10).encode(x=alt.X('Personel', sort='-y'), y='S_Toplam', color='Personel').properties(height=350), use_container_width=True)
-                    with gc2: st.altair_chart(alt.Chart(main_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
+                    with gc2: st.altair_chart(alt.Chart(processed_df['Lead Status'].value_counts().reset_index()).mark_arc(innerRadius=60).encode(theta='count', color='Lead Status').properties(height=350), use_container_width=True)
                     
                     for _, r in perf_stats.iterrows():
                         rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                         st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
+                else:
+                    st.warning("Bugünün planında herhangi bir personel verisi bulunamadı.")
 
             with dashboard_tabs[5]:
                 st.subheader("🔥 Saha Yoğunluk Haritası")
-                heat_map_data = main_df.dropna(subset=["lat", "lon"])
+                heat_map_data = processed_df.dropna(subset=["lat", "lon"]).copy()
                 if not heat_map_data.empty:
                     heat_map_data["lat"] = heat_map_data["lat"].astype(float)
                     heat_map_data["lon"] = heat_map_data["lon"].astype(float)
@@ -734,7 +773,7 @@ if st.session_state.auth:
                 st.divider()
                 try:
                     buf = BytesIO()
-                    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: main_df.to_excel(writer, index=False)
+                    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer: view_df.to_excel(writer, index=False)
                     st.download_button(label="Tüm Veriyi İndir (Excel)", data=buf.getvalue(), file_name=f"Saha_Rapor_{datetime.now().date()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                 except: st.error("Excel modülü eksik.")
 
