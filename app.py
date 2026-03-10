@@ -195,7 +195,7 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
         return False
 
 # ==============================================================================
-# --- VERİ ÇEKME VE SERKAN BEY'İN SÜTUNLARINI EŞLEŞTİRME ---
+# --- VERİ ÇEKME (KURŞUN GEÇİRMEZ HARİTALANDIRMA) ---
 # ==============================================================================
 @st.cache_data(ttl=60)
 def fetch_operational_data(sheet_id):
@@ -204,31 +204,26 @@ def fetch_operational_data(sheet_id):
         df = pd.read_csv(url)
         df.columns = [c.strip() for c in df.columns]
         
-        all_serkan_cols = [
-            "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
-            "Branş", "Potansiyel Kullanıcı Sayısı", "Potansiyel ANA Ürün", "Ziyaret Durumu", 
-            "İtiraz Nedeni", "Telefon", "Mail", "Açıklama/Notlar", "Satış Durumu", "Satış Tipi", 
-            "Kampanya Bilgisi", "Satışı Yapılan ANA Ürün", "Satışı Yapılan EK Ürün", 
-            "e-Nabız Paketi", "Gelişmiş Paket", "Lisans Sayısı", "Lisans Süresi", 
-            "Satış Bedeli(KDV Hariç)", "KDV Dahil Tutar", "Ödeme Kanalı", "Taksit"
-        ]
-        
-        for col in all_serkan_cols:
-            if col not in df.columns:
-                df[col] = "Belirtilmemiş"
-
-        renames = {
-            "Müşteri Bilgisi": "Klinik Adı",
-            "Bölge": "İlçe",
-            "Lead Sahibi": "Personel",
-            "Satış Durumu": "Lead Status", 
-            "Ziyaret Durumu": "Gidildi mi?",
-            "Telefon": "İletişim"
+        # 1. AKILLI BAŞLIK EŞLEŞTİRME (Büyük/Küçük harf fark etmeksizin bulur)
+        renames_lower = {
+            "müşteri bilgisi": "Klinik Adı",
+            "bölge": "İlçe",
+            "lead sahibi": "Personel",
+            "satış durumu": "Lead Status", 
+            "ziyaret durumu": "Gidildi mi?",
+            "telefon": "İletişim"
         }
-        df.rename(columns=renames, inplace=True)
         
-        # --- TEK SÜTUN KONUM (HARİTADAN KOPYALA YAPIŞTIR) MANTIĞI ---
-        if "Konum" in df.columns:
+        actual_renames = {}
+        for col in df.columns:
+            if col.lower() in renames_lower:
+                actual_renames[col] = renames_lower[col.lower()]
+        df.rename(columns=actual_renames, inplace=True)
+        
+        # 2. AKILLI KONUM ALGILAMA (konum, Konum, KONUM hepsini kabul eder)
+        konum_col = next((c for c in df.columns if c.lower() == 'konum'), None)
+        
+        if konum_col:
             def extract_lat(val):
                 if pd.isna(val) or str(val).strip() == "": return None
                 try: return float(str(val).split(",")[0].strip())
@@ -238,14 +233,18 @@ def fetch_operational_data(sheet_id):
                 try: return float(str(val).split(",")[1].strip())
                 except: return None
             
-            df["lat"] = df["Konum"].apply(extract_lat)
-            df["lon"] = df["Konum"].apply(extract_lon)
+            df["lat"] = df[konum_col].apply(extract_lat)
+            df["lon"] = df[konum_col].apply(extract_lon)
         else:
             df["lat"] = None
             df["lon"] = None
-        # -------------------------------------------------------------
 
-        if "Bugünün Planı" not in df.columns: df["Bugünün Planı"] = "Belirtilmemiş"
+        # 3. AKILLI BUGÜNÜN PLANI ALGILAMA
+        bp_col = next((c for c in df.columns if c.lower() == 'bugünün planı'), None)
+        if bp_col:
+            df.rename(columns={bp_col: "Bugünün Planı"}, inplace=True)
+        else:
+            df["Bugünün Planı"] = "Belirtilmemiş"
         
         req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
@@ -451,8 +450,6 @@ with st.sidebar:
         st.divider()
 
     map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    
-    # ARTIK VARSAYILAN OLARAK KAPALI (Tüm listeyi gösterir)
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=False) 
     st.divider()
     
