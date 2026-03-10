@@ -130,6 +130,19 @@ def get_img_as_base64(file_path):
 local_logo_data = get_img_as_base64(LOCAL_LOGO_PATH)
 APP_LOGO_HTML = f"data:image/jpeg;base64,{local_logo_data}" if local_logo_data else "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
 
+def clean_coord(val):
+    try:
+        if pd.isna(val): return None
+        s_val = str(val).replace(",", ".").strip()
+        raw = re.sub(r"[^\d.]", "", s_val)
+        if not raw: return None
+        num = float(raw)
+        if 25 < num < 46: 
+            return num
+        while num > 180: num /= 10
+        return num
+    except: return None
+
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     try:
         if pd.isna(lat2) or pd.isna(lon2): return 9999
@@ -217,9 +230,11 @@ def fetch_operational_data(sheet_id):
         # --- TEK SÜTUN KONUM (HARİTADAN KOPYALA YAPIŞTIR) MANTIĞI ---
         if "Konum" in df.columns:
             def extract_lat(val):
+                if pd.isna(val) or str(val).strip() == "": return None
                 try: return float(str(val).split(",")[0].strip())
                 except: return None
             def extract_lon(val):
+                if pd.isna(val) or str(val).strip() == "": return None
                 try: return float(str(val).split(",")[1].strip())
                 except: return None
             
@@ -230,7 +245,7 @@ def fetch_operational_data(sheet_id):
             df["lon"] = None
         # -------------------------------------------------------------
 
-        if "Bugünün Planı" not in df.columns: df["Bugünün Planı"] = "Evet"
+        if "Bugünün Planı" not in df.columns: df["Bugünün Planı"] = "Belirtilmemiş"
         
         req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
@@ -436,7 +451,9 @@ with st.sidebar:
         st.divider()
 
     map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True)
+    
+    # ARTIK VARSAYILAN OLARAK KAPALI (Tüm listeyi gösterir)
+    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=False) 
     st.divider()
     
     if st.button("🔄 Verileri Güncelle", use_container_width=True):
