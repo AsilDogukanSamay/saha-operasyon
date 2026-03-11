@@ -311,7 +311,7 @@ if not st.session_state.auth:
         }
 
 # ==============================================================================
-# 5. GİRİŞ EKRANI
+# 5. GİRİŞ EKRANI (TASARIM GERİ GELDİ!)
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -380,6 +380,41 @@ if not st.session_state.auth:
             <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır</div>
         </div>
         """, unsafe_allow_html=True)
+
+    with col_right_showcase:
+        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
+        dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
+        diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
+        kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
+        medibulut_logo_url = "https://medibulut.s3.eu-west-1.amazonaws.com/pages/general/logo.svg"
+        
+        showcase_html = f"""
+        <html><head><style>
+            body {{ margin:0; font-family:'Inter', sans-serif; }}
+            .hero-card {{ background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 45px; padding: 60px 50px; color: white; height: 620px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.4); }}
+            .panel-title {{ font-size: 52px; font-weight: 800; margin: 0; line-height: 1.1; letter-spacing: -2px; }}
+            .panel-subtitle {{ font-size: 20px; margin-top: 20px; color: #DBEAFE; opacity: 0.9; }}
+            .product-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 50px; }}
+            .product-card {{ background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px; display: flex; align-items: center; gap: 15px; transition: transform 0.3s ease; cursor: pointer; text-decoration: none; color: white; }}
+            .product-card:hover {{ transform: translateY(-5px); background: rgba(255, 255, 255, 0.2); }}
+            .icon-wrapper {{ width: 50px; height: 50px; border-radius: 12px; background: white; padding: 7px; display: flex; align-items: center; justify-content: center; }}
+            .icon-wrapper img {{ width: 100%; height: 100%; object-fit: contain; }}
+            a {{ text-decoration: none; color: inherit; }}
+        </style></head><body>
+            <div class="hero-card">
+                <div class="panel-title">Tek Platform,<br>Bütün Operasyon.</div>
+                <div class="panel-subtitle">Saha ekibi için geliştirilmiş merkezi yönetim sistemi.</div>
+                <div class="product-grid">
+                    <a href="https://www.dentalbulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{dental_img}"></div><div><h4 style="margin:0;">Dentalbulut</h4></div></div></a>
+                    <a href="https://www.medibulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{medibulut_logo_url}"></div><div><h4 style="margin:0;">Medibulut</h4></div></div></a>
+                    <a href="https://www.diyetbulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{diyet_img}"></div><div><h4 style="margin:0;">Diyetbulut</h4></div></div></a>
+                    <a href="https://kys.medibulut.com" target="_blank"><div class="product-card"><div class="icon-wrapper"><img src="{kys_img}"></div><div><h4 style="margin:0;">Medibulut KYS</h4></div></div></a>
+                </div>
+            </div></body></html>
+        """
+        components.html(showcase_html, height=660)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     st.stop()
 
 # ==============================================================================
@@ -439,8 +474,6 @@ with st.sidebar:
         st.divider()
 
     map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    
-    # FİLTRE ARTIK OTOMATİK OLARAK "AÇIK" GELECEK (Sadece bugünü gösterecek)
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     st.divider()
     
@@ -471,7 +504,6 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
-        # ONAY KUTUSU (CHECKBOX) UYUMLU FİLTRELEME
         if filter_today:
             processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
@@ -554,7 +586,7 @@ if st.session_state.auth:
                         data=plot_df, 
                         get_position='coordinates', 
                         get_fill_color='color',     
-                        get_radius=50,              # Noktalar zarif ve küçük hale getirildi.
+                        get_radius=50,
                         radius_min_pixels=6,        
                         pickable=True
                     )]
@@ -577,9 +609,9 @@ if st.session_state.auth:
                         tooltip={"html": "<b>Klinik:</b> {Klinik Adı}<br><b>Personel:</b> {Personel}"}
                     ))
                 else:
-                    st.warning("⚠️ Haritada gösterilecek bugüne ait geçerli koordinat bilgisi bulunamadı.")
+                    st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı.")
             else:
-                st.warning("Bugüne ait bir plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'den plan ekleyin.")
+                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'e veri girin.")
 
         with dashboard_tabs[1]:
             sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
@@ -682,7 +714,6 @@ if st.session_state.auth:
                             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                             st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
-        # YÖNETİCİ HARİTALARI DA ARTIK FİLTREYE BAĞLI!
         if st.session_state.role == "Yönetici" and len(dashboard_tabs) > 4:
             with dashboard_tabs[4]:
                 st.subheader("📊 Ekip Performans ve Saha Analizi")
