@@ -29,7 +29,7 @@ SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
 SHEET_GID = "680076046" # Bu ana "Saha Lead List" sayfasının GID numarası
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
 
-# 🚨 DİKKAT: AŞAĞIDAKİ "BUNU_DEGISTIR" YAZISINI SİLİP, EXCELDEKİ "HAFTALIK PLAN" SAYFASININ GID NUMARASINI YAZIN! 🚨
+# 🚨 DİKKAT: AŞAĞIDAKİ KISMA "HAFTALIK PLAN" SAYFASININ GID NUMARASINI YAZIN 🚨
 WEEKLY_SHEET_GID = "402390969" 
 
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
@@ -432,7 +432,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD CSS (YENİ TAKVİM STİLLERİ EKLENDİ)
+# 6. DASHBOARD STİLLERİ
 # ==============================================================================
 st.markdown("""
 <style>
@@ -460,8 +460,10 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
+    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
+    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
-    /* --- YENİ EKLENEN MODERN TAKVİM TASARIMI --- */
     .calendar-container { overflow-x: auto; background: #161B22; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; }
     .modern-calendar { width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; }
     .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
@@ -469,7 +471,6 @@ st.markdown("""
     .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
     .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; }
     .task-card { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
-    /* ------------------------------------------ */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -598,65 +599,75 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE SAAS TAKVİM TASARIMI ---
+        # --- EFSANE AKILLI TAKVİM MOTORU (YAPAY ZEKA FİLTRESİ) ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
-            st.subheader("🗓️ Haftalık Saha Operasyon Takvimi")
-            st.markdown("Google Sheets'teki **'Haftalık Plan'** sayfanız, modern bir görev panosu (Kanban/Ajanda) görünümüne dönüştürüldü.")
+            st.subheader("🗓️ Haftalık Saha Operasyon Panosu")
             
             if WEEKLY_SHEET_GID == "BUNU_DEGISTIR" or WEEKLY_SHEET_GID == "":
-                st.error("""
-                ⚠️ **Haftalık Plan Sayfası Henüz Bağlanmadı!**
-                
-                Sistemin Excel'deki 2. sayfanızı okuyabilmesi için o sayfanın kimliğini (GID) girmelisiniz:
-                1. Excel tablonuzdan "Haftalık Plan" isimli 2. sekmeye tıklayın.
-                2. En üstteki tarayıcı (URL) çubuğuna bakın. Linkin en sonunda **`#gid=123456789`** gibi bir rakam göreceksiniz.
-                3. Kodun 24. satırındaki `WEEKLY_SHEET_GID = "BUNU_DEGISTIR"` kısmına o rakamı yapıştırın.
-                """)
+                st.error("⚠️ Lütfen kod içerisine Haftalık Plan sayfasının GID numarasını girin.")
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
-                    original_first_col = weekly_df.columns[0]
-                    weekly_df.rename(columns={original_first_col: "Hafta / Zaman"}, inplace=True)
+                    # 1. TABLOYU PARÇALARA AYIRMA (Yapay Zeka Mantığı)
+                    col0_original = weekly_df.columns[0]
+                    current_week = col0_original # Excelin sol üstündeki ilk başlık (örn: 09-13 Mart)
+                    week_tags = []
+                    
+                    for val in weekly_df[col0_original]:
+                        val_str = str(val).strip()
+                        # Eğer hücrede "Sayı-Sayı" (16-20) formatı varsa ve çok uzun bir metin değilse, bu yeni bir haftadır!
+                        if re.search(r'\d{1,2}.*-\s*\d{1,2}', val_str) and len(val_str) < 25:
+                            current_week = val_str
+                        week_tags.append(current_week)
+                        
+                    weekly_df['Hafta_Grubu'] = week_tags
+                    weekly_df.rename(columns={col0_original: "Zaman Dilimi"}, inplace=True)
                     weekly_df = weekly_df.fillna("").astype(str)
                     
-                    # HTML ile jilet gibi takvim ızgarası oluşturuluyor
+                    # 2. EKRANDA HAFTA SEÇİCİ KUTU (DROPDOWN) OLUŞTUR
+                    all_weeks = []
+                    for w in week_tags:
+                        if w not in all_weeks: all_weeks.append(w)
+                        
+                    selected_hafta = st.selectbox("📆 Gösterilecek Haftayı Seçin:", all_weeks)
+                    st.divider()
+                    
+                    # 3. SADECE SEÇİLEN HAFTAYI FİLTRELE
+                    filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
+                    filtered_weekly_df = filtered_weekly_df.drop(columns=['Hafta_Grubu']) # Ekranda görünmemesi için sil
+                    
+                    # Başlık satırını (örn: "16-20 Mart") tablonun içinden gizle ki şık dursun
+                    filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
+                    
+                    # 4. KANBAN/BOARD TASARIMI İLE EKRANA BAS
                     html_cal = '<div class="calendar-container"><table class="modern-calendar">'
                     
-                    # Başlıklar (Pazartesi, Salı vs.)
+                    # Başlıklar
                     html_cal += '<thead><tr>'
-                    for col in weekly_df.columns:
+                    for col in filtered_weekly_df.columns:
                         html_cal += f'<th>{col}</th>'
                     html_cal += '</tr></thead><tbody>'
                     
-                    # Satırlar ve Hücreler
-                    for _, row in weekly_df.iterrows():
-                        # Eğer o satır tamamen boşsa o satırı hiç çizme (Temiz görüntü)
-                        if all(val.strip() == "" or val.strip().lower() == 'nan' for val in row.values):
-                            continue
+                    # Satırlar
+                    for _, row in filtered_weekly_df.iterrows():
+                        if all(val.strip() == "" for val in row.values): continue # Bomboş satırları yut (Gösterme)
                             
                         html_cal += '<tr>'
                         for i, val in enumerate(row.values):
                             val_clean = val.strip()
-                            if val_clean.lower() == 'nan': val_clean = ""
-                            
                             if i == 0 and val_clean:
-                                # İlk sütun (Hafta/Zaman etiketi)
                                 html_cal += f'<td class="row-label">{val_clean}</td>'
                             elif val_clean:
-                                # Klinik/Görev varsa "Mavi Kart" içine al
                                 html_cal += f'<td><div class="task-card">{val_clean}</div></td>'
                             else:
-                                # Boş hücre
                                 html_cal += '<td></td>'
                         html_cal += '</tr>'
                         
                     html_cal += '</tbody></table></div>'
                     
-                    # Ekrana bas
                     st.markdown(html_cal, unsafe_allow_html=True)
-                    
                 else:
-                    st.warning("Haftalık plan sayfasında veri bulunamadı veya sayfa GID numarası hatalı.")
+                    st.warning("Haftalık plan sayfasında veri bulunamadı.")
         # ---------------------------------------------
         
         elif secili_sayfa == "🗺️ Harita Merkezi":
