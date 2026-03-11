@@ -204,19 +204,6 @@ def fetch_operational_data(sheet_id):
         df = pd.read_csv(url)
         df.columns = [str(c).strip().replace("\n", " ") for c in df.columns]
         
-        all_serkan_cols = [
-            "Lead Sahibi", "İşyeri ID (Eğer oluştuysa)", "İL", "Bölge", "Müşteri Bilgisi", 
-            "Branş", "Potansiyel Kullanıcı Sayısı", "Potansiyel ANA Ürün", "Ziyaret Durumu", 
-            "İtiraz Nedeni", "Telefon", "Mail", "Açıklama/Notlar", "Satış Durumu", "Satış Tipi", 
-            "Kampanya Bilgisi", "Satışı Yapılan ANA Ürün", "Satışı Yapılan EK Ürün", 
-            "e-Nabız Paketi", "Gelişmiş Paket", "Lisans Sayısı", "Lisans Süresi", 
-            "Satış Bedeli(KDV Hariç)", "KDV Dahil Tutar", "Ödeme Kanalı", "Taksit"
-        ]
-        
-        for col in all_serkan_cols:
-            if col not in df.columns:
-                df[col] = "Belirtilmemiş"
-
         renames_lower = {
             "müşteri bilgisi": "Klinik Adı",
             "bölge": "İlçe",
@@ -261,13 +248,7 @@ def fetch_operational_data(sheet_id):
             df["lat"] = None
             df["lon"] = None
 
-        bp_col = next((c for c in df.columns if 'bugünün planı' in str(c).strip().lower()), None)
-        if bp_col:
-            df.rename(columns={bp_col: "Bugünün Planı"}, inplace=True)
-        else:
-            df["Bugünün Planı"] = "Belirtilmemiş"
-        
-        req_cols = ["Lead Status", "Gidildi mi?", "Bugünün Planı", "Personel", "Klinik Adı", "İlçe", "İletişim"]
+        req_cols = ["Lead Status", "Gidildi mi?", "Personel", "Klinik Adı", "İlçe", "İletişim"]
         for col in req_cols:
             if col not in df.columns: df[col] = "Bilinmiyor"
             
@@ -416,7 +397,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD (Simplified & Plan-Focused)
+# 6. DASHBOARD 
 # ==============================================================================
 st.markdown("""
 <style>
@@ -435,6 +416,18 @@ st.markdown("""
     .admin-perf-card { background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid rgba(255, 255, 255, 0.05); }
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
+    
+    .crm-profile-card { background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
+    .crm-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
+    .crm-title { font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0; }
+    .crm-badge { background: rgba(59, 130, 246, 0.2); color: #60A5FA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .crm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+    .crm-item { display: flex; flex-direction: column; gap: 4px; }
+    .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
+    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
+    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -464,6 +457,12 @@ if st.session_state.auth:
             
         view_df = main_df[main_df["Personel"].apply(lambda x: is_name_match(x, current_realname))]
 
+# --- YENİ: DİNAMİK HAFTALIK SÜTUN ALGILAYICI ---
+# Excel'deki "9-13 MART", "16-20", "01-05 NİSAN" gibi sütunları otomatik bulur.
+date_pattern = re.compile(r'\d{1,2}\s*-\s*\d{1,2}')
+week_columns = [col for col in view_df.columns if date_pattern.search(str(col))]
+# ------------------------------------------------
+
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -471,23 +470,32 @@ with st.sidebar:
     st.divider()
     
     st.markdown("### 🧭 Ana Menü")
-    # Simplified Menu Options: "Field Strategy" and "Op Panel" are removed. "Today's Plan" added.
-    menu_opts = ["🗺️ Harita Merkezi", "📅 Bugünün Planı"]
+    menu_opts = ["🗺️ Harita Merkezi", "📅 Haftalık Takvim & Plan"]
     if st.session_state.role == "Yönetici":
         menu_opts += ["📊 Ekip Performansı", "🔥 Yoğunluk Haritası", "⚙️ Personel Yönetimi"]
     
     secili_sayfa = st.radio("Menü", menu_opts, label_visibility="collapsed")
     st.divider()
 
-    st.markdown("### ⚙️ Ayarlar & Filtreler")
-    # Keep "Only Today's Plan" as a global toggle
-    filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
+    # --- YENİ: AKILLI HAFTALIK FİLTRE MENÜSÜ ---
+    st.markdown("### ⚙️ Çalışma Takvimi")
+    selected_week_filter = "Tüm Liste"
+    
+    if week_columns:
+        filter_options = ["Tüm Liste"] + week_columns
+        selected_week_filter = st.selectbox("Hafta Seçin:", filter_options)
+    else:
+        st.info("Tabloda tarih aralığı (Örn: 9-13 Mart) bulunamadı.")
+    # -------------------------------------------
+    
     st.divider()
 
-    # Place Map View Mode toggle globally if map is always core
-    st.markdown("<p style='font-size:13px; color:#9CA3AF; margin-bottom:5px;'>Harita Renklendirme Modu:</p>", unsafe_allow_html=True)
-    map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    
+    if secili_sayfa == "🗺️ Harita Merkezi":
+        st.markdown("<p style='font-size:13px; color:#9CA3AF; margin-bottom:5px;'>Harita Renklendirme Modu:</p>", unsafe_allow_html=True)
+        map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
+    else:
+        map_view_mode = "Ziyaret Durumu" 
+
     st.divider()
     
     if st.session_state.role == "Yönetici":
@@ -525,42 +533,47 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
-        # Apply global date filter
-        if filter_today:
-            processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
+        # --- UYGULANAN AKILLI HAFTALIK FİLTRE ---
+        if selected_week_filter != "Tüm Liste":
+            processed_df = processed_df[processed_df[selected_week_filter].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
+        # ----------------------------------------
         
-        # Sort by distance if location is available
         if user_lat:
             processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
             processed_df = processed_df.sort_values(by="Mesafe_km")
         else: processed_df["Mesafe_km"] = 0
 
-        # KPIs remain global for context
         col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+        
         toplam_hedef = len(processed_df)
         nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.lower().str.contains("hot|sıcak", regex=True, na=False)])
         tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
-        col_kpi1.metric("Toplam Plan", toplam_hedef)
+        
+        # KPI'lar artık seçili haftaya göre değişir!
+        col_kpi1.metric("Toplam Hedef" if selected_week_filter != "Tüm Liste" else "Tüm Plan", toplam_hedef)
         col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
         col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
         col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Goal track bars global context
-        st.markdown("#### 🎯 Günlük Hedef Takibi")
-        hedef_ziyaret_oran = min(tamamlanan_ziyaret / 8.0, 1.0)
-        hedef_demo_oran = min(nitelikli_hot / 4.0, 1.0)
+        st.markdown(f"#### 🎯 Hedef Takibi ({selected_week_filter})")
+        
+        hedef_ziyaret_oran = min(tamamlanan_ziyaret / 8.0, 1.0) if selected_week_filter != "Tüm Liste" else min(tamamlanan_ziyaret / 50.0, 1.0) # Sadece haftalıksa 8'e böl
+        hedef_demo_oran = min(nitelikli_hot / 4.0, 1.0) if selected_week_filter != "Tüm Liste" else min(nitelikli_hot / 20.0, 1.0)
+        
         c_prog1, c_prog2 = st.columns(2, gap="large")
+        
         with c_prog1:
-            st.markdown(f"**🚗 Ziyaret Hedefi ({tamamlanan_ziyaret} / 8)**")
+            st.markdown(f"**🚗 Ziyaret Hedefi ({tamamlanan_ziyaret})**")
             st.progress(hedef_ziyaret_oran)
+            
         with c_prog2:
-            st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot} / 4)**")
+            st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot})**")
             st.progress(hedef_demo_oran)
+            
         st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Page contents logic
         if secili_sayfa == "🗺️ Harita Merkezi":
             if not processed_df.empty:
                 col_ctrl, col_leg = st.columns([1, 2])
@@ -583,14 +596,13 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # Use subtle info box for large count of missing locations, instead of expander
                 eksik_df = processed_df[processed_df["lat"].isna() | processed_df["lon"].isna()]
                 if not eksik_df.empty:
                     eksik_sayisi = len(eksik_df)
                     st.markdown(f"""
                     <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 16px;">💡</span>
-                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor. Koordinatları Excel üzerinden ekleyebilirsiniz.</span>
+                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Seçili takvimde konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor.</span>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -636,33 +648,25 @@ if st.session_state.auth:
                 else:
                     st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı.")
             else:
-                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'e veri girin.")
+                st.warning("Bu hafta için plan bulunamadı. Lütfen sol menüden haftayı değiştirin.")
 
-        elif secili_sayfa == "📅 Bugünün Planı":
-            st.subheader("📅 Günlük Ziyaret Planı")
-            # This is the new simplified plan view, acting as a Calendar/Plan. Combine List and Status sorting here.
+        elif secili_sayfa == "📅 Haftalık Takvim & Plan":
+            st.subheader(f"📅 Ziyaret Planı: {selected_week_filter}")
             
-            # KPI relevant to this view (Plan of Today context)
             total_plan_count = len(processed_df)
             completed_count = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
             pending_count = total_plan_count - completed_count
             
-            # Simple Plan Status Indicators
             kpi_plan1, kpi_plan2, kpi_plan3 = st.columns(3)
-            kpi_plan1.metric("Toplam Plan Hedefi", total_plan_count)
-            kpi_plan2.metric("✅ Tamamlanan", completed_count, f"{completed_count - 0} Bugün")
+            kpi_plan1.metric("Görev Hedefi", total_plan_count)
+            kpi_plan2.metric("✅ Tamamlanan", completed_count)
             kpi_plan3.metric("⏳ Bekleyen", pending_count)
             
             st.divider()
 
-            # The clean list view, acts as a "single document" view from Sheets, simplified.
-            st.info("📍 **Günlük Rota Sıralaması:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır. İşlemi bitenleri Sheet üzerinden 'Gidildi mi?' sütununu 'Evet' yaparak güncelleyebilirsiniz.")
+            st.info("📍 **Akıllı Rota Sıralaması:** Liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
             
-            # Simplified columns for a pure plan view
-            plan_columns = ["Klinik Adı", "İlçe", "Lead Status", "Gidildi mi?", "Mesafe_km"]
-            
-            # Basic filtering within the plan view
-            plan_filter = st.selectbox("Plan Durumuna Göre Filtrele:", ["Tümü", "Bekleyenler", "Tamamlananlar"], index=0)
+            plan_filter = st.selectbox("Duruma Göre Filtrele:", ["Tümü", "Bekleyenler", "Tamamlananlar"], index=0)
             
             fdf_plan = processed_df.copy()
             if plan_filter == "Bekleyenler":
@@ -670,12 +674,16 @@ if st.session_state.auth:
             elif plan_filter == "Tamamlananlar":
                 fdf_plan = fdf_plan[fdf_plan["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)]
             
-            # Render the clean table
+            fdf_plan["Nav"] = fdf_plan.apply(lambda x: f"http://maps.google.com/?q={x['lat']},{x['lon']}" if pd.notnull(x['lat']) else "", axis=1)
+            
+            plan_columns = ["Klinik Adı", "İlçe", "Lead Status", "Gidildi mi?", "Mesafe_km", "Nav"]
+            
             st.dataframe(
                 fdf_plan[plan_columns], 
                 column_config={
                     "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f"),
-                    "Gidildi mi?": st.column_config.TextColumn("Ziyaret Durumu")
+                    "Gidildi mi?": st.column_config.TextColumn("Ziyaret Durumu"),
+                    "Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git")
                 }, 
                 use_container_width=True, 
                 hide_index=True
@@ -693,14 +701,13 @@ if st.session_state.auth:
                 else:
                     map_df_admin_base = processed_df[(processed_df["Personel"] == secilen_personel)].copy()
                 
-                # Admin missing location micro UI
                 eksik_admin_df = map_df_admin_base[map_df_admin_base["lat"].isna() | map_df_admin_base["lon"].isna()]
                 if not eksik_admin_df.empty:
                     eksik_sayisi = len(eksik_admin_df)
                     st.markdown(f"""
                     <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 16px;">💡</span>
-                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Seçili filtrede konumu eksik olan <b>{eksik_sayisi} klinik</b> haritada gösterilemiyor.</span>
+                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Seçili takvimde konumu eksik olan <b>{eksik_sayisi} klinik</b> haritada gösterilemiyor.</span>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -766,7 +773,7 @@ if st.session_state.auth:
                     rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
                     st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
             else:
-                st.warning("Bugünün planında herhangi bir personel verisi bulunamadı.")
+                st.warning("Bu hafta için plan bulunamadı.")
 
         elif secili_sayfa == "🔥 Yoğunluk Haritası" and st.session_state.role == "Yönetici":
             st.subheader("🔥 Saha Yoğunluk Haritası")
