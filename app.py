@@ -155,11 +155,6 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     except: return 9999
 
-def typewriter_effect(text):
-    for word in text.split(" "):
-        yield word + " "
-        time.sleep(0.04)
-
 def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url):
     sender_email = "asildogukansamay@gmail.com" 
     app_password = st.secrets["EMAIL_PASS"] 
@@ -606,7 +601,7 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE ARAYÜZ: KARTA GÖMÜLÜ ZAMAN ETİKETLERİ ---
+        # --- YENİ EFSANE ARAYÜZ: TAM DOĞRU ZAMAN ETİKETLERİ ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
@@ -648,14 +643,12 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # HER SATIRIN ZAMAN DİLİMİNİ (Örn: Öğleden Sonra) HAFIZAYA AL
-                    current_time_tag = ""
+                    # YENİ MANTIK: Hafıza İPTAL. Sadece o satırda yazıyorsa etiketi koy!
                     time_blocks = []
                     for val in filtered_weekly_df['Zaman Dilimi']:
                         v = str(val).strip()
-                        if v and v.lower() != 'nan':
-                            current_time_tag = v
-                        time_blocks.append(current_time_tag)
+                        if v.lower() == 'nan': v = ""
+                        time_blocks.append(v)
                     filtered_weekly_df['Zaman_Etiketi'] = time_blocks
                     
                     rows_data = []
@@ -680,7 +673,6 @@ if st.session_state.auth:
                                     'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
                                 }
 
-                    # HTML ÇİZİMİ (ZAMAN SÜTUNU YOK)
                     html_cal = '<div class="premium-calendar-wrapper"><table class="premium-calendar">'
                     
                     html_cal += '<thead><tr>'
@@ -890,31 +882,21 @@ if st.session_state.auth:
                     
                     st.markdown(html_details, unsafe_allow_html=True)
                     
-                    # --- OPERASYON PANELİ KALDIRILDI, SAHA STRATEJİSTİ TAM EKRAN YAPILDI ---
-                    st.markdown("### 🤖 Saha Stratejisti")
-                    lead_stat = str(clinic_row["Lead Status"]).lower()
-                    
-                    if any(x in lead_stat for x in ["hot", "sıcak"]):
-                        ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
-                    elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
-                        ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
-                    else:
-                        ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
-                        
-                    with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
-                    st.markdown("---")
+                    # --- TAM EKRAN NOT PANELİ (YAPAY ZEKA VE KRONOMETRE KALDIRILDI) ---
+                    st.markdown("### 📝 Ziyaret Notları")
                     existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                    new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-                    if st.button("💾 Notu Kaydet", use_container_width=True):
+                    new_note_val = st.text_area("Klinik ile ilgili notlarınızı buraya girebilirsiniz:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}", height=150)
+                    
+                    if st.button("💾 Notu Kaydet", type="primary", use_container_width=True):
                         st.session_state.notes[selected_clinic_ai] = new_note_val
-                        st.toast("Not kaydedildi!", icon="✅")
+                        st.toast("Not başarıyla kaydedildi!", icon="✅")
                     
                     if st.session_state.notes:
                         notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
                         df_notes = pd.DataFrame(notes_data)
                         buffer = BytesIO()
                         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                        st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                        st.download_button(label="📥 Tüm Notları İndir (Excel)", data=buffer.getvalue(), file_name="Saha_Notlari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                     # ------------------------------------------------------------------------
 
         elif secili_sayfa == "📊 Ekip Performansı" and st.session_state.role == "Yönetici":
