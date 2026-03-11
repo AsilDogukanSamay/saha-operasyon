@@ -432,7 +432,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD 
+# 6. DASHBOARD CSS (YENİ TAKVİM STİLLERİ EKLENDİ)
 # ==============================================================================
 st.markdown("""
 <style>
@@ -460,9 +460,16 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
-    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
-    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
+    
+    /* --- YENİ EKLENEN MODERN TAKVİM TASARIMI --- */
+    .calendar-container { overflow-x: auto; background: #161B22; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; }
+    .modern-calendar { width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; }
+    .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
+    .modern-calendar td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); vertical-align: top; min-width: 150px; }
+    .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
+    .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; }
+    .task-card { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
+    /* ------------------------------------------ */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -591,9 +598,10 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
+        # --- YENİ EFSANE SAAS TAKVİM TASARIMI ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Takvimi")
-            st.markdown("Aşağıdaki takvim, Google Sheets tablonuzdaki **'Sayfa 2 (Haftalık Plan)'** verisini canlı olarak çeker.")
+            st.markdown("Google Sheets'teki **'Haftalık Plan'** sayfanız, modern bir görev panosu (Kanban/Ajanda) görünümüne dönüştürüldü.")
             
             if WEEKLY_SHEET_GID == "BUNU_DEGISTIR" or WEEKLY_SHEET_GID == "":
                 st.error("""
@@ -611,9 +619,45 @@ if st.session_state.auth:
                     weekly_df.rename(columns={original_first_col: "Hafta / Zaman"}, inplace=True)
                     weekly_df = weekly_df.fillna("").astype(str)
                     
-                    st.dataframe(weekly_df, use_container_width=True, hide_index=True)
+                    # HTML ile jilet gibi takvim ızgarası oluşturuluyor
+                    html_cal = '<div class="calendar-container"><table class="modern-calendar">'
+                    
+                    # Başlıklar (Pazartesi, Salı vs.)
+                    html_cal += '<thead><tr>'
+                    for col in weekly_df.columns:
+                        html_cal += f'<th>{col}</th>'
+                    html_cal += '</tr></thead><tbody>'
+                    
+                    # Satırlar ve Hücreler
+                    for _, row in weekly_df.iterrows():
+                        # Eğer o satır tamamen boşsa o satırı hiç çizme (Temiz görüntü)
+                        if all(val.strip() == "" or val.strip().lower() == 'nan' for val in row.values):
+                            continue
+                            
+                        html_cal += '<tr>'
+                        for i, val in enumerate(row.values):
+                            val_clean = val.strip()
+                            if val_clean.lower() == 'nan': val_clean = ""
+                            
+                            if i == 0 and val_clean:
+                                # İlk sütun (Hafta/Zaman etiketi)
+                                html_cal += f'<td class="row-label">{val_clean}</td>'
+                            elif val_clean:
+                                # Klinik/Görev varsa "Mavi Kart" içine al
+                                html_cal += f'<td><div class="task-card">{val_clean}</div></td>'
+                            else:
+                                # Boş hücre
+                                html_cal += '<td></td>'
+                        html_cal += '</tr>'
+                        
+                    html_cal += '</tbody></table></div>'
+                    
+                    # Ekrana bas
+                    st.markdown(html_cal, unsafe_allow_html=True)
+                    
                 else:
                     st.warning("Haftalık plan sayfasında veri bulunamadı veya sayfa GID numarası hatalı.")
+        # ---------------------------------------------
         
         elif secili_sayfa == "🗺️ Harita Merkezi":
             if not processed_df.empty:
@@ -694,14 +738,12 @@ if st.session_state.auth:
         elif secili_sayfa == "📋 Liste & Rota":
             alt_sekme1, alt_sekme2 = st.tabs(["📋 Klinik Listesi & Arama", "📍 Akıllı Rota Sıralaması"])
             
-            # --- ZIRHLI LİNK OLUŞTURUCU (HATA ÇÖZÜMÜ) ---
             def get_map_link(lat, lon):
                 try:
                     if pd.isna(lat) or pd.isna(lon): return None
                     if str(lat).strip().lower() in ['nan', 'none', '']: return None
                     return f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
                 except: return None
-            # ---------------------------------------------
             
             with alt_sekme1:
                 sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
