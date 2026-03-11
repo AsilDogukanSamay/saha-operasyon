@@ -456,8 +456,17 @@ if st.session_state.auth:
         view_df = main_df
     else:
         current_realname = st.session_state.auth_user_info['real_name']
-        u_norm = normalize_text(current_realname)
-        view_df = main_df[main_df["Personel"].apply(normalize_text) == u_norm]
+        
+        # --- YENİ: AKILLI İSİM EŞLEŞTİRME MOTORU (FUZZY MATCHING) ---
+        def is_name_match(excel_val, db_val):
+            e = normalize_text(excel_val)
+            d = normalize_text(db_val)
+            if not e or not d: return False
+            # Eğer "Mustafacan" excelde yazıp, veritabanında "Mustafa Can Yılmaz" yazıyorsa, birbirini kapsadığı için kabul eder.
+            return e in d or d in e
+            
+        view_df = main_df[main_df["Personel"].apply(lambda x: is_name_match(x, current_realname))]
+        # -------------------------------------------------------------
 
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
@@ -570,12 +579,10 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # --- YENİ EKLENEN EKSİK KONUM DEDEKTÖRÜ ---
                 eksik_df = processed_df[processed_df["lat"].isna() | processed_df["lon"].isna()]
                 if not eksik_df.empty:
                     eksik_klinikler = ", ".join(eksik_df["Klinik Adı"].astype(str).unique())
                     st.error(f"🕵️‍♂️ **Sistem Uyarısı:** Aşağıdaki kliniklerin planı var ancak Excel'de 'Konum' hücreleri **BOŞ** bırakıldığı için haritada gösterilemiyor. Lütfen koordinatlarını girin:\n\n👉 **{eksik_klinikler}**")
-                # ------------------------------------------
 
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
@@ -735,11 +742,9 @@ if st.session_state.auth:
                     else:
                         map_df_admin_base = processed_df[(processed_df["Personel"] == secilen_personel)].copy()
                     
-                    # --- YÖNETİCİ EKSİK KONUM DEDEKTÖRÜ ---
                     eksik_admin_df = map_df_admin_base[map_df_admin_base["lat"].isna() | map_df_admin_base["lon"].isna()]
                     if not eksik_admin_df.empty:
                         st.error(f"⚠️ **Yönetici Uyarısı:** Şu anki filtreye göre {len(eksik_admin_df)} adet kliniğin Konum verisi eksik olduğu için haritada gösterilemiyor.")
-                    # --------------------------------------
 
                     map_df_valid_admin = map_df_admin_base.dropna(subset=["lat", "lon"]).copy()
                     
