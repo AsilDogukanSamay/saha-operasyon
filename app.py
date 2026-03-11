@@ -418,7 +418,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD (KOYU TEMA & DETAYLI CSS)
+# 6. DASHBOARD (KOYU TEMA & DETAYLI CSS & YENİ CRM KARTI)
 # ==============================================================================
 st.markdown("""
 <style>
@@ -438,11 +438,23 @@ st.markdown("""
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
     
+    /* --- YENİ EKLENEN CRM KART TASARIMI --- */
+    .crm-profile-card { background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
+    .crm-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
+    .crm-title { font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0; }
+    .crm-badge { background: rgba(59, 130, 246, 0.2); color: #60A5FA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .crm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+    .crm-item { display: flex; flex-direction: column; gap: 4px; }
+    .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
+    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
+    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
+    /* -------------------------------------- */
+    
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
     .dashboard-signature a { color: #3B82F6; text-decoration: none; font-weight: 700; }
-    
-    /* Yan menü styling iyileştirmeleri */
     div[role="radiogroup"] label { cursor: pointer; padding: 5px 0; }
 </style>
 """, unsafe_allow_html=True)
@@ -468,9 +480,6 @@ if st.session_state.auth:
             
         view_df = main_df[main_df["Personel"].apply(lambda x: is_name_match(x, current_realname))]
 
-# ==============================================================================
-# AKILLI YAN MENÜ (SIDEBAR NAVIGATION)
-# ==============================================================================
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -488,12 +497,11 @@ with st.sidebar:
     st.markdown("### ⚙️ Ayarlar & Filtreler")
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     
-    # Harita Rengi filtresi sadece Harita sayfasındayken görünür!
     if secili_sayfa == "🗺️ Harita Merkezi":
         st.markdown("<p style='font-size:13px; color:#9CA3AF; margin-bottom:5px; margin-top:10px;'>Harita Renklendirme Modu:</p>", unsafe_allow_html=True)
         map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
     else:
-        map_view_mode = "Ziyaret Durumu" # Arka planda varsayılan olarak kalır
+        map_view_mode = "Ziyaret Durumu" 
 
     st.divider()
     
@@ -569,10 +577,6 @@ if st.session_state.auth:
             
         st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # ==============================================================================
-        # SAYFA İÇERİKLERİ (SEKMELER KALKTI, MENÜ GELDİ)
-        # ==============================================================================
         
         if secili_sayfa == "🗺️ Harita Merkezi":
             if not processed_df.empty:
@@ -673,22 +677,44 @@ if st.session_state.auth:
                 if selected_clinic_ai:
                     clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
                     
-                    with st.expander("📋 Müşteri Detayları & Satış Bilgileri", expanded=False):
-                        c_det1, c_det2, c_det3 = st.columns(3)
-                        c_det1.markdown(f"**İl / İlçe:** {clinic_row.get('İL', '-')} / {clinic_row.get('İlçe', '-')}")
-                        c_det1.markdown(f"**Branş:** {clinic_row.get('Branş', '-')}")
-                        c_det1.markdown(f"**Potansiyel ANA Ürün:** {clinic_row.get('Potansiyel ANA Ürün', '-')}")
+                    # --- YENİ PREMIUM CRM KART TASARIMI ---
+                    def safe_get(key):
+                        val = str(clinic_row.get(key, '-')).strip()
+                        return val if val.lower() not in ['nan', 'none', ''] else '-'
+
+                    html_details = f"""
+                    <div class="crm-profile-card">
+                        <div class="crm-header-row">
+                            <h3 class="crm-title">🏥 {selected_clinic_ai}</h3>
+                            <span class="crm-badge">ID: {safe_get('İşyeri ID (Eğer oluştuysa)')}</span>
+                        </div>
+                        <div class="crm-grid">
+                            <div class="crm-item"><span class="crm-label">📍 İl / İlçe</span><span class="crm-value">{safe_get('İL')} / {safe_get('İlçe')}</span></div>
+                            <div class="crm-item"><span class="crm-label">⚕️ Branş</span><span class="crm-value">{safe_get('Branş')}</span></div>
+                            <div class="crm-item"><span class="crm-label">👥 Potansiyel Kullanıcı</span><span class="crm-value">{safe_get('Potansiyel Kullanıcı Sayısı')}</span></div>
+                            <div class="crm-item"><span class="crm-label">📦 Ana Ürün</span><span class="crm-value">{safe_get('Potansiyel ANA Ürün')}</span></div>
+                            <div class="crm-item"><span class="crm-label">💼 Satış Tipi</span><span class="crm-value">{safe_get('Satış Tipi')}</span></div>
+                            <div class="crm-item"><span class="crm-label">🏷️ Kampanya</span><span class="crm-value">{safe_get('Kampanya Bilgisi')}</span></div>
+                            <div class="crm-item"><span class="crm-label">💳 Tutar / Taksit</span><span class="crm-value">{safe_get('KDV Dahil Tutar')} TL ({safe_get('Taksit')})</span></div>
+                            <div class="crm-item"><span class="crm-label">🏦 Ödeme Kanalı</span><span class="crm-value">{safe_get('Ödeme Kanalı')}</span></div>
+                        </div>
+                    """
+                    
+                    notlar = safe_get('Açıklama/Notlar')
+                    itiraz = safe_get('İtiraz Nedeni')
+                    
+                    if notlar != '-' or itiraz != '-':
+                        html_details += '<div class="crm-notes-container">'
+                        if notlar != '-':
+                            html_details += f'<div class="crm-note-box"><div class="crm-label" style="color:#60A5FA; margin-bottom:5px;">📝 Açıklama / Notlar</div><div class="crm-value" style="font-size:14px;">{notlar}</div></div>'
+                        if itiraz != '-':
+                            html_details += f'<div class="crm-alert-box"><div class="crm-label" style="color:#F87171; margin-bottom:5px;">⚠️ İtiraz Nedeni</div><div class="crm-value" style="font-size:14px;">{itiraz}</div></div>'
+                        html_details += '</div>'
                         
-                        c_det2.markdown(f"**Potansiyel Kullanıcı:** {clinic_row.get('Potansiyel Kullanıcı Sayısı', '-')}")
-                        c_det2.markdown(f"**Satış Tipi:** {clinic_row.get('Satış Tipi', '-')}")
-                        c_det2.markdown(f"**Kampanya Bilgisi:** {clinic_row.get('Kampanya Bilgisi', '-')}")
-                        
-                        c_det3.markdown(f"**İşyeri ID:** {clinic_row.get('İşyeri ID (Eğer oluştuysa)', '-')}")
-                        c_det3.markdown(f"**Tutar:** {clinic_row.get('KDV Dahil Tutar', '-')} TL")
-                        c_det3.markdown(f"**Ödeme / Taksit:** {clinic_row.get('Ödeme Kanalı', '-')} / {clinic_row.get('Taksit', '-')}")
-                        
-                        st.markdown(f"**Açıklama/Notlar:** {clinic_row.get('Açıklama/Notlar', '-')}")
-                        st.markdown(f"**İtiraz Nedeni:** {clinic_row.get('İtiraz Nedeni', '-')}")
+                    html_details += "</div>"
+                    
+                    st.markdown(html_details, unsafe_allow_html=True)
+                    # --------------------------------------
                     
                     col_op, col_ai = st.columns(2)
                     
