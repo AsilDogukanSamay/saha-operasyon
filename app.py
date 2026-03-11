@@ -460,17 +460,16 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
-    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
-    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
+    /* --- YENİ EKLENEN MODERN TAKVİM TASARIMI --- */
     .calendar-container { overflow-x: auto; background: #161B22; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; }
     .modern-calendar { width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; }
     .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
     .modern-calendar td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); vertical-align: top; min-width: 150px; }
     .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
     .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; vertical-align: middle !important; text-align: center; }
-    .task-card { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
+    .task-card { color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
+    /* ------------------------------------------ */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -599,15 +598,17 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- ZAMAN BLOKLAMALI (HÜCRE BİRLEŞTİRMELİ) TAKVİM ---
+        # --- YENİ EFSANE AKILLI TAKVİM MOTORU (SATIR KORUMALI & ÇAPRAZ REFERANSLI) ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Panosu")
+            st.markdown("Satır düzeniniz birebir korunarak Ana Sistem ile eşleştirildi. Renkler klinik durumunu gösterir.")
             
             if WEEKLY_SHEET_GID == "BUNU_DEGISTIR" or WEEKLY_SHEET_GID == "":
                 st.error("⚠️ Lütfen kod içerisine Haftalık Plan sayfasının GID numarasını girin.")
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
+                    # 1. TABLOYU PARÇALARA AYIRMA
                     col0_original = weekly_df.columns[0]
                     current_week = col0_original 
                     week_tags = []
@@ -620,7 +621,7 @@ if st.session_state.auth:
                         
                     weekly_df['Hafta_Grubu'] = week_tags
                     weekly_df.rename(columns={col0_original: "Zaman Dilimi"}, inplace=True)
-                    weekly_df = weekly_df.fillna("")
+                    weekly_df = weekly_df.fillna("").astype(str)
                     
                     all_weeks = []
                     for w in week_tags:
@@ -629,67 +630,78 @@ if st.session_state.auth:
                     selected_hafta = st.selectbox("📆 Gösterilecek Haftayı Seçin:", all_weeks)
                     st.divider()
                     
-                    # Seçili haftayı filtrele ve başlık satırını gizle
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
+                    filtered_weekly_df = filtered_weekly_df.drop(columns=['Hafta_Grubu'])
                     
-                    # 1. AKILLI ZAMAN DOLDURUCU (Aynı bloktaki klinikleri gruplamak için)
-                    current_time_block = "Belirsiz Zaman"
-                    time_blocks = []
-                    for val in filtered_weekly_df['Zaman Dilimi']:
-                        val_str = str(val).strip()
-                        if val_str and val_str.lower() != 'nan':
-                            current_time_block = val_str
-                        time_blocks.append(current_time_block)
-                    filtered_weekly_df['Zaman_Blok'] = time_blocks
-                    
-                    # Günleri tespit et (Zaman_Blok vb. harici sütunlar)
-                    days = [col for col in filtered_weekly_df.columns if col not in ['Zaman Dilimi', 'Hafta_Grubu', 'Zaman_Blok']]
-                    
-                    # Benzersiz zaman bloklarını bul
-                    unique_blocks = []
-                    for tb in time_blocks:
-                        if tb not in unique_blocks: unique_blocks.append(tb)
+                    # 2. ÇAPRAZ REFERANS (Ana tablodan personeli ve durumu bul)
+                    clinic_info = {}
+                    if not main_df.empty:
+                        for _, r in main_df.iterrows():
+                            c_name = str(r.get('Klinik Adı', ''))
+                            norm_name = normalize_text(c_name)
+                            if norm_name:
+                                clinic_info[norm_name] = {
+                                    'Personel': str(r.get('Personel', 'Bilinmiyor')),
+                                    'Status': str(r.get('Lead Status', '')),
+                                    'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
+                                }
 
-                    # 2. HÜCRELERİ BİRLEŞTİREREK EKRANA BASMA (Premium Kanban Görünümü)
+                    # 3. HÜCRELERİ SATIR SATIR ÇİZ (Excel düzenini ASLA bozma)
                     html_cal = '<div class="calendar-container"><table class="modern-calendar">'
                     
                     html_cal += '<thead><tr>'
-                    html_cal += '<th>ZAMAN DİLİMİ</th>'
-                    for d in days:
-                        html_cal += f'<th>{d}</th>'
+                    for col in filtered_weekly_df.columns:
+                        html_cal += f'<th>{col}</th>'
                     html_cal += '</tr></thead><tbody>'
                     
-                    for block in unique_blocks:
-                        block_df = filtered_weekly_df[filtered_weekly_df['Zaman_Blok'] == block]
-                        
-                        # O zaman diliminde herhangi bir günde herhangi bir görev var mı kontrol et
-                        is_empty_block = True
-                        for d in days:
-                            tasks = [str(t).strip() for t in block_df[d] if str(t).strip() and str(t).strip().lower() != 'nan']
-                            if tasks:
-                                is_empty_block = False
-                                break
-                                
-                        if is_empty_block: continue # Eğer "Öğleden Sonra" komple boşsa satırı hiç çizme
-                        
-                        # Dolu zaman bloğu satırını çiz
-                        html_cal += '<tr>'
-                        html_cal += f'<td class="row-label">{block}</td>' # Zaman dilimi (Sol sütun)
-                        
-                        for d in days:
-                            # O güne ve o zamana ait tüm klinikleri topla
-                            tasks = [str(t).strip() for t in block_df[d] if str(t).strip() and str(t).strip().lower() != 'nan']
+                    for _, row in filtered_weekly_df.iterrows():
+                        if all(str(val).strip() == "" for val in row.values): continue 
                             
-                            if tasks:
-                                html_cal += '<td>'
-                                for task in tasks:
-                                    # Her bir kliniği mavi görev kartı olarak aynı hücreye bas
-                                    html_cal += f'<div class="task-card">{task}</div>'
-                                html_cal += '</td>'
+                        html_cal += '<tr>'
+                        for i, val in enumerate(row.values):
+                            val_clean = str(val).strip()
+                            if i == 0:
+                                # Zaman/Satır Etiketi
+                                if val_clean:
+                                    html_cal += f'<td class="row-label">{val_clean}</td>'
+                                else:
+                                    html_cal += f'<td class="row-label" style="background: transparent; border: none;"></td>'
                             else:
-                                html_cal += '<td></td>' # O gün o zaman dilimi boşsa hücreyi boş bırak
-                                
+                                if val_clean:
+                                    # Klinik veya Görev
+                                    norm_val = normalize_text(val_clean)
+                                    bg_color = "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" # Varsayılan Mavi
+                                    personel_name = ""
+                                    show_card = True
+                                    
+                                    if norm_val in clinic_info:
+                                        info = clinic_info[norm_val]
+                                        personel_name = info['Personel']
+                                        status = info['Status'].lower()
+                                        gidildi = info['Gidildi'].lower()
+                                        
+                                        # YETKİ KONTROLÜ (Personel sadece kendi kliniğini görür)
+                                        if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
+                                            show_card = False
+                                            
+                                        # DURUMA GÖRE RENKLENDİRME
+                                        if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
+                                            bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
+                                        elif any(x in status for x in ['hot', 'sıcak']):
+                                            bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
+                                        elif any(x in status for x in ['warm', 'ılık', 'takip']):
+                                            bg_color = "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" # Turuncu
+                                            
+                                    if show_card:
+                                        html_cal += f'<td><div class="task-card" style="background: {bg_color};">{val_clean}'
+                                        if personel_name: # Personel ismini karta yazdır
+                                            html_cal += f'<br><span style="font-size:10.5px; opacity:0.85; font-weight:500;">👤 {personel_name}</span>'
+                                        html_cal += '</div></td>'
+                                    else:
+                                        html_cal += '<td></td>' # Başkasının kliniği ise o kişiye boş görünür
+                                else:
+                                    html_cal += '<td></td>'
                         html_cal += '</tr>'
                         
                     html_cal += '</tbody></table></div>'
