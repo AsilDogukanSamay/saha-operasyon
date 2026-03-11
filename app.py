@@ -27,6 +27,7 @@ LOCAL_LOGO_PATH = "SahaBulut.jpg"
 
 SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
 SHEET_GID = "680076046" # Bu ana "Saha Lead List" sayfasının GID numarası
+EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
 
 # 🚨 DİKKAT: AŞAĞIDAKİ "BUNU_DEGISTIR" YAZISINI SİLİP, EXCELDEKİ "HAFTALIK PLAN" SAYFASININ GID NUMARASINI YAZIN! 🚨
 WEEKLY_SHEET_GID = "402390969" 
@@ -693,14 +694,14 @@ if st.session_state.auth:
         elif secili_sayfa == "📋 Liste & Rota":
             alt_sekme1, alt_sekme2 = st.tabs(["📋 Klinik Listesi & Arama", "📍 Akıllı Rota Sıralaması"])
             
-            # --- YENİ ZIRHLI ROTA LİNK OLUŞTURUCU ---
+            # --- ZIRHLI LİNK OLUŞTURUCU (HATA ÇÖZÜMÜ) ---
             def get_map_link(lat, lon):
                 try:
                     if pd.isna(lat) or pd.isna(lon): return None
                     if str(lat).strip().lower() in ['nan', 'none', '']: return None
                     return f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
                 except: return None
-            # ----------------------------------------
+            # ---------------------------------------------
             
             with alt_sekme1:
                 sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
