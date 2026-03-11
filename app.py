@@ -294,8 +294,6 @@ if "auth" not in st.session_state: st.session_state.auth = False
 if "role" not in st.session_state: st.session_state.role = None
 if "user" not in st.session_state: st.session_state.user = None
 if "auth_user_info" not in st.session_state: st.session_state.auth_user_info = None
-if "timer_start" not in st.session_state: st.session_state.timer_start = None
-if "timer_clinic" not in st.session_state: st.session_state.timer_clinic = None
 if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
 if not st.session_state.auth:
@@ -418,7 +416,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD (KOYU TEMA & DETAYLI CSS & YENİ CRM KARTI)
+# 6. DASHBOARD (Simplified & Plan-Focused)
 # ==============================================================================
 st.markdown("""
 <style>
@@ -437,18 +435,6 @@ st.markdown("""
     .admin-perf-card { background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid rgba(255, 255, 255, 0.05); }
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
-    
-    .crm-profile-card { background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
-    .crm-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-    .crm-title { font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0; }
-    .crm-badge { background: rgba(59, 130, 246, 0.2); color: #60A5FA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .crm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
-    .crm-item { display: flex; flex-direction: column; gap: 4px; }
-    .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-    .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
-    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
-    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -485,7 +471,8 @@ with st.sidebar:
     st.divider()
     
     st.markdown("### 🧭 Ana Menü")
-    menu_opts = ["🗺️ Harita Merkezi", "📋 Liste & Rota", "✅ İşlem Paneli"]
+    # Simplified Menu Options: "Field Strategy" and "Op Panel" are removed. "Today's Plan" added.
+    menu_opts = ["🗺️ Harita Merkezi", "📅 Bugünün Planı"]
     if st.session_state.role == "Yönetici":
         menu_opts += ["📊 Ekip Performansı", "🔥 Yoğunluk Haritası", "⚙️ Personel Yönetimi"]
     
@@ -493,14 +480,14 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ⚙️ Ayarlar & Filtreler")
+    # Keep "Only Today's Plan" as a global toggle
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
-    
-    if secili_sayfa == "🗺️ Harita Merkezi":
-        st.markdown("<p style='font-size:13px; color:#9CA3AF; margin-bottom:5px; margin-top:10px;'>Harita Renklendirme Modu:</p>", unsafe_allow_html=True)
-        map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
-    else:
-        map_view_mode = "Ziyaret Durumu" 
+    st.divider()
 
+    # Place Map View Mode toggle globally if map is always core
+    st.markdown("<p style='font-size:13px; color:#9CA3AF; margin-bottom:5px;'>Harita Renklendirme Modu:</p>", unsafe_allow_html=True)
+    map_view_mode = st.radio("Harita Modu:", ["Ziyaret Durumu", "Lead Potansiyeli"], label_visibility="collapsed")
+    
     st.divider()
     
     if st.session_state.role == "Yönetici":
@@ -538,44 +525,42 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
+        # Apply global date filter
         if filter_today:
             processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
+        # Sort by distance if location is available
         if user_lat:
             processed_df["Mesafe_km"] = processed_df.apply(lambda r: calculate_haversine_distance(user_lat, user_lon, r["lat"], r["lon"]), axis=1)
             processed_df = processed_df.sort_values(by="Mesafe_km")
         else: processed_df["Mesafe_km"] = 0
 
+        # KPIs remain global for context
         col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-        
         toplam_hedef = len(processed_df)
         nitelikli_hot = len(processed_df[processed_df["Lead Status"].astype(str).str.lower().str.contains("hot|sıcak", regex=True, na=False)])
         tamamlanan_ziyaret = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
-        
         col_kpi1.metric("Toplam Plan", toplam_hedef)
         col_kpi2.metric("🔥 Hot Lead", nitelikli_hot)
         col_kpi3.metric("✅ Ziyaret", tamamlanan_ziyaret)
         col_kpi4.metric("🏆 Skor", processed_df["Skor"].sum())
         
         st.markdown("<br>", unsafe_allow_html=True)
+        # Goal track bars global context
         st.markdown("#### 🎯 Günlük Hedef Takibi")
-        
         hedef_ziyaret_oran = min(tamamlanan_ziyaret / 8.0, 1.0)
         hedef_demo_oran = min(nitelikli_hot / 4.0, 1.0)
-        
         c_prog1, c_prog2 = st.columns(2, gap="large")
-        
         with c_prog1:
             st.markdown(f"**🚗 Ziyaret Hedefi ({tamamlanan_ziyaret} / 8)**")
             st.progress(hedef_ziyaret_oran)
-            
         with c_prog2:
             st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot} / 4)**")
             st.progress(hedef_demo_oran)
-            
         st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # Page contents logic
         if secili_sayfa == "🗺️ Harita Merkezi":
             if not processed_df.empty:
                 col_ctrl, col_leg = st.columns([1, 2])
@@ -598,7 +583,7 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
-                # --- YENİ MİKRO ARAYÜZ (ZARİF UYARI) ---
+                # Use subtle info box for large count of missing locations, instead of expander
                 eksik_df = processed_df[processed_df["lat"].isna() | processed_df["lon"].isna()]
                 if not eksik_df.empty:
                     eksik_sayisi = len(eksik_df)
@@ -608,7 +593,6 @@ if st.session_state.auth:
                         <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor. Koordinatları Excel üzerinden ekleyebilirsiniz.</span>
                     </div>
                     """, unsafe_allow_html=True)
-                # --------------------------------------
 
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
@@ -654,129 +638,48 @@ if st.session_state.auth:
             else:
                 st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'e veri girin.")
 
-        elif secili_sayfa == "📋 Liste & Rota":
-            alt_sekme1, alt_sekme2 = st.tabs(["📋 Klinik Listesi & Arama", "📍 Akıllı Rota Sıralaması"])
+        elif secili_sayfa == "📅 Bugünün Planı":
+            st.subheader("📅 Günlük Ziyaret Planı")
+            # This is the new simplified plan view, acting as a Calendar/Plan. Combine List and Status sorting here.
             
-            with alt_sekme1:
-                sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
-                fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
-                fdf["Nav"] = fdf.apply(lambda x: f"http://maps.google.com/?q={x['lat']},{x['lon']}" if pd.notnull(x['lat']) else "", axis=1)
-                st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
-
-            with alt_sekme2:
-                st.info("📍 **Akıllı Rota:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır.")
-                st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
-
-        elif secili_sayfa == "✅ İşlem Paneli":
-            all_clinics = processed_df["Klinik Adı"].tolist()
-            default_idx = 0
-            if user_lat:
-                nearby = processed_df[processed_df["Mesafe_km"] <= 1.5]
-                if not nearby.empty:
-                    default_idx = all_clinics.index(nearby.iloc[0]["Klinik Adı"])
-                    st.success(f"📍 Konumunuza en yakın klinik ({nearby.iloc[0]['Klinik Adı']}) otomatik seçildi.")
+            # KPI relevant to this view (Plan of Today context)
+            total_plan_count = len(processed_df)
+            completed_count = len(processed_df[processed_df["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)])
+            pending_count = total_plan_count - completed_count
             
-            if all_clinics:
-                selected_clinic_ai = st.selectbox("İşlem Yapılacak Klinik:", all_clinics, index=default_idx)
-                if selected_clinic_ai:
-                    clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
-                    
-                    def safe_get(key):
-                        val = str(clinic_row.get(key, '-')).strip()
-                        return val if val.lower() not in ['nan', 'none', ''] else '-'
+            # Simple Plan Status Indicators
+            kpi_plan1, kpi_plan2, kpi_plan3 = st.columns(3)
+            kpi_plan1.metric("Toplam Plan Hedefi", total_plan_count)
+            kpi_plan2.metric("✅ Tamamlanan", completed_count, f"{completed_count - 0} Bugün")
+            kpi_plan3.metric("⏳ Bekleyen", pending_count)
+            
+            st.divider()
 
-                    html_details = f"""
-                    <div class="crm-profile-card">
-                        <div class="crm-header-row">
-                            <h3 class="crm-title">🏥 {selected_clinic_ai}</h3>
-                            <span class="crm-badge">ID: {safe_get('İşyeri ID (Eğer oluştuysa)')}</span>
-                        </div>
-                        <div class="crm-grid">
-                            <div class="crm-item"><span class="crm-label">📍 İl / İlçe</span><span class="crm-value">{safe_get('İL')} / {safe_get('İlçe')}</span></div>
-                            <div class="crm-item"><span class="crm-label">⚕️ Branş</span><span class="crm-value">{safe_get('Branş')}</span></div>
-                            <div class="crm-item"><span class="crm-label">👥 Potansiyel Kullanıcı</span><span class="crm-value">{safe_get('Potansiyel Kullanıcı Sayısı')}</span></div>
-                            <div class="crm-item"><span class="crm-label">📦 Ana Ürün</span><span class="crm-value">{safe_get('Potansiyel ANA Ürün')}</span></div>
-                            <div class="crm-item"><span class="crm-label">💼 Satış Tipi</span><span class="crm-value">{safe_get('Satış Tipi')}</span></div>
-                            <div class="crm-item"><span class="crm-label">🏷️ Kampanya</span><span class="crm-value">{safe_get('Kampanya Bilgisi')}</span></div>
-                            <div class="crm-item"><span class="crm-label">💳 Tutar / Taksit</span><span class="crm-value">{safe_get('KDV Dahil Tutar')} TL ({safe_get('Taksit')})</span></div>
-                            <div class="crm-item"><span class="crm-label">🏦 Ödeme Kanalı</span><span class="crm-value">{safe_get('Ödeme Kanalı')}</span></div>
-                        </div>
-                    """
-                    
-                    notlar = safe_get('Açıklama/Notlar')
-                    itiraz = safe_get('İtiraz Nedeni')
-                    
-                    if notlar != '-' or itiraz != '-':
-                        html_details += '<div class="crm-notes-container">'
-                        if notlar != '-':
-                            html_details += f'<div class="crm-note-box"><div class="crm-label" style="color:#60A5FA; margin-bottom:5px;">📝 Açıklama / Notlar</div><div class="crm-value" style="font-size:14px;">{notlar}</div></div>'
-                        if itiraz != '-':
-                            html_details += f'<div class="crm-alert-box"><div class="crm-label" style="color:#F87171; margin-bottom:5px;">⚠️ İtiraz Nedeni</div><div class="crm-value" style="font-size:14px;">{itiraz}</div></div>'
-                        html_details += '</div>'
-                        
-                    html_details += "</div>"
-                    
-                    st.markdown(html_details, unsafe_allow_html=True)
-                    
-                    col_op, col_ai = st.columns(2)
-                    
-                    with col_op:
-                        st.markdown("### 🛠️ Operasyon Paneli")
-                        st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                        raw_phone = str(clinic_row.get("İletişim", ""))
-                        clean_phone = re.sub(r"\D", "", raw_phone)
-                        if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
-                        if len(clean_phone) == 10: clean_phone = "90" + clean_phone
-                        
-                        msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                        if len(clean_phone) >= 10:
-                            wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
-                            st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
-                        else:
-                            st.error("⚠️ İletişim numarası hatalı.")
-                        
-                        st.markdown("#### ⏱️ Ziyaret Süresi")
-                        c_t1, c_t2 = st.columns(2)
-                        if st.session_state.timer_start is None:
-                            if c_t1.button("▶️ Başlat"):
-                                st.session_state.timer_start = time.time()
-                                st.session_state.timer_clinic = selected_clinic_ai
-                                st.rerun()
-                        else:
-                            elapsed = int(time.time() - st.session_state.timer_start)
-                            mins, secs = divmod(elapsed, 60)
-                            st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
-                            if c_t2.button("⏹️ Bitir"):
-                                st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
-                                st.session_state.timer_start = None
-                                st.success("Ziyaret süresi kaydedildi!")
-                                st.rerun()
-
-                    with col_ai:
-                        st.markdown("### 🤖 Saha Stratejisti")
-                        lead_stat = str(clinic_row["Lead Status"]).lower()
-                        
-                        if any(x in lead_stat for x in ["hot", "sıcak"]):
-                            ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
-                        elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
-                            ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
-                        else:
-                            ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
-                            
-                        with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
-                        st.markdown("---")
-                        existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                        new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-                        if st.button("💾 Notu Kaydet", use_container_width=True):
-                            st.session_state.notes[selected_clinic_ai] = new_note_val
-                            st.toast("Not kaydedildi!", icon="✅")
-                        
-                        if st.session_state.notes:
-                            notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
-                            df_notes = pd.DataFrame(notes_data)
-                            buffer = BytesIO()
-                            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                            st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+            # The clean list view, acts as a "single document" view from Sheets, simplified.
+            st.info("📍 **Günlük Rota Sıralaması:** Aşağıdaki liste, şu anki konumunuza en yakın klinikten en uzağa doğru otomatik sıralanmıştır. İşlemi bitenleri Sheet üzerinden 'Gidildi mi?' sütununu 'Evet' yaparak güncelleyebilirsiniz.")
+            
+            # Simplified columns for a pure plan view
+            plan_columns = ["Klinik Adı", "İlçe", "Lead Status", "Gidildi mi?", "Mesafe_km"]
+            
+            # Basic filtering within the plan view
+            plan_filter = st.selectbox("Plan Durumuna Göre Filtrele:", ["Tümü", "Bekleyenler", "Tamamlananlar"], index=0)
+            
+            fdf_plan = processed_df.copy()
+            if plan_filter == "Bekleyenler":
+                fdf_plan = fdf_plan[~fdf_plan["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)]
+            elif plan_filter == "Tamamlananlar":
+                fdf_plan = fdf_plan[fdf_plan["Gidildi mi?"].astype(str).str.lower().str.contains("evet|tamam|yapıldı", regex=True, na=False)]
+            
+            # Render the clean table
+            st.dataframe(
+                fdf_plan[plan_columns], 
+                column_config={
+                    "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f"),
+                    "Gidildi mi?": st.column_config.TextColumn("Ziyaret Durumu")
+                }, 
+                use_container_width=True, 
+                hide_index=True
+            )
 
         elif secili_sayfa == "📊 Ekip Performansı" and st.session_state.role == "Yönetici":
             st.subheader("📊 Ekip Performans ve Saha Analizi")
@@ -790,7 +693,7 @@ if st.session_state.auth:
                 else:
                     map_df_admin_base = processed_df[(processed_df["Personel"] == secilen_personel)].copy()
                 
-                # --- YÖNETİCİ MİKRO ARAYÜZ ---
+                # Admin missing location micro UI
                 eksik_admin_df = map_df_admin_base[map_df_admin_base["lat"].isna() | map_df_admin_base["lon"].isna()]
                 if not eksik_admin_df.empty:
                     eksik_sayisi = len(eksik_admin_df)
@@ -800,7 +703,6 @@ if st.session_state.auth:
                         <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Seçili filtrede konumu eksik olan <b>{eksik_sayisi} klinik</b> haritada gösterilemiyor.</span>
                     </div>
                     """, unsafe_allow_html=True)
-                # -----------------------------
 
                 map_df_valid_admin = map_df_admin_base.dropna(subset=["lat", "lon"]).copy()
                 
