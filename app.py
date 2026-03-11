@@ -460,25 +460,24 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
+    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
+    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
-    /* --- EFSANE GRID (HÜCRE) TAKVİM TASARIMI --- */
+    /* --- YEPYENİ KANBAN GRID AJANDA TASARIMI --- */
     .premium-calendar-wrapper { overflow-x: auto; padding: 10px 0 20px 0; }
     .premium-calendar { width: 100%; border-collapse: separate; border-spacing: 12px; font-family: 'Inter', sans-serif; }
     
     .premium-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; border-radius: 14px; font-weight: 800; color: #E5E7EB; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
     
-    .premium-calendar td { background: rgba(255,255,255,0.02); padding: 8px; border-radius: 14px; vertical-align: top; min-width: 160px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .premium-calendar td { background: rgba(255,255,255,0.02); padding: 8px; border-radius: 14px; vertical-align: top; min-width: 170px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .premium-calendar td:hover { background: rgba(255,255,255,0.04); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
     
-    /* Zaman Sütunu - Özel Tasarım (Satırı İşgal Etmez, Havada Uçar) */
-    .time-axis { background: transparent !important; border: none !important; text-align: right; vertical-align: middle !important; padding: 0 15px 0 0 !important; width: 120px; min-width: 120px !important; box-shadow: none !important; transform: none !important; }
-    .time-axis:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
+    /* Kart İçi Etiket (Zaman) Tasarımı */
+    .task-card-p { color: white; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); line-height: 1.4; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: default; }
+    .task-card-p:hover { transform: scale(1.02); }
     
-    .time-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); color: #60A5FA; padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); letter-spacing: 0.5px; }
-    
-    .task-card-p { color: white; padding: 14px; border-radius: 10px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); line-height: 1.4; min-height: 70px; display: flex; flex-direction: column; justify-content: center; border: 1px solid rgba(255,255,255,0.15); }
-    
-    .empty-slot-p { height: 70px; border: 2px dashed rgba(255,255,255,0.08); border-radius: 10px; transition: border-color 0.3s; display: flex; align-items: center; justify-content: center; }
+    .empty-slot-p { height: 85px; border: 2px dashed rgba(255,255,255,0.08); border-radius: 10px; transition: border-color 0.3s; display: flex; align-items: center; justify-content: center; }
     .empty-slot-p:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.02); }
     /* ------------------------------------------ */
     
@@ -608,7 +607,7 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE ARAYÜZ: PREMIUM GRID TAKVİM ---
+        # --- YENİ EFSANE ARAYÜZ: KARTA GÖMÜLÜ ZAMAN ETİKETLERİ ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
@@ -627,7 +626,6 @@ if st.session_state.auth:
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
-                    # Unnamed Sütun Temizliği
                     weekly_df = weekly_df.loc[:, ~weekly_df.columns.str.contains('^Unnamed')]
                     
                     col0_original = weekly_df.columns[0]
@@ -653,7 +651,16 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # Veriyi en fazla 8 satırda tut
+                    # 1. HER SATIRIN ZAMAN DİLİMİNİ (Örn: Öğleden Sonra) HAFIZAYA AL (Forward-Fill Mantığı)
+                    current_time_tag = ""
+                    time_blocks = []
+                    for val in filtered_weekly_df['Zaman Dilimi']:
+                        v = str(val).strip()
+                        if v and v.lower() != 'nan':
+                            current_time_tag = v
+                        time_blocks.append(current_time_tag)
+                    filtered_weekly_df['Zaman_Etiketi'] = time_blocks
+                    
                     rows_data = []
                     for _, row in filtered_weekly_df.iterrows():
                         rows_data.append(row)
@@ -676,69 +683,63 @@ if st.session_state.auth:
                                     'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
                                 }
 
-                    # --- PREMIUM HTML GRID ÇİZİMİ ---
+                    # 2. HTML ÇİZİMİ (SADECE GÜNLER, ZAMAN SÜTUNU TAMAMEN KALKTI)
                     html_cal = '<div class="premium-calendar-wrapper"><table class="premium-calendar">'
                     
-                    # Başlıklar
                     html_cal += '<thead><tr>'
                     for col in filtered_weekly_df.columns:
-                        if col == 'Hafta_Grubu': continue
-                        header_name = "ZAMAN" if col == "Zaman Dilimi" else col
-                        # Zaman sütunu başlığını gizle ki sadece bir boşluk gibi dursun
-                        if col == "Zaman Dilimi":
-                            html_cal += f'<th style="background: transparent; border: none;"></th>'
-                        else:
-                            html_cal += f'<th>{header_name}</th>'
+                        # Zaman sütununu ve grup isimlerini tablodan tamamen çıkar!
+                        if col in ['Hafta_Grubu', 'Zaman Dilimi', 'Zaman_Etiketi']: continue
+                        html_cal += f'<th>{col}</th>'
                     html_cal += '</tr></thead><tbody>'
                     
-                    # Satırlar
                     for row in rows_data:
                         html_cal += '<tr>'
+                        
+                        # O satırın zaman etiketini (Öğleden Sonra vs.) al
+                        tb_tag = str(row.get('Zaman_Etiketi', '')).strip()
+                        if tb_tag.lower() == 'nan': tb_tag = ""
+                        
                         for i, col in enumerate(filtered_weekly_df.columns):
-                            if col == 'Hafta_Grubu': continue
+                            if col in ['Hafta_Grubu', 'Zaman Dilimi', 'Zaman_Etiketi']: continue
                             
                             val = str(row[col]).strip()
                             if val.lower() == 'nan': val = ""
                             
-                            # 1. SÜTUN: ZAMAN KAPSÜLÜ (Bağımsız ve Zarif)
-                            if i == 0: 
-                                if val:
-                                    html_cal += f'<td class="time-axis"><span class="time-badge">{val}</span></td>'
-                                else:
-                                    html_cal += f'<td class="time-axis"></td>'
-                            # DİĞER SÜTUNLAR: GÖREV KARTLARI
-                            else: 
-                                if val:
-                                    norm_val = normalize_text(val)
-                                    bg_color = "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" # Mavi (Bekliyor/Cold)
-                                    personel_name = ""
-                                    show_card = True
+                            if val:
+                                norm_val = normalize_text(val)
+                                bg_color = "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" # Mavi
+                                personel_name = "Bilinmiyor"
+                                show_card = True
+                                
+                                if norm_val in clinic_info:
+                                    info = clinic_info[norm_val]
+                                    personel_name = info['Personel']
+                                    status = info['Status'].lower()
+                                    gidildi = info['Gidildi'].lower()
                                     
-                                    if norm_val in clinic_info:
-                                        info = clinic_info[norm_val]
-                                        personel_name = info['Personel']
-                                        status = info['Status'].lower()
-                                        gidildi = info['Gidildi'].lower()
+                                    if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
+                                        show_card = False
                                         
-                                        if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
-                                            show_card = False
-                                            
-                                        if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
-                                            bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
-                                        elif any(x in status for x in ['hot', 'sıcak']):
-                                            bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
-                                        elif any(x in status for x in ['warm', 'ılık', 'takip']):
-                                            bg_color = "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" # Turuncu
-                                            
-                                    if show_card:
-                                        html_cal += f'<td><div class="task-card-p" style="background: {bg_color};"><div style="margin-bottom: 4px;">{val}</div>'
-                                        if personel_name:
-                                            html_cal += f'<div style="font-size:11px; opacity:0.9; font-weight:600; color: #E5E7EB;">👤 {personel_name}</div>'
-                                        html_cal += '</div></td>'
-                                    else:
-                                        html_cal += '<td><div class="empty-slot-p"></div></td>'
+                                    if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
+                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
+                                    elif any(x in status for x in ['hot', 'sıcak']):
+                                        bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
+                                    elif any(x in status for x in ['warm', 'ılık', 'takip']):
+                                        bg_color = "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" # Turuncu
+                                        
+                                if show_card:
+                                    # KARTIN İÇİNE ZAMAN ETİKETİNİ (TAG) GÖM!
+                                    tag_html = f'<div style="background: rgba(0,0,0,0.18); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px;"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
+                                    
+                                    html_cal += f'<td><div class="task-card-p" style="background: {bg_color};">'
+                                    html_cal += f'<div style="font-size:14px; font-weight:800; margin-bottom:6px; letter-spacing:0.3px;">{val}</div>'
+                                    html_cal += f'<div style="font-size:11px; opacity:0.95; font-weight:600; color: #E5E7EB; display:flex; flex-direction:column; gap:2px;"><span>👤 {personel_name}</span>{tag_html}</div>'
+                                    html_cal += '</div></td>'
                                 else:
                                     html_cal += '<td><div class="empty-slot-p"></div></td>'
+                            else:
+                                html_cal += '<td><div class="empty-slot-p"></div></td>'
                         html_cal += '</tr>'
                         
                     html_cal += '</tbody></table></div>'
