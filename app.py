@@ -469,7 +469,7 @@ st.markdown("""
     .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
     .modern-calendar td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); vertical-align: top; min-width: 150px; }
     .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
-    .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; }
+    .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; vertical-align: middle !important; text-align: center; }
     .task-card { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
     
     .main .block-container { padding-bottom: 5rem; }
@@ -599,7 +599,7 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- EFSANE AKILLI TAKVİM MOTORU (YAPAY ZEKA FİLTRESİ) ---
+        # --- ZAMAN BLOKLAMALI (HÜCRE BİRLEŞTİRMELİ) TAKVİM ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Panosu")
             
@@ -608,23 +608,20 @@ if st.session_state.auth:
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
-                    # 1. TABLOYU PARÇALARA AYIRMA (Yapay Zeka Mantığı)
                     col0_original = weekly_df.columns[0]
-                    current_week = col0_original # Excelin sol üstündeki ilk başlık (örn: 09-13 Mart)
+                    current_week = col0_original 
                     week_tags = []
                     
                     for val in weekly_df[col0_original]:
                         val_str = str(val).strip()
-                        # Eğer hücrede "Sayı-Sayı" (16-20) formatı varsa ve çok uzun bir metin değilse, bu yeni bir haftadır!
                         if re.search(r'\d{1,2}.*-\s*\d{1,2}', val_str) and len(val_str) < 25:
                             current_week = val_str
                         week_tags.append(current_week)
                         
                     weekly_df['Hafta_Grubu'] = week_tags
                     weekly_df.rename(columns={col0_original: "Zaman Dilimi"}, inplace=True)
-                    weekly_df = weekly_df.fillna("").astype(str)
+                    weekly_df = weekly_df.fillna("")
                     
-                    # 2. EKRANDA HAFTA SEÇİCİ KUTU (DROPDOWN) OLUŞTUR
                     all_weeks = []
                     for w in week_tags:
                         if w not in all_weeks: all_weeks.append(w)
@@ -632,35 +629,67 @@ if st.session_state.auth:
                     selected_hafta = st.selectbox("📆 Gösterilecek Haftayı Seçin:", all_weeks)
                     st.divider()
                     
-                    # 3. SADECE SEÇİLEN HAFTAYI FİLTRELE
+                    # Seçili haftayı filtrele ve başlık satırını gizle
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
-                    filtered_weekly_df = filtered_weekly_df.drop(columns=['Hafta_Grubu']) # Ekranda görünmemesi için sil
-                    
-                    # Başlık satırını (örn: "16-20 Mart") tablonun içinden gizle ki şık dursun
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # 4. KANBAN/BOARD TASARIMI İLE EKRANA BAS
+                    # 1. AKILLI ZAMAN DOLDURUCU (Aynı bloktaki klinikleri gruplamak için)
+                    current_time_block = "Belirsiz Zaman"
+                    time_blocks = []
+                    for val in filtered_weekly_df['Zaman Dilimi']:
+                        val_str = str(val).strip()
+                        if val_str and val_str.lower() != 'nan':
+                            current_time_block = val_str
+                        time_blocks.append(current_time_block)
+                    filtered_weekly_df['Zaman_Blok'] = time_blocks
+                    
+                    # Günleri tespit et (Zaman_Blok vb. harici sütunlar)
+                    days = [col for col in filtered_weekly_df.columns if col not in ['Zaman Dilimi', 'Hafta_Grubu', 'Zaman_Blok']]
+                    
+                    # Benzersiz zaman bloklarını bul
+                    unique_blocks = []
+                    for tb in time_blocks:
+                        if tb not in unique_blocks: unique_blocks.append(tb)
+
+                    # 2. HÜCRELERİ BİRLEŞTİREREK EKRANA BASMA (Premium Kanban Görünümü)
                     html_cal = '<div class="calendar-container"><table class="modern-calendar">'
                     
-                    # Başlıklar
                     html_cal += '<thead><tr>'
-                    for col in filtered_weekly_df.columns:
-                        html_cal += f'<th>{col}</th>'
+                    html_cal += '<th>ZAMAN DİLİMİ</th>'
+                    for d in days:
+                        html_cal += f'<th>{d}</th>'
                     html_cal += '</tr></thead><tbody>'
                     
-                    # Satırlar
-                    for _, row in filtered_weekly_df.iterrows():
-                        if all(val.strip() == "" for val in row.values): continue # Bomboş satırları yut (Gösterme)
-                            
+                    for block in unique_blocks:
+                        block_df = filtered_weekly_df[filtered_weekly_df['Zaman_Blok'] == block]
+                        
+                        # O zaman diliminde herhangi bir günde herhangi bir görev var mı kontrol et
+                        is_empty_block = True
+                        for d in days:
+                            tasks = [str(t).strip() for t in block_df[d] if str(t).strip() and str(t).strip().lower() != 'nan']
+                            if tasks:
+                                is_empty_block = False
+                                break
+                                
+                        if is_empty_block: continue # Eğer "Öğleden Sonra" komple boşsa satırı hiç çizme
+                        
+                        # Dolu zaman bloğu satırını çiz
                         html_cal += '<tr>'
-                        for i, val in enumerate(row.values):
-                            val_clean = val.strip()
-                            if i == 0 and val_clean:
-                                html_cal += f'<td class="row-label">{val_clean}</td>'
-                            elif val_clean:
-                                html_cal += f'<td><div class="task-card">{val_clean}</div></td>'
+                        html_cal += f'<td class="row-label">{block}</td>' # Zaman dilimi (Sol sütun)
+                        
+                        for d in days:
+                            # O güne ve o zamana ait tüm klinikleri topla
+                            tasks = [str(t).strip() for t in block_df[d] if str(t).strip() and str(t).strip().lower() != 'nan']
+                            
+                            if tasks:
+                                html_cal += '<td>'
+                                for task in tasks:
+                                    # Her bir kliniği mavi görev kartı olarak aynı hücreye bas
+                                    html_cal += f'<div class="task-card">{task}</div>'
+                                html_cal += '</td>'
                             else:
-                                html_cal += '<td></td>'
+                                html_cal += '<td></td>' # O gün o zaman dilimi boşsa hücreyi boş bırak
+                                
                         html_cal += '</tr>'
                         
                     html_cal += '</tbody></table></div>'
