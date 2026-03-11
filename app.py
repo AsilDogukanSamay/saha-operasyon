@@ -291,7 +291,6 @@ def fetch_operational_data(sheet_id):
 
 @st.cache_data(ttl=5)
 def fetch_weekly_calendar(sheet_id, weekly_gid):
-    # SAYFA 2 (HAFTALIK PLAN) VERİLERİNİ ÇEKEN ÖZEL FONKSİYON
     if not weekly_gid or weekly_gid == "BUNU_DEGISTIR":
         return pd.DataFrame()
     try:
@@ -553,7 +552,6 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
-        # Filtre sadece ana veriyi (Harita/Liste/İşlem Paneli) etkiler
         if filter_today and secili_sayfa != "🗓️ Haftalık Takvim":
             processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
@@ -562,7 +560,6 @@ if st.session_state.auth:
             processed_df = processed_df.sort_values(by="Mesafe_km")
         else: processed_df["Mesafe_km"] = 0
 
-        # KPI'lar sadece Ana Sayfalarda görünsün, Takvimde gizlensin
         if secili_sayfa != "🗓️ Haftalık Takvim":
             col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
             toplam_hedef = len(processed_df)
@@ -593,7 +590,6 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- HAFTALIK TAKVİM SAYFASI (GÜNCELLENDİ) ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Takvimi")
             st.markdown("Aşağıdaki takvim, Google Sheets tablonuzdaki **'Sayfa 2 (Haftalık Plan)'** verisini canlı olarak çeker.")
@@ -610,17 +606,13 @@ if st.session_state.auth:
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
-                    # İlk sütunun adını düzeltelim ki şık dursun
                     original_first_col = weekly_df.columns[0]
                     weekly_df.rename(columns={original_first_col: "Hafta / Zaman"}, inplace=True)
-                    
-                    # 🚀 MÜKEMMEL ÇÖZÜM (BUG FIX): NaN'lar ve Float'lar metne dönüştürülüyor
                     weekly_df = weekly_df.fillna("").astype(str)
                     
                     st.dataframe(weekly_df, use_container_width=True, hide_index=True)
                 else:
                     st.warning("Haftalık plan sayfasında veri bulunamadı veya sayfa GID numarası hatalı.")
-        # ---------------------------------------------
         
         elif secili_sayfa == "🗺️ Harita Merkezi":
             if not processed_df.empty:
@@ -701,10 +693,24 @@ if st.session_state.auth:
         elif secili_sayfa == "📋 Liste & Rota":
             alt_sekme1, alt_sekme2 = st.tabs(["📋 Klinik Listesi & Arama", "📍 Akıllı Rota Sıralaması"])
             
+            # --- YENİ ZIRHLI ROTA LİNK OLUŞTURUCU ---
+            def get_map_link(lat, lon):
+                try:
+                    if pd.isna(lat) or pd.isna(lon): return None
+                    if str(lat).strip().lower() in ['nan', 'none', '']: return None
+                    return f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+                except: return None
+            # ----------------------------------------
+            
             with alt_sekme1:
                 sq = st.text_input("Ara:", placeholder="Klinik veya İlçe...")
-                fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)] if sq else processed_df
-                fdf["Nav"] = fdf.apply(lambda x: f"http://maps.google.com/?q={x['lat']},{x['lon']}" if pd.notnull(x['lat']) else "", axis=1)
+                fdf = processed_df[processed_df["Klinik Adı"].str.contains(sq, case=False) | processed_df["İlçe"].str.contains(sq, case=False)].copy() if sq else processed_df.copy()
+                
+                if not fdf.empty:
+                    fdf["Nav"] = fdf.apply(lambda x: get_map_link(x.get('lat'), x.get('lon')), axis=1)
+                else:
+                    fdf["Nav"] = pd.Series(dtype=str)
+                    
                 st.dataframe(fdf[["Klinik Adı", "İlçe", "Personel", "Lead Status", "Mesafe_km", "Nav"]], column_config={"Nav": st.column_config.LinkColumn("Rota", display_text="📍 Git"), "Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
             with alt_sekme2:
