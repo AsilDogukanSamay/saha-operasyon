@@ -432,7 +432,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ==============================================================================
-# 6. DASHBOARD STİLLERİ
+# 6. DASHBOARD STİLLERİ (YENİ KANBAN DİKEY DÜZENİ)
 # ==============================================================================
 st.markdown("""
 <style>
@@ -460,30 +460,22 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
-    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
-    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
-    .calendar-container { overflow-x: auto; background: #161B22; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; }
-    .modern-calendar { width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; }
-    .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
-    .modern-calendar td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); vertical-align: top; min-width: 150px; }
-    .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
-    .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; vertical-align: middle !important; text-align: center; }
-    .task-card { color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
+    /* --- YENİ EKLENEN KANBAN (BOARD) TASARIMI --- */
+    .kanban-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-top: 15px; align-items: flex-start; }
+    .kanban-col { flex: 1; min-width: 160px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .kanban-col.time-col { flex: 0.6; min-width: 120px; background: transparent; border: none; padding-left: 0; }
     
-    /* YENİ EKLENEN BOŞ SLOT TASARIMI (Monday.com tarzı) */
-    .empty-slot { 
-        border: 2px dashed rgba(255,255,255,0.05); 
-        border-radius: 8px; 
-        height: 55px; 
-        width: 100%; 
-        transition: all 0.3s ease;
-    }
-    .empty-slot:hover {
-        border-color: rgba(255,255,255,0.15);
-        background: rgba(255,255,255,0.02);
-    }
+    .kanban-header { text-align: center; font-weight: 800; font-size: 13px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
+    
+    .kanban-card { color: white; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: center; min-height: 60px; transition: transform 0.2s ease; }
+    .kanban-card:hover { transform: translateY(-2px); }
+    
+    .kanban-time-label { background: rgba(59, 130, 246, 0.1); color: #60A5FA; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; border: 1px solid rgba(59, 130, 246, 0.2); display: flex; align-items: center; justify-content: center; min-height: 60px; }
+    
+    .kanban-empty { border: 2px dashed rgba(255,255,255,0.05); border-radius: 8px; min-height: 60px; transition: all 0.3s ease; }
+    .kanban-empty:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.02); }
+    /* ------------------------------------------ */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -612,17 +604,17 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ: SABİT 8 SLOTLU KUSURSUZ AJANDA TASARIMI ---
+        # --- YENİ EFSANE KANBAN (DİKEY) TAKVİM MOTORU ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Panosu")
-            st.markdown("Günlük 8 klinik hedefi baz alınarak otomatik slotlar (kısımlar) oluşturulmuştur.")
+            st.markdown("Her gün, dikey olarak birbirinden bağımsız çalışır. Günlük 8 ziyaret slotu bulunur.")
             
             if WEEKLY_SHEET_GID == "BUNU_DEGISTIR" or WEEKLY_SHEET_GID == "":
                 st.error("⚠️ Lütfen kod içerisine Haftalık Plan sayfasının GID numarasını girin.")
             else:
                 weekly_df = fetch_weekly_calendar(SHEET_DATA_ID, WEEKLY_SHEET_GID)
                 if not weekly_df.empty:
-                    # 1. "Unnamed" ÇÖPLÜĞÜNÜ TEMİZLE!
+                    # Unnamed çöplüğünü temizle
                     weekly_df = weekly_df.loc[:, ~weekly_df.columns.str.contains('^Unnamed')]
                     
                     col0_original = weekly_df.columns[0]
@@ -649,19 +641,6 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # 2. TAM OLARAK 8 SATIR (SLOT) OLUŞTURMA MANTIĞI
-                    rows_data = []
-                    for _, row in filtered_weekly_df.iterrows():
-                        rows_data.append(row)
-                        
-                    # Eğer 8 satırdan az veri varsa, altını "Boş Satırlarla" tamamla ki 8 slot görüntüsü bozulmasın
-                    while len(rows_data) < 8:
-                        empty_row = pd.Series([""] * len(filtered_weekly_df.columns), index=filtered_weekly_df.columns)
-                        rows_data.append(empty_row)
-                    
-                    # Sadece ilk 8 satırı (kısmı) al
-                    rows_data = rows_data[:8]
-                    
                     # Çapraz referans için Ana Veritabanı okuması
                     clinic_info = {}
                     if not main_df.empty:
@@ -675,32 +654,39 @@ if st.session_state.auth:
                                     'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
                                 }
 
-                    # 3. HTML KANBAN / AJANDA ÇİZİMİ
-                    html_cal = '<div class="calendar-container"><table class="modern-calendar">'
+                    # 3. YENİ HTML KANBAN / BOARD ÇİZİMİ (DİKEY SÜTUNLAR)
+                    html_cal = '<div class="kanban-board">'
                     
-                    html_cal += '<thead><tr>'
-                    for col in filtered_weekly_df.columns:
-                        if col != 'Hafta_Grubu': # Grup başlığını gizle
-                            html_cal += f'<th>{col}</th>'
-                    html_cal += '</tr></thead><tbody>'
-                    
-                    # Tam tamına 8 tur dönecek (Çünkü rows_data'yı 8'e sabitledik)
-                    for row in rows_data:
-                        html_cal += '<tr>'
-                        for i, col in enumerate(filtered_weekly_df.columns):
-                            if col == 'Hafta_Grubu': continue
+                    for col_name in filtered_weekly_df.columns:
+                        if col_name == 'Hafta_Grubu': continue
+                        
+                        col_class = "kanban-col time-col" if col_name == "Zaman Dilimi" else "kanban-col"
+                        header_name = "ZAMAN / NOT" if col_name == "Zaman Dilimi" else col_name
+                        
+                        html_cal += f'<div class="{col_class}">'
+                        html_cal += f'<div class="kanban-header">{header_name}</div>'
+                        
+                        # O güne ait tüm satırları al
+                        col_values = filtered_weekly_df[col_name].tolist()
+                        
+                        # Uzunluğunu kesinlikle 8'e sabitle
+                        while len(col_values) < 8:
+                            col_values.append("")
+                        col_values = col_values[:8]
+                        
+                        for val in col_values:
+                            val_clean = str(val).strip()
+                            if val_clean.lower() == 'nan': val_clean = ""
                             
-                            val = str(row[col]).strip()
-                            if val.lower() == 'nan': val = ""
-                            
-                            if i == 0: # Birinci Sütun: Zaman Dilimi
-                                if val:
-                                    html_cal += f'<td class="row-label">{val}</td>'
+                            if col_name == "Zaman Dilimi":
+                                if val_clean:
+                                    html_cal += f'<div class="kanban-time-label">{val_clean}</div>'
                                 else:
-                                    html_cal += f'<td class="row-label" style="background: transparent; border: none;"></td>'
-                            else: # Diğer Sütunlar: Günler ve Slotlar
-                                if val:
-                                    norm_val = normalize_text(val)
+                                    # Zaman diliminde boşluk varsa görünmez slot bırak ki hizalar kaymasın
+                                    html_cal += '<div class="kanban-empty" style="border:none;"></div>'
+                            else:
+                                if val_clean:
+                                    norm_val = normalize_text(val_clean)
                                     bg_color = "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)"
                                     personel_name = ""
                                     show_card = True
@@ -722,18 +708,18 @@ if st.session_state.auth:
                                             bg_color = "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
                                             
                                     if show_card:
-                                        html_cal += f'<td><div class="task-card" style="background: {bg_color};">{val}'
+                                        html_cal += f'<div class="kanban-card" style="background: {bg_color};"><div>{val_clean}</div>'
                                         if personel_name:
-                                            html_cal += f'<br><span style="font-size:10.5px; opacity:0.85; font-weight:500;">👤 {personel_name}</span>'
-                                        html_cal += '</div></td>'
+                                            html_cal += f'<div style="font-size:10.5px; opacity:0.85; font-weight:500; margin-top:4px;">👤 {personel_name}</div>'
+                                        html_cal += '</div>'
                                     else:
-                                        html_cal += '<td><div class="empty-slot"></div></td>'
+                                        html_cal += '<div class="kanban-empty"></div>'
                                 else:
-                                    # HÜCRE BOŞSA KESİK ÇİZGİLİ ŞIK BİR SLOT ÇİZ!
-                                    html_cal += '<td><div class="empty-slot"></div></td>'
-                        html_cal += '</tr>'
+                                    html_cal += '<div class="kanban-empty"></div>'
                         
-                    html_cal += '</tbody></table></div>'
+                        html_cal += '</div>' # kanban-col kapanışı
+                        
+                    html_cal += '</div>' # kanban-board kapanışı
                     
                     st.markdown(html_cal, unsafe_allow_html=True)
                 else:
