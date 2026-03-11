@@ -124,6 +124,12 @@ def normalize_text(text):
     if pd.isna(text): return ""
     return unicodedata.normalize('NFKD', str(text)).encode('ASCII', 'ignore').decode('utf-8').lower().replace(" ","")
 
+def is_name_match(excel_val, db_val):
+    e = normalize_text(excel_val)
+    d = normalize_text(db_val)
+    if not e or not d: return False
+    return e in d or d in e
+
 def get_img_as_base64(file_path):
     try:
         if os.path.exists(file_path):
@@ -493,13 +499,6 @@ if st.session_state.auth:
         view_df = main_df
     else:
         current_realname = st.session_state.auth_user_info['real_name']
-        
-        def is_name_match(excel_val, db_val):
-            e = normalize_text(excel_val)
-            d = normalize_text(db_val)
-            if not e or not d: return False
-            return e in d or d in e
-            
         view_df = main_df[main_df["Personel"].apply(lambda x: is_name_match(x, current_realname))]
 
 with st.sidebar:
@@ -518,6 +517,12 @@ with st.sidebar:
 
     st.markdown("### ⚙️ Ayarlar & Filtreler")
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
+    
+    # --- YENİ: YÖNETİCİ PERSONEL FİLTRESİ ---
+    selected_personel_filter = "Tüm Ekip"
+    if st.session_state.role == "Yönetici":
+        p_list = ["Tüm Ekip"] + sorted(list(set([str(x).strip() for x in main_df["Personel"].unique() if str(x).strip() and str(x).strip().lower() != 'nan'])))
+        selected_personel_filter = st.selectbox("👨‍💼 Personel Filtresi:", p_list)
     st.divider()
 
     if secili_sayfa == "🗺️ Harita Merkezi":
@@ -563,6 +568,10 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
+        # --- YÖNETİCİ PERSONEL FİLTRESİ UYGULANIYOR ---
+        if st.session_state.role == "Yönetici" and selected_personel_filter != "Tüm Ekip":
+            processed_df = processed_df[processed_df["Personel"].apply(lambda x: is_name_match(x, selected_personel_filter))]
+        
         if filter_today and secili_sayfa != "🗓️ Haftalık Takvim":
             processed_df = processed_df[processed_df['Bugünün Planı'].astype(str).str.lower().str.contains('evet|tamam|true|1', regex=True, na=False)]
         
@@ -601,7 +610,7 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE ARAYÜZ: TAM DOĞRU ZAMAN ETİKETLERİ ---
+        # --- YENİ EFSANE ARAYÜZ: SADELEŞTİRİLMİŞ İKİ RENKLİ TAKVİM ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
@@ -643,7 +652,6 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # YENİ MANTIK: Hafıza İPTAL. Sadece o satırda yazıyorsa etiketi koy!
                     time_blocks = []
                     for val in filtered_weekly_df['Zaman Dilimi']:
                         v = str(val).strip()
@@ -704,11 +712,17 @@ if st.session_state.auth:
                                     personel_name = info['Personel']
                                     gidildi = info['Gidildi'].lower()
                                     
-                                    if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
+                                    # --- YÖNETİCİ PERSONEL FİLTRESİ (TAKVİM İÇİN) ---
+                                    if st.session_state.role == "Yönetici" and selected_personel_filter != "Tüm Ekip":
+                                        if not is_name_match(personel_name, selected_personel_filter):
+                                            show_card = False
+
+                                    # --- SAHA PERSONELİ FİLTRESİ ---
+                                    elif st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
                                         show_card = False
                                         
                                     if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
-                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
+                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" 
                                         
                                 if show_card:
                                     tag_html = f'<div style="background: rgba(0,0,0,0.18); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px;"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
@@ -882,7 +896,6 @@ if st.session_state.auth:
                     
                     st.markdown(html_details, unsafe_allow_html=True)
                     
-                    # --- TAM EKRAN NOT PANELİ (YAPAY ZEKA VE KRONOMETRE KALDIRILDI) ---
                     st.markdown("### 📝 Ziyaret Notları")
                     existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
                     new_note_val = st.text_area("Klinik ile ilgili notlarınızı buraya girebilirsiniz:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}", height=150)
@@ -897,7 +910,6 @@ if st.session_state.auth:
                         buffer = BytesIO()
                         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
                         st.download_button(label="📥 Tüm Notları İndir (Excel)", data=buffer.getvalue(), file_name="Saha_Notlari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-                    # ------------------------------------------------------------------------
 
         elif secili_sayfa == "📊 Ekip Performansı" and st.session_state.role == "Yönetici":
             st.subheader("📊 Ekip Performans ve Saha Analizi")
