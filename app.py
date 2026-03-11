@@ -29,7 +29,7 @@ SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
 SHEET_GID = "680076046" # Bu ana "Saha Lead List" sayfasının GID numarası
 
 # 🚨 DİKKAT: AŞAĞIDAKİ "BUNU_DEGISTIR" YAZISINI SİLİP, EXCELDEKİ "HAFTALIK PLAN" SAYFASININ GID NUMARASINI YAZIN! 🚨
-WEEKLY_SHEET_GID = "BUNU_DEGISTIR" 
+WEEKLY_SHEET_GID = "402390969" 
 
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
 
@@ -499,7 +499,6 @@ with st.sidebar:
     st.divider()
     
     st.markdown("### 🧭 Ana Menü")
-    # YENİ EKLENEN "Haftalık Takvim" Sayfası
     menu_opts = ["🗺️ Harita Merkezi", "📋 Liste & Rota", "✅ İşlem Paneli", "🗓️ Haftalık Takvim"]
     if st.session_state.role == "Yönetici":
         menu_opts += ["📊 Ekip Performansı", "🔥 Yoğunluk Haritası", "⚙️ Personel Yönetimi"]
@@ -508,7 +507,6 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ⚙️ Ayarlar & Filtreler")
-    # ESKİ EFSANE "Bugünün Planı" TUŞU GERİ GELDİ!
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     st.divider()
 
@@ -595,7 +593,7 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ: HAFTALIK TAKVİM SAYFASI KODLARI ---
+        # --- HAFTALIK TAKVİM SAYFASI (GÜNCELLENDİ) ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Takvimi")
             st.markdown("Aşağıdaki takvim, Google Sheets tablonuzdaki **'Sayfa 2 (Haftalık Plan)'** verisini canlı olarak çeker.")
@@ -615,7 +613,9 @@ if st.session_state.auth:
                     # İlk sütunun adını düzeltelim ki şık dursun
                     original_first_col = weekly_df.columns[0]
                     weekly_df.rename(columns={original_first_col: "Hafta / Zaman"}, inplace=True)
-                    weekly_df.fillna("", inplace=True) # NaN yazan boşlukları temizle
+                    
+                    # 🚀 MÜKEMMEL ÇÖZÜM (BUG FIX): NaN'lar ve Float'lar metne dönüştürülüyor
+                    weekly_df = weekly_df.fillna("").astype(str)
                     
                     st.dataframe(weekly_df, use_container_width=True, hide_index=True)
                 else:
@@ -696,7 +696,7 @@ if st.session_state.auth:
                 else:
                     st.warning("⚠️ Haritada gösterilecek geçerli koordinat bilgisi bulunamadı.")
             else:
-                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden filtreyi kapatın veya Excel'e veri girin.")
+                st.warning("Görüntülenecek plan bulunamadı. Lütfen sol menüden 'Sadece Bugünün Planı' filtresini kapatın veya Excel'e veri girin.")
 
         elif secili_sayfa == "📋 Liste & Rota":
             alt_sekme1, alt_sekme2 = st.tabs(["📋 Klinik Listesi & Arama", "📍 Akıllı Rota Sıralaması"])
