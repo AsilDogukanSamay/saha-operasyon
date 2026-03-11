@@ -311,7 +311,7 @@ if not st.session_state.auth:
         }
 
 # ==============================================================================
-# 5. GİRİŞ EKRANI (TASARIM GERİ GELDİ!)
+# 5. GİRİŞ EKRANI 
 # ==============================================================================
 if not st.session_state.auth:
     st.markdown("""
@@ -569,6 +569,14 @@ if st.session_state.auth:
                         return [59,130,246]
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
+                
+                # --- YENİ EKLENEN EKSİK KONUM DEDEKTÖRÜ ---
+                eksik_df = processed_df[processed_df["lat"].isna() | processed_df["lon"].isna()]
+                if not eksik_df.empty:
+                    eksik_klinikler = ", ".join(eksik_df["Klinik Adı"].astype(str).unique())
+                    st.error(f"🕵️‍♂️ **Sistem Uyarısı:** Aşağıdaki kliniklerin planı var ancak Excel'de 'Konum' hücreleri **BOŞ** bırakıldığı için haritada gösterilemiyor. Lütfen koordinatlarını girin:\n\n👉 **{eksik_klinikler}**")
+                # ------------------------------------------
+
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
                 if not map_df_valid.empty:
@@ -723,9 +731,17 @@ if st.session_state.auth:
                     secilen_personel = st.selectbox("Haritada İncelemek İstediğiniz Personel:", ekip_listesi)
                     
                     if secilen_personel == "Tüm Ekip":
-                        map_df_valid_admin = processed_df.dropna(subset=["lat", "lon"]).copy()
+                        map_df_admin_base = processed_df.copy()
                     else:
-                        map_df_valid_admin = processed_df[(processed_df["Personel"] == secilen_personel)].dropna(subset=["lat", "lon"]).copy()
+                        map_df_admin_base = processed_df[(processed_df["Personel"] == secilen_personel)].copy()
+                    
+                    # --- YÖNETİCİ EKSİK KONUM DEDEKTÖRÜ ---
+                    eksik_admin_df = map_df_admin_base[map_df_admin_base["lat"].isna() | map_df_admin_base["lon"].isna()]
+                    if not eksik_admin_df.empty:
+                        st.error(f"⚠️ **Yönetici Uyarısı:** Şu anki filtreye göre {len(eksik_admin_df)} adet kliniğin Konum verisi eksik olduğu için haritada gösterilemiyor.")
+                    # --------------------------------------
+
+                    map_df_valid_admin = map_df_admin_base.dropna(subset=["lat", "lon"]).copy()
                     
                     if not map_df_valid_admin.empty:
                         map_df_valid_admin["lat"] = map_df_valid_admin["lat"].astype(float)
