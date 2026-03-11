@@ -473,7 +473,12 @@ st.markdown("""
     .premium-calendar td { background: rgba(255,255,255,0.02); padding: 8px; border-radius: 14px; vertical-align: top; min-width: 170px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .premium-calendar td:hover { background: rgba(255,255,255,0.04); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
     
-    /* Kart İçi Etiket (Zaman) Tasarımı */
+    /* Zaman Sütunu - Özel Tasarım (Satırı İşgal Etmez, Havada Uçar) */
+    .time-axis { background: transparent !important; border: none !important; text-align: right; vertical-align: middle !important; padding: 0 15px 0 0 !important; width: 120px; min-width: 120px !important; box-shadow: none !important; transform: none !important; }
+    .time-axis:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
+    
+    .time-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); color: #60A5FA; padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); letter-spacing: 0.5px; }
+    
     .task-card-p { color: white; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); line-height: 1.4; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: default; }
     .task-card-p:hover { transform: scale(1.02); }
     
@@ -607,17 +612,15 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE ARAYÜZ: KARTA GÖMÜLÜ ZAMAN ETİKETLERİ ---
+        # --- YENİ EFSANE ARAYÜZ: SADELEŞTİRİLMİŞ İKİ RENKLİ TAKVİM ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
-            # --- TAKVİM RENK AÇIKLAMALARI (LEGEND) ---
+            # --- YÖNETİCİ TALEBİ: SADECE YEŞİL VE KIRMIZI LEGEND ---
             st.markdown("""
             <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🟢 Ziyaret Edildi</div>
-                <div style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔥 Hot Lead (Sıcak)</div>
-                <div style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🟠 Warm Lead (Ilık)</div>
-                <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔵 Bekliyor / Soğuk</div>
+                <div style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔴 Bekliyor / Planlandı</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -651,7 +654,6 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # 1. HER SATIRIN ZAMAN DİLİMİNİ (Örn: Öğleden Sonra) HAFIZAYA AL (Forward-Fill Mantığı)
                     current_time_tag = ""
                     time_blocks = []
                     for val in filtered_weekly_df['Zaman Dilimi']:
@@ -683,12 +685,10 @@ if st.session_state.auth:
                                     'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
                                 }
 
-                    # 2. HTML ÇİZİMİ (SADECE GÜNLER, ZAMAN SÜTUNU TAMAMEN KALKTI)
                     html_cal = '<div class="premium-calendar-wrapper"><table class="premium-calendar">'
                     
                     html_cal += '<thead><tr>'
                     for col in filtered_weekly_df.columns:
-                        # Zaman sütununu ve grup isimlerini tablodan tamamen çıkar!
                         if col in ['Hafta_Grubu', 'Zaman Dilimi', 'Zaman_Etiketi']: continue
                         html_cal += f'<th>{col}</th>'
                     html_cal += '</tr></thead><tbody>'
@@ -696,7 +696,6 @@ if st.session_state.auth:
                     for row in rows_data:
                         html_cal += '<tr>'
                         
-                        # O satırın zaman etiketini (Öğleden Sonra vs.) al
                         tb_tag = str(row.get('Zaman_Etiketi', '')).strip()
                         if tb_tag.lower() == 'nan': tb_tag = ""
                         
@@ -708,28 +707,24 @@ if st.session_state.auth:
                             
                             if val:
                                 norm_val = normalize_text(val)
-                                bg_color = "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" # Mavi
+                                # YÖNETİCİ TALEBİ: Varsayılan (Bekliyor) renk artık KIRMIZI
+                                bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" 
                                 personel_name = "Bilinmiyor"
                                 show_card = True
                                 
                                 if norm_val in clinic_info:
                                     info = clinic_info[norm_val]
                                     personel_name = info['Personel']
-                                    status = info['Status'].lower()
                                     gidildi = info['Gidildi'].lower()
                                     
                                     if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
                                         show_card = False
                                         
+                                    # YÖNETİCİ TALEBİ: Sadece Gidildi ise YEŞİL yap, geri kalanlar KIRMIZI (Hot/Warm İptal)
                                     if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
-                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
-                                    elif any(x in status for x in ['hot', 'sıcak']):
-                                        bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
-                                    elif any(x in status for x in ['warm', 'ılık', 'takip']):
-                                        bg_color = "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" # Turuncu
+                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" 
                                         
                                 if show_card:
-                                    # KARTIN İÇİNE ZAMAN ETİKETİNİ (TAG) GÖM!
                                     tag_html = f'<div style="background: rgba(0,0,0,0.18); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px;"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
                                     
                                     html_cal += f'<td><div class="task-card-p" style="background: {bg_color};">'
