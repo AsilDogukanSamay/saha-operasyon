@@ -26,10 +26,10 @@ MY_LINKEDIN_URL = "https://www.linkedin.com/in/asil-dogukan-samay/"
 LOCAL_LOGO_PATH = "SahaBulut.jpg"
 
 SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
-SHEET_GID = "680076046" # Bu ana "Saha Lead List" sayfasının GID numarası
+SHEET_GID = "680076046"
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
 
-# 🚨 DİKKAT: AŞAĞIDAKİ KISMA "HAFTALIK PLAN" SAYFASININ GID NUMARASINI YAZIN 🚨
+
 WEEKLY_SHEET_GID = "402390969" 
 
 COMPETITORS_LIST = ["Kullanmıyor / Defter", "DentalSoft", "Dentsis", "BulutKlinik", "Yerel Yazılım", "Diğer"]
