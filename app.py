@@ -310,7 +310,6 @@ if "auth" not in st.session_state: st.session_state.auth = False
 if "role" not in st.session_state: st.session_state.role = None
 if "user" not in st.session_state: st.session_state.user = None
 if "auth_user_info" not in st.session_state: st.session_state.auth_user_info = None
-if "visit_logs" not in st.session_state: st.session_state.visit_logs = []
 
 if not st.session_state.auth:
     params = st.query_params
@@ -473,12 +472,7 @@ st.markdown("""
     .premium-calendar td { background: rgba(255,255,255,0.02); padding: 8px; border-radius: 14px; vertical-align: top; min-width: 170px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .premium-calendar td:hover { background: rgba(255,255,255,0.04); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
     
-    /* Zaman Sütunu - Özel Tasarım (Satırı İşgal Etmez, Havada Uçar) */
-    .time-axis { background: transparent !important; border: none !important; text-align: right; vertical-align: middle !important; padding: 0 15px 0 0 !important; width: 120px; min-width: 120px !important; box-shadow: none !important; transform: none !important; }
-    .time-axis:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
-    
-    .time-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); color: #60A5FA; padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); letter-spacing: 0.5px; }
-    
+    /* Kart İçi Etiket (Zaman) Tasarımı */
     .task-card-p { color: white; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); line-height: 1.4; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: default; }
     .task-card-p:hover { transform: scale(1.02); }
     
@@ -612,11 +606,11 @@ if st.session_state.auth:
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
             st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- YENİ EFSANE ARAYÜZ: SADELEŞTİRİLMİŞ İKİ RENKLİ TAKVİM ---
+        # --- YENİ EFSANE ARAYÜZ: KARTA GÖMÜLÜ ZAMAN ETİKETLERİ ---
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
-            # --- YÖNETİCİ TALEBİ: SADECE YEŞİL VE KIRMIZI LEGEND ---
+            # --- TAKVİM RENK AÇIKLAMALARI (LEGEND) ---
             st.markdown("""
             <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🟢 Ziyaret Edildi</div>
@@ -654,6 +648,7 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
+                    # HER SATIRIN ZAMAN DİLİMİNİ (Örn: Öğleden Sonra) HAFIZAYA AL
                     current_time_tag = ""
                     time_blocks = []
                     for val in filtered_weekly_df['Zaman Dilimi']:
@@ -685,6 +680,7 @@ if st.session_state.auth:
                                     'Gidildi': str(r.get('Gidildi mi?', 'Hayır'))
                                 }
 
+                    # HTML ÇİZİMİ (ZAMAN SÜTUNU YOK)
                     html_cal = '<div class="premium-calendar-wrapper"><table class="premium-calendar">'
                     
                     html_cal += '<thead><tr>'
@@ -707,8 +703,7 @@ if st.session_state.auth:
                             
                             if val:
                                 norm_val = normalize_text(val)
-                                # YÖNETİCİ TALEBİ: Varsayılan (Bekliyor) renk artık KIRMIZI
-                                bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" 
+                                bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
                                 personel_name = "Bilinmiyor"
                                 show_card = True
                                 
@@ -720,9 +715,8 @@ if st.session_state.auth:
                                     if st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
                                         show_card = False
                                         
-                                    # YÖNETİCİ TALEBİ: Sadece Gidildi ise YEŞİL yap, geri kalanlar KIRMIZI (Hot/Warm İptal)
                                     if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
-                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" 
+                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
                                         
                                 if show_card:
                                     tag_html = f'<div style="background: rgba(0,0,0,0.18); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px;"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
@@ -896,65 +890,32 @@ if st.session_state.auth:
                     
                     st.markdown(html_details, unsafe_allow_html=True)
                     
-                    col_op, col_ai = st.columns(2)
+                    # --- OPERASYON PANELİ KALDIRILDI, SAHA STRATEJİSTİ TAM EKRAN YAPILDI ---
+                    st.markdown("### 🤖 Saha Stratejisti")
+                    lead_stat = str(clinic_row["Lead Status"]).lower()
                     
-                    with col_op:
-                        st.markdown("### 🛠️ Operasyon Paneli")
-                        st.selectbox("Rakip Yazılım", COMPETITORS_LIST)
-                        raw_phone = str(clinic_row.get("İletişim", ""))
-                        clean_phone = re.sub(r"\D", "", raw_phone)
-                        if clean_phone.startswith("0"): clean_phone = clean_phone[1:]
-                        if len(clean_phone) == 10: clean_phone = "90" + clean_phone
+                    if any(x in lead_stat for x in ["hot", "sıcak"]):
+                        ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
+                    elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
+                        ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
+                    else:
+                        ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
                         
-                        msg_body = urllib.parse.quote(f"Merhaba, Medibulut'tan {st.session_state.user} ben. Bölgenizdeyim.")
-                        if len(clean_phone) >= 10:
-                            wa_link = f"https://api.whatsapp.com/send?phone={clean_phone}&text={msg_body}"
-                            st.markdown(f"""<a href="{wa_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; cursor:pointer;">📲 WhatsApp Mesajı Gönder ({raw_phone})</div></a>""", unsafe_allow_html=True)
-                        else:
-                            st.error("⚠️ İletişim numarası hatalı.")
-                        
-                        st.markdown("#### ⏱️ Ziyaret Süresi")
-                        c_t1, c_t2 = st.columns(2)
-                        if st.session_state.timer_start is None:
-                            if c_t1.button("▶️ Başlat"):
-                                st.session_state.timer_start = time.time()
-                                st.session_state.timer_clinic = selected_clinic_ai
-                                st.rerun()
-                        else:
-                            elapsed = int(time.time() - st.session_state.timer_start)
-                            mins, secs = divmod(elapsed, 60)
-                            st.warning(f"⏳ Süre İşliyor: {mins:02d}:{secs:02d}")
-                            if c_t2.button("⏹️ Bitir"):
-                                st.session_state.visit_logs.append({"Klinik": st.session_state.timer_clinic, "Süre": f"{mins} dk {secs} sn", "Tarih": datetime.now().strftime("%H:%M")})
-                                st.session_state.timer_start = None
-                                st.success("Ziyaret süresi kaydedildi!")
-                                st.rerun()
-
-                    with col_ai:
-                        st.markdown("### 🤖 Saha Stratejisti")
-                        lead_stat = str(clinic_row["Lead Status"]).lower()
-                        
-                        if any(x in lead_stat for x in ["hot", "sıcak"]):
-                            ai_msg = f"Kritik Fırsat! 🔥 {selected_clinic_ai} HOT statüsünde. Satışı kapat!" 
-                        elif any(x in lead_stat for x in ["warm", "ılık", "takip"]):
-                            ai_msg = f"Dikkat! 🟠 {selected_clinic_ai} Takip edilecek (Warm) durumda. İlgililer ama kararsızlar. Referanslarımızdan bahsederek güven kazan."
-                        else:
-                            ai_msg = f"Bilgilendirme. 🔵 {selected_clinic_ai} henüz soğuk. Tanışma ve güven verme hedefli ilerle."
-                            
-                        with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
-                        st.markdown("---")
-                        existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
-                        new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
-                        if st.button("💾 Notu Kaydet", use_container_width=True):
-                            st.session_state.notes[selected_clinic_ai] = new_note_val
-                            st.toast("Not kaydedildi!", icon="✅")
-                        
-                        if st.session_state.notes:
-                            notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
-                            df_notes = pd.DataFrame(notes_data)
-                            buffer = BytesIO()
-                            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
-                            st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                    with st.chat_message("assistant", avatar="🤖"): st.write_stream(typewriter_effect(ai_msg))
+                    st.markdown("---")
+                    existing_note_val = st.session_state.notes.get(selected_clinic_ai, "")
+                    new_note_val = st.text_area("Not Ekle:", value=existing_note_val, key=f"note_input_{selected_clinic_ai}")
+                    if st.button("💾 Notu Kaydet", use_container_width=True):
+                        st.session_state.notes[selected_clinic_ai] = new_note_val
+                        st.toast("Not kaydedildi!", icon="✅")
+                    
+                    if st.session_state.notes:
+                        notes_data = [{"Klinik": k, "Not": v} for k, v in st.session_state.notes.items()]
+                        df_notes = pd.DataFrame(notes_data)
+                        buffer = BytesIO()
+                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer: df_notes.to_excel(writer, index=False)
+                        st.download_button(label="📥 Notları İndir", data=buffer.getvalue(), file_name="Notlar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                    # ------------------------------------------------------------------------
 
         elif secili_sayfa == "📊 Ekip Performansı" and st.session_state.role == "Yönetici":
             st.subheader("📊 Ekip Performans ve Saha Analizi")
