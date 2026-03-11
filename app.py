@@ -460,8 +460,10 @@ st.markdown("""
     .crm-item { display: flex; flex-direction: column; gap: 4px; }
     .crm-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .crm-value { font-size: 15px; color: #F9FAFB; font-weight: 500; }
+    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
+    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
     
-    /* --- YENİ EKLENEN MODERN TAKVİM TASARIMI --- */
     .calendar-container { overflow-x: auto; background: #161B22; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; }
     .modern-calendar { width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; }
     .modern-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; font-weight: 700; color: #E5E7EB; border-bottom: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
@@ -469,7 +471,6 @@ st.markdown("""
     .modern-calendar tr:hover { background: rgba(255,255,255,0.01); }
     .row-label { font-weight: 800; color: #60A5FA !important; font-size: 14px; background: rgba(59, 130, 246, 0.05); white-space: nowrap; vertical-align: middle !important; text-align: center; }
     .task-card { color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-bottom: 8px; line-height: 1.4; border: 1px solid rgba(255,255,255,0.1); }
-    /* ------------------------------------------ */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -583,7 +584,7 @@ if st.session_state.auth:
             st.markdown("#### 🎯 Günlük Hedef Takibi")
             
             hedef_ziyaret_oran = min(tamamlanan_ziyaret / 8.0, 1.0)
-            hedef_demo_oran = min(nitelikli_hot / 4.0, 1.0)
+            hedef_demo_oran = min(nitelikli_hot / 8.0, 1.0)
             
             c_prog1, c_prog2 = st.columns(2, gap="large")
             
@@ -592,7 +593,7 @@ if st.session_state.auth:
                 st.progress(hedef_ziyaret_oran)
                 
             with c_prog2:
-                st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot} / 4)**")
+                st.markdown(f"**🔥 Nitelikli / Demo Hedefi ({nitelikli_hot} / 8)**")
                 st.progress(hedef_demo_oran)
                 
             st.info("📌 **Saha Bilgi Notu:** Nitelikli/Demo sayacınızın artması ve hedefe ulaşmanız için, klinik görüşmesinden sonra listedeki Satış Durumunu **'Hot'** veya **'Sıcak'** olarak güncellemelisiniz.")
