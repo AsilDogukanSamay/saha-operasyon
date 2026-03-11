@@ -438,7 +438,6 @@ st.markdown("""
     .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
     .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
     
-    /* --- YENİ EKLENEN CRM KART TASARIMI --- */
     .crm-profile-card { background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
     .crm-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
     .crm-title { font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0; }
@@ -450,7 +449,6 @@ st.markdown("""
     .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
     .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
     .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
-    /* -------------------------------------- */
     
     .main .block-container { padding-bottom: 5rem; }
     .dashboard-signature { text-align: center; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; width: 100%; }
@@ -600,11 +598,17 @@ if st.session_state.auth:
                 
                 processed_df["color"] = processed_df.apply(get_pt_color, axis=1)
                 
+                # --- YENİ MİKRO ARAYÜZ (ZARİF UYARI) ---
                 eksik_df = processed_df[processed_df["lat"].isna() | processed_df["lon"].isna()]
                 if not eksik_df.empty:
-                    with st.expander(f"📍 {len(eksik_df)} Kliniğin Harita Konumu Eksik (Detay için tıklayın)", expanded=False):
-                        eksik_klinikler = ", ".join(eksik_df["Klinik Adı"].astype(str).unique())
-                        st.info(f"Excel tablosunda aşağıdaki kliniklerin 'Konum' hücresi boş bırakılmış. Haritada görünebilmeleri için koordinat eklemelisiniz.\n\n👉 **{eksik_klinikler}**")
+                    eksik_sayisi = len(eksik_df)
+                    st.markdown(f"""
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 16px;">💡</span>
+                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor. Koordinatları Excel üzerinden ekleyebilirsiniz.</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                # --------------------------------------
 
                 map_df_valid = processed_df.dropna(subset=["lat", "lon"]).copy()
                 
@@ -677,7 +681,6 @@ if st.session_state.auth:
                 if selected_clinic_ai:
                     clinic_row = processed_df[processed_df["Klinik Adı"] == selected_clinic_ai].iloc[0]
                     
-                    # --- YENİ PREMIUM CRM KART TASARIMI ---
                     def safe_get(key):
                         val = str(clinic_row.get(key, '-')).strip()
                         return val if val.lower() not in ['nan', 'none', ''] else '-'
@@ -714,7 +717,6 @@ if st.session_state.auth:
                     html_details += "</div>"
                     
                     st.markdown(html_details, unsafe_allow_html=True)
-                    # --------------------------------------
                     
                     col_op, col_ai = st.columns(2)
                     
@@ -788,10 +790,17 @@ if st.session_state.auth:
                 else:
                     map_df_admin_base = processed_df[(processed_df["Personel"] == secilen_personel)].copy()
                 
+                # --- YÖNETİCİ MİKRO ARAYÜZ ---
                 eksik_admin_df = map_df_admin_base[map_df_admin_base["lat"].isna() | map_df_admin_base["lon"].isna()]
                 if not eksik_admin_df.empty:
-                    with st.expander(f"📍 Seçili filtrede {len(eksik_admin_df)} kliniğin konumu eksik", expanded=False):
-                        st.info("Bu personelin/ekibin listesinde koordinatı girilmemiş klinikler var. Harita üzerinde sadece koordinatı olanlar gösteriliyor.")
+                    eksik_sayisi = len(eksik_admin_df)
+                    st.markdown(f"""
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 16px;">💡</span>
+                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Seçili filtrede konumu eksik olan <b>{eksik_sayisi} klinik</b> haritada gösterilemiyor.</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                # -----------------------------
 
                 map_df_valid_admin = map_df_admin_base.dropna(subset=["lat", "lon"]).copy()
                 
