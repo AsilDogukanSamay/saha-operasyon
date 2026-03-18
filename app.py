@@ -29,7 +29,6 @@ SHEET_DATA_ID = "1MubSeIIp0-hz0A5o9fmAhv-wrGkPCgmkXyYkpD32Xk4"
 SHEET_GID = "680076046" 
 EXCEL_DOWNLOAD_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_DATA_ID}/edit?gid={SHEET_GID}#gid={SHEET_GID}"
 
-# HAFTALIK PLAN SAYFASININ GID NUMARASI
 WEEKLY_SHEET_GID = "402390969" 
 
 try:
@@ -184,7 +183,6 @@ def send_welcome_email(receiver_email, user_name, user_login, user_pass, app_url
     </body>
     </html>
     """
-    
     part = MIMEText(html_content, "html")
     msg.attach(part)
     try:
@@ -323,69 +321,23 @@ if not st.session_state.auth:
         }
 
 # ==============================================================================
-# 5. ZORUNLU KOYU MOD CSS'İ (LIGHT MODE KORUMASI)
-# ==============================================================================
-st.markdown("""
-<style>
-    /* ZORUNLU KOYU MOD DAYATMASI - Chrome açık olsa bile yazılar okunur */
-    .stApp { background-color: #0E1117 !important; color: #FFFFFF !important; }
-    [data-testid="stHeader"] { background-color: rgba(14, 17, 23, 0.8) !important; }
-    [data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid rgba(255,255,255,0.1); }
-    
-    /* Streamlit varsayılan yazılarını zorla beyaza çek */
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown { color: #FFFFFF !important; }
-    .stMetric label { color: #9CA3AF !important; }
-    .stMetric div[data-testid="stMetricValue"] { color: #FFFFFF !important; }
-    
-    /* Input ve Box renklerini sabitle */
-    div[data-baseweb="select"] > div { background-color: #1F2937 !important; color: white !important; border: 1px solid #374151 !important; }
-    div[role="listbox"] { background-color: #1F2937 !important; color: white !important; }
-    input, textarea { background-color: #1F2937 !important; color: white !important; border: 1px solid #374151 !important; }
-    
-    /* Dashboard custom classes */
-    .header-master-wrapper { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .location-status-badge { background: rgba(59, 130, 246, 0.1); color: #60A5FA; border: 1px solid #3B82F6; padding: 8px 18px; border-radius: 25px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .map-legend-pro-container { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-wrap: wrap; gap: 25px; justify-content: center; align-items: center; margin: 0 auto; width: fit-content; backdrop-filter: blur(10px); }
-    .leg-item-row { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #E2E8F0; }
-    .leg-dot-indicator { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-    .admin-perf-card { background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid rgba(255, 255, 255, 0.05); }
-    .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }
-    .progress-bar-fill { background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }
-    .crm-profile-card { background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
-    .crm-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-    .crm-title { font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0; }
-    .crm-badge { background: rgba(59, 130, 246, 0.2); color: #60A5FA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .crm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
-    .crm-item { display: flex; flex-direction: column; gap: 4px; }
-    .crm-label { font-size: 11px; color: #9CA3AF !important; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-    .crm-value { font-size: 15px; color: #F9FAFB !important; font-weight: 500; }
-    .crm-notes-container { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .crm-note-box { background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; }
-    .crm-alert-box { background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; }
-    
-    .premium-calendar-wrapper { overflow-x: auto; padding: 10px 0 20px 0; }
-    .premium-calendar { width: 100%; border-collapse: separate; border-spacing: 12px; font-family: 'Inter', sans-serif; }
-    .premium-calendar th { background: rgba(255,255,255,0.03); padding: 18px 15px; border-radius: 14px; font-weight: 800; color: #E5E7EB; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-    .premium-calendar td { background: rgba(255,255,255,0.02); padding: 8px; border-radius: 14px; vertical-align: top; min-width: 170px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .premium-calendar td:hover { background: rgba(255,255,255,0.04); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
-    .time-axis { background: transparent !important; border: none !important; text-align: right; vertical-align: middle !important; padding: 0 15px 0 0 !important; width: 120px; min-width: 120px !important; box-shadow: none !important; transform: none !important; }
-    .time-axis:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
-    .time-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); color: #60A5FA; padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); letter-spacing: 0.5px; }
-    .task-card-p { color: white !important; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); line-height: 1.4; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: default; }
-    .task-card-p:hover { transform: scale(1.02); }
-    .empty-slot-p { height: 85px; border: 2px dashed rgba(255,255,255,0.08); border-radius: 10px; transition: border-color 0.3s; display: flex; align-items: center; justify-content: center; }
-    .empty-slot-p:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.02); }
-    .main .block-container { padding-bottom: 5rem; }
-    
-    div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
-    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
-</style>
-""", unsafe_allow_html=True)
-
-# ==============================================================================
-# 6. GİRİŞ EKRANI 
+# 5. GİRİŞ EKRANI 
 # ==============================================================================
 if not st.session_state.auth:
+    st.markdown("""
+    <style>
+        .stApp { background-color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] { display: none !important; }
+        div[data-testid="stTextInput"] label { color: #111827 !important; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 14px !important; }
+        div[data-testid="stTextInput"] input { background-color: #F9FAFB !important; color: #111827 !important; border: 1px solid #D1D5DB !important; border-radius: 10px !important; padding: 12px 15px !important; }
+        div.stButton > button { background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }
+        div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
+        @media (max-width: 900px) { .desktop-right-panel { display: none !important; } }
+        [data-testid="column"]:first-child > div { display: flex; flex-direction: column; min-height: 85vh; }
+        .login-footer-wrapper { text-align: center; font-size: 12px; color: #6B7280; font-family: 'Inter', sans-serif; padding: 20px 0; border-top: 1px solid #F3F4F6; width: 100%; margin-top: auto; }
+    </style>
+    """, unsafe_allow_html=True)
+
     col_left_form, col_right_showcase = st.columns([1, 1.3], gap="large")
 
     with col_left_form:
@@ -399,8 +351,8 @@ if not st.session_state.auth:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("""<h2 style='color:#FFFFFF; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
-        st.markdown("""<p style='color:#9CA3AF; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği e-posta ve parola ile giriş yapın.</p>""", unsafe_allow_html=True)
+        st.markdown("""<h2 style='color:#111827; font-weight:800; font-size:24px; margin-bottom:10px; font-family:"Inter",sans-serif;'>Sistem Girişi</h2>""", unsafe_allow_html=True)
+        st.markdown("""<p style='color:#6B7280; font-size:15px; margin-bottom:20px;'>Devam etmek için yöneticinizin size verdiği e-posta ve parola ile giriş yapın.</p>""", unsafe_allow_html=True)
         
         auth_u = st.text_input("E-Posta Adresi", placeholder="Örn: dogukan@medibulut.com")
         auth_p = st.text_input("Parola", type="password", placeholder="••••••••")
@@ -421,8 +373,26 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("Giriş bilgileri hatalı veya hesabınız bulunamadı.")
+        
+        current_year = datetime.now().year
+        st.markdown(f"""
+        <style>
+            .modern-footer-light {{ display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: auto; padding: 25px 0 15px 0; border-top: 1px solid #E5E7EB; font-family: 'Inter', sans-serif; width: 100%; }}
+            .m-brand-l {{ font-weight: 800; font-size: 15px; color: #111827; letter-spacing: 0.5px; }}
+            .m-dev-l {{ font-size: 13px; color: #6B7280; }}
+            .m-dev-l a {{ color: #2563EB; text-decoration: none; font-weight: 700; transition: color 0.2s; }}
+            .m-dev-l a:hover {{ color: #1D4ED8; }}
+            .m-copy-l {{ font-size: 11px; color: #9CA3AF; margin-top: 4px; }}
+        </style>
+        <div class="modern-footer-light">
+            <div class="m-brand-l">SahaBulut</div>
+            <div class="m-dev-l">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
+            <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col_right_showcase:
+        st.markdown('<div class="desktop-right-panel">', unsafe_allow_html=True)
         dental_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcseNqZSjQW75ELkn1TVERcOP_m8Mw6Iunaw&s"
         diyet_img = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBgGC9IrEFvunZVW5I3YUq6OhPtInaCMfow&s"
         kys_img = "https://play-lh.googleusercontent.com/qgZj2IhoSpyEGslGjs_ERlG_1UhHI0VWIDxOSADgS_TcdXX6cBEqGfes06LIXREkhAo"
@@ -430,7 +400,7 @@ if not st.session_state.auth:
         
         showcase_html = f"""
         <html><head><style>
-            body {{ margin:0; font-family:'Inter', sans-serif; background: #0E1117; }}
+            body {{ margin:0; font-family:'Inter', sans-serif; background-color: #0E1117; }}
             .hero-card {{ background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 45px; padding: 60px 50px; color: white; height: 620px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.4); }}
             .panel-title {{ font-size: 52px; font-weight: 800; margin: 0; line-height: 1.1; letter-spacing: -2px; }}
             .panel-subtitle {{ font-size: 20px; margin-top: 20px; color: #DBEAFE; opacity: 0.9; }}
@@ -453,11 +423,11 @@ if not st.session_state.auth:
             </div></body></html>
         """
         components.html(showcase_html, height=660)
-    
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==============================================================================
-# 7. ANA UYGULAMA (DASHBOARD)
+# 6. ANA UYGULAMA (DASHBOARD)
 # ==============================================================================
 loc_data = None
 try: loc_data = get_geolocation()
@@ -473,6 +443,7 @@ if st.session_state.auth:
         current_realname = st.session_state.auth_user_info['real_name']
         view_df = main_df[main_df["Personel"].apply(lambda x: is_name_match(x, current_realname))]
 
+# --- SOL MENÜ VE TEMA AYARLARI ---
 with st.sidebar:
     st.markdown(f'<img src="{APP_LOGO_HTML}" style="width: 50%; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 15px; display: block;">', unsafe_allow_html=True)
     st.markdown(f"### 👤 {st.session_state.user}")
@@ -488,9 +459,10 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ⚙️ Ayarlar & Filtreler")
+    # YENİ: TEMA FİLTRESİ
+    tema_secimi = st.radio("🎨 Tema Seçimi:", ["Koyu Mod", "Açık Mod"], horizontal=True)
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     
-    # YÖNETİCİ PERSONEL FİLTRESİ
     selected_personel_filter = "Tüm Ekip"
     if st.session_state.role == "Yönetici":
         p_list = ["Tüm Ekip"] + sorted(list(set([str(x).strip() for x in main_df["Personel"].unique() if str(x).strip() and str(x).strip().lower() != 'nan'])))
@@ -505,6 +477,14 @@ with st.sidebar:
 
     st.divider()
     
+    if st.session_state.role == "Yönetici":
+        st.markdown("##### 🏆 GÜNÜN LİDERLERİ")
+        if not main_df.empty:
+            leaders = main_df.groupby("Personel")["Skor"].sum().sort_values(ascending=False).head(3)
+            for i, (name, score) in enumerate(leaders.items()):
+                st.markdown(f"**{i+1}. {name}** - {score} P")
+        st.divider()
+    
     if st.button("🔄 Verileri Güncelle", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
@@ -515,12 +495,90 @@ with st.sidebar:
         st.query_params.clear()
         st.rerun()
 
+# --- TEMA İÇİN DİNAMİK CSS ÜRETİMİ ---
+if tema_secimi == "Koyu Mod":
+    c_bg_app = "#0E1117"
+    c_text = "#FFFFFF"
+    c_card_bg = "rgba(255,255,255,0.03)"
+    c_border = "rgba(255,255,255,0.1)"
+    c_border_dash = "rgba(255,255,255,0.15)"
+    c_hover = "rgba(255,255,255,0.05)"
+    c_muted = "#9CA3AF"
+    c_header = "rgba(14,17,23,0.9)"
+    c_sidebar = "#161B22"
+    c_input_bg = "#1F2937"
+else:
+    c_bg_app = "#F9FAFB"
+    c_text = "#111827"
+    c_card_bg = "#FFFFFF"
+    c_border = "#E5E7EB"
+    c_border_dash = "rgba(0,0,0,0.15)"
+    c_hover = "#F3F4F6"
+    c_muted = "#4B5563"
+    c_header = "rgba(249,250,251,0.9)"
+    c_sidebar = "#FFFFFF"
+    c_input_bg = "#FFFFFF"
+
+st.markdown(f"""
+<style>
+    /* DİNAMİK TEMA (AÇIK / KOYU) */
+    .stApp {{ background-color: {c_bg_app} !important; color: {c_text} !important; }}
+    [data-testid="stHeader"] {{ background-color: {c_header} !important; }}
+    [data-testid="stSidebar"] {{ background-color: {c_sidebar} !important; border-right: 1px solid {c_border}; }}
+    
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {{ color: {c_text} !important; }}
+    .stMetric label {{ color: {c_muted} !important; }}
+    .stMetric div[data-testid="stMetricValue"] {{ color: {c_text} !important; }}
+    
+    div[data-baseweb="select"] > div {{ background-color: {c_input_bg} !important; color: {c_text} !important; border: 1px solid {c_border} !important; }}
+    div[role="listbox"] {{ background-color: {c_input_bg} !important; color: {c_text} !important; }}
+    input, textarea {{ background-color: {c_input_bg} !important; color: {c_text} !important; border: 1px solid {c_border} !important; }}
+    
+    .header-master-wrapper {{ display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid {c_border}; margin-bottom: 20px; }}
+    .location-status-badge {{ background: rgba(59, 130, 246, 0.1); color: #2563EB; border: 1px solid #3B82F6; padding: 8px 18px; border-radius: 25px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }}
+    
+    .admin-perf-card {{ background: {c_card_bg}; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3B82F6; border: 1px solid {c_border}; }}
+    .progress-track {{ background: {c_border}; border-radius: 6px; height: 8px; width: 100%; margin-top: 10px; }}
+    .progress-bar-fill {{ background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%); height: 8px; border-radius: 6px; transition: width 0.5s; }}
+    
+    .crm-profile-card {{ background: {c_card_bg}; border: 1px solid {c_border}; border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
+    .crm-header-row {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid {c_border}; padding-bottom: 15px; margin-bottom: 20px; }}
+    .crm-title {{ font-size: 20px; font-weight: 800; color: {c_text}; margin: 0; }}
+    .crm-badge {{ background: rgba(59, 130, 246, 0.1); color: #2563EB; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(59, 130, 246, 0.3); }}
+    .crm-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }}
+    .crm-item {{ display: flex; flex-direction: column; gap: 4px; }}
+    .crm-label {{ font-size: 11px; color: {c_muted} !important; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }}
+    .crm-value {{ font-size: 15px; color: {c_text} !important; font-weight: 500; }}
+    .crm-notes-container {{ margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }}
+    .crm-note-box {{ background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; padding: 15px; border-radius: 0 8px 8px 0; color:{c_text}; }}
+    .crm-alert-box {{ background: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 15px; border-radius: 0 8px 8px 0; color:{c_text}; }}
+    
+    /* --- YEPYENİ KANBAN GRID AJANDA TASARIMI --- */
+    .premium-calendar-wrapper {{ overflow-x: auto; padding: 10px 0 20px 0; }}
+    .premium-calendar {{ width: 100%; border-collapse: separate; border-spacing: 12px; font-family: 'Inter', sans-serif; }}
+    .premium-calendar th {{ background: {c_card_bg}; padding: 18px 15px; border-radius: 14px; font-weight: 800; color: {c_text}; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; text-align: center; border: 1px solid {c_border}; }}
+    .premium-calendar td {{ background: {c_card_bg}; padding: 8px; border-radius: 14px; vertical-align: top; min-width: 170px; border: 1px solid {c_border}; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }}
+    .premium-calendar td:hover {{ background: {c_hover}; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }}
+    
+    .task-card-p {{ color: white !important; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); line-height: 1.4; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: default; }}
+    .task-card-p:hover {{ transform: scale(1.02); }}
+    
+    .empty-slot-p {{ height: 85px; border: 2px dashed {c_border_dash}; border-radius: 10px; display: flex; align-items: center; justify-content: center; }}
+    /* ------------------------------------------ */
+    
+    .main .block-container {{ padding-bottom: 5rem; }}
+    div.stButton > button {{ background: linear-gradient(to right, #2563EB, #1D4ED8) !important; color: white !important; border: none !important; width: 100% !important; padding: 14px !important; border-radius: 10px; font-weight: 800; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); transition: all 0.3s ease; }}
+    div.stButton > button:hover {{ transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }}
+</style>
+""", unsafe_allow_html=True)
+
+# ÜST BİLGİ ALANI
 location_text = f"📍 Konum: {user_lat:.4f}, {user_lon:.4f}" if user_lat else "📍 GPS Aranıyor... (İzin Verin)"
 st.markdown(f"""
 <div class="header-master-wrapper">
     <div style="display: flex; align-items: center;">
-        <img src="{APP_LOGO_HTML}" style="height: 55px; margin-right: 20px; border-radius: 12px; background: white; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-        <h1 style='color:white; margin: 0; font-size: 2.2em; letter-spacing:-1px; font-family:"Inter";'>Saha Operasyon Merkezi</h1>
+        <img src="{APP_LOGO_HTML}" style="height: 55px; margin-right: 20px; border-radius: 12px; background: white; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <h1 style='margin: 0; font-size: 2.2em; letter-spacing:-1px; font-family:"Inter";'>Saha Operasyon Merkezi</h1>
     </div>
     <div class="location-status-badge">{location_text}</div>
 </div>
@@ -532,7 +590,7 @@ if st.session_state.auth:
     else:
         processed_df = view_df.copy()
         
-        # --- YÖNETİCİ PERSONEL FİLTRESİ UYGULANIYOR ---
+        # YÖNETİCİ PERSONEL FİLTRESİ
         if st.session_state.role == "Yönetici" and selected_personel_filter != "Tüm Ekip":
             processed_df = processed_df[processed_df["Personel"].apply(lambda x: is_name_match(x, selected_personel_filter))]
         
@@ -575,13 +633,13 @@ if st.session_state.auth:
             st.markdown("<br>", unsafe_allow_html=True)
         
         # =========================================================================================
-        # --- 🗓️ HAFTALIK TAKVİM SAYFASI (YAPAY ZEKA FİLTRESİ & KANBAN GRID) ---
+        # --- 🗓️ HAFTALIK TAKVİM SAYFASI (NOKTA ATIŞI ETİKET + GRID) ---
         # =========================================================================================
         if secili_sayfa == "🗓️ Haftalık Takvim":
             st.subheader("🗓️ Haftalık Saha Operasyon Ajandası")
             
             st.markdown("""
-            <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; background: rgba(128,128,128,0.05); padding: 15px; border-radius: 12px;">
                 <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🟢 Ziyaret Edildi</div>
                 <div style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔴 Bekliyor / Planlandı</div>
             </div>
@@ -617,13 +675,7 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    time_blocks = []
-                    for val in filtered_weekly_df['Zaman Dilimi']:
-                        v = str(val).strip()
-                        if v.lower() == 'nan': v = ""
-                        time_blocks.append(v)
-                    filtered_weekly_df['Zaman_Etiketi'] = time_blocks
-                    
+                    # HAFIZA MANTIĞI SİLİNDİ! SADECE O SATIRDAKİ YAZIYI (ÖRN: ÖĞLEDEN SONRA) ALIR
                     rows_data = []
                     for _, row in filtered_weekly_df.iterrows():
                         rows_data.append(row)
@@ -650,25 +702,26 @@ if st.session_state.auth:
                     
                     html_cal += '<thead><tr>'
                     for col in filtered_weekly_df.columns:
-                        if col in ['Hafta_Grubu', 'Zaman Dilimi', 'Zaman_Etiketi']: continue
+                        if col in ['Hafta_Grubu', 'Zaman Dilimi']: continue
                         html_cal += f'<th>{col}</th>'
                     html_cal += '</tr></thead><tbody>'
                     
                     for row in rows_data:
                         html_cal += '<tr>'
                         
-                        tb_tag = str(row.get('Zaman_Etiketi', '')).strip()
+                        # SADECE BU SATIRA AİT ZAMAN ETİKETİ ÇEKİLİR (İleriye bulaşmaz)
+                        tb_tag = str(row.get('Zaman Dilimi', '')).strip()
                         if tb_tag.lower() == 'nan': tb_tag = ""
                         
                         for i, col in enumerate(filtered_weekly_df.columns):
-                            if col in ['Hafta_Grubu', 'Zaman Dilimi', 'Zaman_Etiketi']: continue
+                            if col in ['Hafta_Grubu', 'Zaman Dilimi']: continue
                             
                             val = str(row[col]).strip()
                             if val.lower() == 'nan': val = ""
                             
                             if val:
                                 norm_val = normalize_text(val)
-                                bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Kırmızı
+                                bg_color = "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" # Default Kırmızı
                                 personel_name = "Bilinmiyor"
                                 show_card = True
                                 
@@ -687,10 +740,10 @@ if st.session_state.auth:
                                         show_card = False
                                         
                                     if any(x in gidildi for x in ['evet', 'tamam', 'yapıldı']):
-                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" 
+                                        bg_color = "linear-gradient(135deg, #10B981 0%, #059669 100%)" # Yeşil
                                         
                                 if show_card:
-                                    tag_html = f'<div style="background: rgba(0,0,0,0.18); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px;"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
+                                    tag_html = f'<div style="background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; width: fit-content; font-size: 11px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><span style="font-size:12px;">🕒</span> {tb_tag}</div>' if tb_tag else ''
                                     
                                     html_cal += f'<td><div class="task-card-p" style="background: {bg_color};">'
                                     html_cal += f'<div style="font-size:14px; font-weight:800; margin-bottom:6px; letter-spacing:0.3px;">{val}</div>'
@@ -703,6 +756,7 @@ if st.session_state.auth:
                         html_cal += '</tr>'
                         
                     html_cal += '</tbody></table></div>'
+                    
                     st.markdown(html_cal, unsafe_allow_html=True)
                 else:
                     st.warning("Haftalık plan sayfasında veri bulunamadı.")
@@ -715,9 +769,9 @@ if st.session_state.auth:
                 col_ctrl, col_leg = st.columns([1, 2])
                 with col_leg:
                     if "Ziyaret" in map_view_mode:
-                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#10B981;'></span> Tamamlanan</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#DC2626;'></span> Bekleyen</div><div class='leg-item-row' style='border-left:1px solid rgba(128,128,128,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
                     else:
-                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(255,255,255,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
+                        legend_html = """<div class='map-legend-pro-container'><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#EF4444;'></span> Hot</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#F59E0B;'></span> Warm</div><div class='leg-item-row'><span class='leg-dot-indicator' style='background:#3B82F6;'></span> Cold</div><div class='leg-item-row' style='border-left:1px solid rgba(128,128,128,0.2); padding-left:15px;'><span class='leg-dot-indicator' style='background:#00FFFF; box-shadow:0 0 5px #00FFFF;'></span> Canlı Konum</div></div>"""
                     st.markdown(legend_html, unsafe_allow_html=True)
 
                 def get_pt_color(r):
@@ -738,7 +792,7 @@ if st.session_state.auth:
                     st.markdown(f"""
                     <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 16px;">💡</span>
-                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor.</span>
+                        <span style="color: #FBBF24; font-size: 13px; font-weight: 500;">Konum verisi girilmemiş <b>{eksik_sayisi} klinik</b> haritada gizleniyor. Koordinatları Excel üzerinden ekleyebilirsiniz.</span>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -815,7 +869,7 @@ if st.session_state.auth:
                 st.dataframe(processed_df.sort_values("Mesafe_km")[["Klinik Adı", "Mesafe_km", "Lead Status", "İlçe"]], column_config={"Mesafe_km": st.column_config.NumberColumn("Mesafe (km)", format="%.2f")}, use_container_width=True, hide_index=True)
 
         # =========================================================================================
-        # --- ✅ İŞLEM PANELİ (YAPAY ZEKA VE SÜRE KALDIRILDI - SADECE NOT) ---
+        # --- ✅ İŞLEM PANELİ (SADELEŞTİRİLMİŞ) ---
         # =========================================================================================
         elif secili_sayfa == "✅ İşlem Paneli":
             all_clinics = processed_df["Klinik Adı"].tolist()
@@ -968,7 +1022,7 @@ if st.session_state.auth:
                 
                 for _, r in perf_stats.iterrows():
                     rt = int(r['Z_Adet']/r['H_Adet']*100) if r['H_Adet']>0 else 0
-                    st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800; color:white;">{r['Personel']}</span><span style="color:#A0AEC0; font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div class="admin-perf-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:18px; font-weight:800;">{r['Personel']}</span><span style="font-size:14px;">🎯 {r['Z_Adet']}/{r['H_Adet']} • 🏆 {r['S_Toplam']}</span></div><div class="progress-track"><div class="progress-bar-fill" style="width:{rt}%;"></div></div></div>""", unsafe_allow_html=True)
             else:
                 st.warning("Bugünün planında herhangi bir personel verisi bulunamadı.")
 
@@ -1049,12 +1103,9 @@ if st.session_state.auth:
     # FOOTER
     current_year = datetime.now().year
     st.markdown(f"""
-    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(255, 255, 255, 0.05); font-family: 'Inter', sans-serif; width: 100%;">
-        <div style="font-weight: 800; font-size: 15px; color: #E5E7EB; letter-spacing: 0.5px;">SahaBulut</div>
-        <div style="font-size: 13px; color: #9CA3AF;">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank" style="color: #3B82F6; text-decoration: none; font-weight: 700;">Asil Doğukan Samay</a></div>
-        <div style="font-size: 11px; color: #6B7280; margin-top: 4px;">© {current_year} Tüm Hakları Saklıdır</div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(128, 128, 128, 0.1); font-family: 'Inter', sans-serif; width: 100%;">
+        <div style="font-weight: 800; font-size: 15px; letter-spacing: 0.5px;">SahaBulut</div>
+        <div style="font-size: 13px;">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank" style="color: #3B82F6; text-decoration: none; font-weight: 700;">Asil Doğukan Samay</a></div>
+        <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">© {current_year} Tüm Hakları Saklıdır</div>
     </div>
     """, unsafe_allow_html=True)
-
-else:
-    st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
