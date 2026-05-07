@@ -69,7 +69,6 @@ def init_db():
     try:
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
-            # Şifreler artık GÜVENLİ kasadan çekiliyor
             admin_pass = st.secrets.get("ADMIN_DEFAULT_PASS", "GeciciSifre123!")
             dogukan_pass = st.secrets.get("DOGUKAN_DEFAULT_PASS", "GeciciSifre123!")
             
@@ -80,7 +79,7 @@ def init_db():
             supabase.table("users").insert(default_users).execute()
     except Exception as e:
         if "Name or service not known" in str(e):
-            pass # Uyku modundaysa gereksiz hata gösterme
+            pass 
         else:
             st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
 
@@ -578,6 +577,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ÜST BİLGİ ALANI
+location_text = f"📍 Konum: {user_lat:.4f}, {user_lon:.4f}" if user_lat else "📍 GPS Aranıyor... (İzin Verin)"
 st.markdown(f"""
 <div class="header-master-wrapper">
     <div style="display: flex; align-items: center;">
@@ -713,6 +713,7 @@ if st.session_state.auth:
                     for row in rows_data:
                         html_cal += '<tr>'
                         
+                        # SADECE BU SATIRA AİT ZAMAN ETİKETİ ÇEKİLİR (İleriye bulaşmaz)
                         tb_tag = str(row.get('Zaman Dilimi', '')).strip()
                         if tb_tag.lower() == 'nan': tb_tag = ""
                         
@@ -733,10 +734,12 @@ if st.session_state.auth:
                                     personel_name = info['Personel']
                                     gidildi = info['Gidildi'].lower()
                                     
+                                    # YÖNETİCİ PERSONEL FİLTRESİ
                                     if st.session_state.role == "Yönetici" and selected_personel_filter != "Tüm Ekip":
                                         if not is_name_match(personel_name, selected_personel_filter):
                                             show_card = False
 
+                                    # SAHA PERSONELİ FİLTRESİ
                                     elif st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
                                         show_card = False
                                         
