@@ -69,13 +69,20 @@ def init_db():
     try:
         res = supabase.table("users").select("username").limit(1).execute()
         if len(res.data) == 0:
+            # Şifreler artık GÜVENLİ kasadan çekiliyor
+            admin_pass = st.secrets.get("ADMIN_DEFAULT_PASS", "GeciciSifre123!")
+            dogukan_pass = st.secrets.get("DOGUKAN_DEFAULT_PASS", "GeciciSifre123!")
+            
             default_users = [
-                {"username": "admin", "password": make_hashes("Medibulut.2026!"), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
-                {"username": "dogukan", "password": make_hashes("Medibulut.2026!"), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
+                {"username": "admin", "password": make_hashes(admin_pass), "email": "admin@medibulut.com", "role": "Yönetici", "real_name": "Sistem Yöneticisi", "points": 1000},
+                {"username": "dogukan", "password": make_hashes(dogukan_pass), "email": "dogukan@medibulut.com", "role": "Saha Personeli", "real_name": "Doğukan", "points": 500}
             ]
             supabase.table("users").insert(default_users).execute()
     except Exception as e:
-        st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
+        if "Name or service not known" in str(e):
+            pass # Uyku modundaysa gereksiz hata gösterme
+        else:
+            st.error(f"🚨 VERİTABANI BAŞLATMA HATASI: {e}")
 
 init_db()
 
@@ -88,7 +95,10 @@ def authenticate_user(email, password):
                 return user_data
         return None
     except Exception as e:
-        st.error(f"🚨 GİRİŞ HATASI: {e}")
+        if "Name or service not known" in str(e):
+            st.error("🚨 Veritabanı uyku modunda! Lütfen Supabase panelinden projeyi 'Restore' edin.")
+        else:
+            st.error(f"🚨 GİRİŞ HATASI: {e}")
         return None
 
 def add_user_to_db(username, password, email, role, real_name):
@@ -110,7 +120,10 @@ def add_user_to_db(username, password, email, role, real_name):
         supabase.table("users").insert(new_user).execute()
         return True
     except Exception as e:
-        st.error(f"🚨 KULLANICI EKLEME HATASI: {e}")
+        if "Name or service not known" in str(e):
+            st.error("🚨 Veritabanı uyku modunda! Lütfen Supabase panelinden projeyi 'Restore' edin.")
+        else:
+            st.error(f"🚨 KULLANICI EKLEME HATASI: {e}")
         return False
 
 # ==============================================================================
@@ -376,18 +389,10 @@ if not st.session_state.auth:
         
         current_year = datetime.now().year
         st.markdown(f"""
-        <style>
-            .modern-footer-light {{ display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: auto; padding: 25px 0 15px 0; border-top: 1px solid #E5E7EB; font-family: 'Inter', sans-serif; width: 100%; }}
-            .m-brand-l {{ font-weight: 800; font-size: 15px; color: #111827; letter-spacing: 0.5px; }}
-            .m-dev-l {{ font-size: 13px; color: #6B7280; }}
-            .m-dev-l a {{ color: #2563EB; text-decoration: none; font-weight: 700; transition: color 0.2s; }}
-            .m-dev-l a:hover {{ color: #1D4ED8; }}
-            .m-copy-l {{ font-size: 11px; color: #9CA3AF; margin-top: 4px; }}
-        </style>
-        <div class="modern-footer-light">
-            <div class="m-brand-l">SahaBulut</div>
-            <div class="m-dev-l">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank">Asil Doğukan Samay</a></div>
-            <div class="m-copy-l">© {current_year} Tüm Hakları Saklıdır</div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: auto; padding: 25px 0 15px 0; border-top: 1px solid #E5E7EB; font-family: 'Inter', sans-serif; width: 100%;">
+            <div style="font-weight: 800; font-size: 15px; color: #111827; letter-spacing: 0.5px;">SahaBulut</div>
+            <div style="font-size: 13px; color: #6B7280;">Designed & Developed by <a href="{MY_LINKEDIN_URL}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 700;">Asil Doğukan Samay</a></div>
+            <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">© {current_year} Tüm Hakları Saklıdır</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -459,7 +464,7 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ⚙️ Ayarlar & Filtreler")
-    # YENİ: TEMA FİLTRESİ
+    # TEMA FİLTRESİ
     tema_secimi = st.radio("🎨 Tema Seçimi:", ["Koyu Mod", "Açık Mod"], horizontal=True)
     filter_today = st.toggle("📅 Sadece Bugünün Planı", value=True) 
     
@@ -573,7 +578,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ÜST BİLGİ ALANI
-location_text = f"📍 Konum: {user_lat:.4f}, {user_lon:.4f}" if user_lat else "📍 GPS Aranıyor... (İzin Verin)"
 st.markdown(f"""
 <div class="header-master-wrapper">
     <div style="display: flex; align-items: center;">
@@ -675,7 +679,7 @@ if st.session_state.auth:
                     filtered_weekly_df = weekly_df[weekly_df['Hafta_Grubu'] == selected_hafta].copy()
                     filtered_weekly_df = filtered_weekly_df[filtered_weekly_df['Zaman Dilimi'] != selected_hafta]
                     
-                    # HAFIZA MANTIĞI SİLİNDİ! SADECE O SATIRDAKİ YAZIYI (ÖRN: ÖĞLEDEN SONRA) ALIR
+                    # HAFIZA MANTIĞI SİLİNDİ! SADECE O SATIRDAKİ YAZIYI ALIR
                     rows_data = []
                     for _, row in filtered_weekly_df.iterrows():
                         rows_data.append(row)
@@ -709,7 +713,6 @@ if st.session_state.auth:
                     for row in rows_data:
                         html_cal += '<tr>'
                         
-                        # SADECE BU SATIRA AİT ZAMAN ETİKETİ ÇEKİLİR (İleriye bulaşmaz)
                         tb_tag = str(row.get('Zaman Dilimi', '')).strip()
                         if tb_tag.lower() == 'nan': tb_tag = ""
                         
@@ -730,12 +733,10 @@ if st.session_state.auth:
                                     personel_name = info['Personel']
                                     gidildi = info['Gidildi'].lower()
                                     
-                                    # YÖNETİCİ PERSONEL FİLTRESİ
                                     if st.session_state.role == "Yönetici" and selected_personel_filter != "Tüm Ekip":
                                         if not is_name_match(personel_name, selected_personel_filter):
                                             show_card = False
 
-                                    # SAHA PERSONELİ FİLTRESİ
                                     elif st.session_state.role != "Yönetici" and not is_name_match(personel_name, st.session_state.auth_user_info['real_name']):
                                         show_card = False
                                         
@@ -1098,7 +1099,11 @@ if st.session_state.auth:
                             else: st.warning("Silmek için bir personel seçmelisiniz.")
                     else:
                         st.info("Sistemde silinecek kayıtlı personel bulunamadı.")
-                except Exception as e: st.error(f"Veritabanı okunamadı: {e}")
+                except Exception as e:
+                    if "Name or service not known" in str(e):
+                        st.error("🚨 Veritabanı uyku modunda! Lütfen Supabase panelinden projeyi 'Restore' edin.")
+                    else:
+                        st.error(f"Veritabanı okunamadı: {e}")
 
     # FOOTER
     current_year = datetime.now().year
@@ -1109,3 +1114,6 @@ if st.session_state.auth:
         <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">© {current_year} Tüm Hakları Saklıdır</div>
     </div>
     """, unsafe_allow_html=True)
+
+else:
+    st.warning("Lütfen giriş yapın veya planınızın olduğundan emin olun.")
